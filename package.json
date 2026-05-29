@@ -57,8 +57,12 @@
     },
     "dependencies": {
         "@jupyterlab/application": "^4.0.0",
+        "@jupyterlab/apputils": "^4.0.0",
         "@jupyterlab/coreutils": "^6.0.0",
-        "@jupyterlab/services": "^7.0.0"
+        "@jupyterlab/docregistry": "^4.0.0",
+        "@jupyterlab/imageviewer": "^4.0.0",
+        "@jupyterlab/settingregistry": "^4.0.0",
+        "@lumino/disposable": "^2.0.0"
     },
     "devDependencies": {
         "@jupyterlab/builder": "^4.0.0",
@@ -100,18 +104,9 @@
         "access": "public"
     },
     "jupyterlab": {
-        "discovery": {
-            "server": {
-                "managers": [
-                    "pip"
-                ],
-                "base": {
-                    "name": "jupyterlab_advanced_image_viewer_extension"
-                }
-            }
-        },
         "extension": true,
-        "outputDir": "jupyterlab_advanced_image_viewer_extension/labextension"
+        "outputDir": "jupyterlab_advanced_image_viewer_extension/labextension",
+        "schemaDir": "schema"
     },
     "eslintIgnore": [
         "node_modules",

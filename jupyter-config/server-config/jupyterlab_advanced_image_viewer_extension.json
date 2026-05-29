@@ -1,7 +1,0 @@
-{
-  "ServerApp": {
-    "jpserver_extensions": {
-      "jupyterlab_advanced_image_viewer_extension": true
-    }
-  }
-}

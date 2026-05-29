@@ -1,0 +1,35 @@
+{
+  "jupyter.lab.setting-icon-label": "Advanced Image Viewer",
+  "title": "Advanced Image Viewer",
+  "description": "Settings for wheel-zoom, drag-pan, and folder navigation in the advanced image viewer.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "navEnabled": {
+      "type": "boolean",
+      "title": "Enable folder navigation",
+      "description": "When enabled, the previous/next keys open the previous or next image in the same folder.",
+      "default": true
+    },
+    "prevKey": {
+      "type": "string",
+      "title": "Previous image key",
+      "description": "Key that opens the previous image in the folder. Uses Lumino keystroke syntax (e.g. 'ArrowLeft', 'PageUp', 'Shift ArrowLeft').",
+      "default": "ArrowLeft"
+    },
+    "nextKey": {
+      "type": "string",
+      "title": "Next image key",
+      "description": "Key that opens the next image in the folder. Uses Lumino keystroke syntax (e.g. 'ArrowRight', 'PageDown', 'Shift ArrowRight').",
+      "default": "ArrowRight"
+    },
+    "zoomStep": {
+      "type": "number",
+      "title": "Zoom step",
+      "description": "Fractional zoom change per wheel notch or toolbar zoom click (0.1 = 10% per step).",
+      "default": 0.1,
+      "minimum": 0.01,
+      "maximum": 1
+    }
+  }
+}
