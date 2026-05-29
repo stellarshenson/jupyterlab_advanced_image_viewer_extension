@@ -1,0 +1,18 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.5.2
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: konrad.jelen+github@gmail.com
+author_name: Stellars Henson
+has_ai_rules: false
+has_binder: false
+has_settings: false
+kind: frontend-and-server
+labextension_name: jupyterlab_advanced_image_viewer_extension
+project_short_description: 'Jupyterlab extension to allow advanced image viewing:
+    pan, zoom, also controls for pan + zoom (and use of the mouse - hold and move,
+    wheel up and down) and optional (configurable) left and right keys to move to
+    previous and next image in folder'
+python_name: jupyterlab_advanced_image_viewer_extension
+repository: ''
+test: true
+
