@@ -74,9 +74,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       return controllers.get(widget.content) ?? null;
     };
 
-    const attach = (
-      widget: IDocumentWidget<ImageViewer>
-    ): void => {
+    const attach = (widget: IDocumentWidget<ImageViewer>): void => {
       const viewer = widget.content;
       if (controllers.has(viewer)) {
         return;
