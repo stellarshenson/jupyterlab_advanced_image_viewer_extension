@@ -39,22 +39,18 @@ const IMAGE_EXTS = new Set([
 
 interface ISettingsState {
   navEnabled: boolean;
-  prevKey: string;
-  nextKey: string;
   zoomStep: number;
 }
 
 const defaults: ISettingsState = {
   navEnabled: true,
-  prevKey: 'ArrowLeft',
-  nextKey: 'ArrowRight',
   zoomStep: 0.1
 };
 
 const plugin: JupyterFrontEndPlugin<void> = {
   id: PLUGIN_ID,
   description:
-    'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and configurable folder navigation.',
+    'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation.',
   autoStart: true,
   requires: [IImageTracker],
   optional: [ISettingRegistry],
@@ -63,6 +59,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
     tracker: IImageTracker,
     settingRegistry: ISettingRegistry | null
   ): void => {
+    console.log(
+      'JupyterLab extension jupyterlab_advanced_image_viewer_extension is activated!'
+    );
     const controllers = new WeakMap<ImageViewer, ViewerController>();
     const state: ISettingsState = { ...defaults };
     let keyBindings: IDisposable[] = [];
@@ -185,10 +184,18 @@ const plugin: JupyterFrontEndPlugin<void> = {
       if (target === idx) {
         return;
       }
+      // Advance within a single viewer: open the next image, then close the
+      // previous one. The stock image viewer binds each file to its own
+      // DocumentWidget, so an in-place file swap is not possible; opening and
+      // disposing the previous widget leaves one image tab that advances.
+      const previous = widget;
       await app.commands.execute('docmanager:open', {
         path: images[target].path,
         factory: 'Image'
       });
+      if (!previous.isDisposed && previous !== tracker.currentWidget) {
+        previous.dispose();
+      }
     };
 
     app.commands.addCommand(CommandIDs.previous, {
@@ -211,14 +218,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
       keyBindings.push(
         app.commands.addKeyBinding({
           command: CommandIDs.previous,
-          keys: [state.prevKey],
+          keys: ['ArrowLeft'],
           selector: '.jp-ImageViewer'
         })
       );
       keyBindings.push(
         app.commands.addKeyBinding({
           command: CommandIDs.next,
-          keys: [state.nextKey],
+          keys: ['ArrowRight'],
           selector: '.jp-ImageViewer'
         })
       );
@@ -241,8 +248,6 @@ const plugin: JupyterFrontEndPlugin<void> = {
           const read = (): void => {
             const c = settings.composite as Partial<ISettingsState>;
             state.navEnabled = c.navEnabled ?? defaults.navEnabled;
-            state.prevKey = c.prevKey ?? defaults.prevKey;
-            state.nextKey = c.nextKey ?? defaults.nextKey;
             state.zoomStep = c.zoomStep ?? defaults.zoomStep;
           };
           read();

@@ -8,13 +8,15 @@
 [![Brought To You By KOLOMOLO](https://img.shields.io/badge/Brought%20To%20You%20By-KOLOMOLO-00ffff?style=flat)](https://kolomolo.com)
 [![Donate PayPal](https://img.shields.io/badge/Donate-PayPal-blue?style=flat)](https://www.paypal.com/donate/?hosted_button_id=B4KPBJDLLXTSA)
 
-A JupyterLab extension for advanced image viewing - pan and zoom large images directly in the workspace, drive them with the mouse, and step through a folder of images without leaving the viewer.
+A JupyterLab 4 extension that makes the built-in image viewer interactive. Images open fitted to the panel just like the stock viewer, then you can zoom with the wheel, pan by dragging, and step through a folder of images with the arrow keys - all in a single viewer tab.
 
 ## Features
 
-- **Pan and zoom** - move around and scale images that are too large to fit the view
-- **Mouse controls** - hold and move to pan, wheel up and down to zoom
-- **Folder navigation** - optional, configurable left and right keys to move to the previous and next image in the same folder
+- **Fit to screen** - every image opens scaled to fit the panel (same result as the stock viewer), and reset returns to that fit
+- **Wheel zoom** - scroll to zoom in and out, anchored at the cursor; zoom out as far as you like
+- **Drag to pan** - hold and drag to move around a zoomed-in image
+- **Toolbar controls** - zoom in, zoom out, and reset-to-fit buttons on the viewer toolbar
+- **Arrow-key navigation** - Left and Right open the previous and next image in the same folder, advancing within one viewer instead of opening new tabs
 
 ## Requirements
 

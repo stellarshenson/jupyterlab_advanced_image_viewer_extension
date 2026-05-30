@@ -8,20 +8,8 @@
     "navEnabled": {
       "type": "boolean",
       "title": "Enable folder navigation",
-      "description": "When enabled, the previous/next keys open the previous or next image in the same folder.",
+      "description": "When enabled, the Left/Right arrow keys open the previous or next image in the same folder.",
       "default": true
-    },
-    "prevKey": {
-      "type": "string",
-      "title": "Previous image key",
-      "description": "Key that opens the previous image in the folder. Uses Lumino keystroke syntax (e.g. 'ArrowLeft', 'PageUp', 'Shift ArrowLeft').",
-      "default": "ArrowLeft"
-    },
-    "nextKey": {
-      "type": "string",
-      "title": "Next image key",
-      "description": "Key that opens the next image in the folder. Uses Lumino keystroke syntax (e.g. 'ArrowRight', 'PageDown', 'Shift ArrowRight').",
-      "default": "ArrowRight"
     },
     "zoomStep": {
       "type": "number",

@@ -1,21 +1,20 @@
-// ViewerController owns scale + translate for ONE ImageViewer widget.
-// It layers a CSS transform 'translate(tx,ty) scale(s)' on the default
-// viewer's inner <img> (transform-origin top left), keeping a fit-to-screen
-// baseline that 'reset' returns to. The host node is forced to
-// overflow:hidden so panning is purely our translate, never native scroll.
+// ViewerController adds zoom + pan ON TOP of JupyterLab's stock image viewer.
+// The stock viewer already fits the image with CSS (object-fit: contain,
+// max-width/height: 100%), so the identity transform IS the correct
+// fit-to-screen view for both raster and SVG. We never read naturalWidth /
+// naturalHeight (an SVG with only a viewBox reports a bogus intrinsic size).
+// Zoom is a single relative factor s (s = 1 is fit); pan is a translate.
+// transform-origin is the host centre, matching the centred object-fit layout.
+
+const MIN_SCALE = 0.05;
+const MAX_SCALE = 40;
 
 export class ViewerController {
   private host: HTMLElement;
   private img: HTMLImageElement;
-  private nw = 0;
-  private nh = 0;
-  private fitScale = 1;
-  private tx0 = 0;
-  private ty0 = 0;
   private s = 1;
   private tx = 0;
   private ty = 0;
-  private wasModified = false;
   private panning = false;
   private start = { x: 0, y: 0, tx: 0, ty: 0 };
   private zoomStep: number;
@@ -27,75 +26,48 @@ export class ViewerController {
     this.img = img;
     this.zoomStep = zoomStep;
     this.host.style.overflow = 'hidden';
-    this.img.style.transformOrigin = 'top left';
+    this.img.style.transformOrigin = 'center center';
     this.host.addEventListener('wheel', this.onWheel, { passive: false });
     this.host.addEventListener('mousedown', this.onDown);
     this.ro = new ResizeObserver(() => this.onResize());
     this.ro.observe(this.host);
-    if (this.img.complete && this.img.naturalWidth) {
-      this.onImageReady();
-    } else {
-      this.img.addEventListener('load', this.onImageReady, { once: true });
-    }
+    this.apply();
   }
 
   setZoomStep(zoomStep: number): void {
     this.zoomStep = zoomStep;
   }
 
-  private onImageReady = (): void => {
-    this.nw = this.img.naturalWidth;
-    this.nh = this.img.naturalHeight;
-    this.reset();
-  };
+  reset(): void {
+    this.s = 1;
+    this.tx = 0;
+    this.ty = 0;
+    this.apply();
+  }
 
   private viewport(): { vw: number; vh: number } {
     return { vw: this.host.clientWidth, vh: this.host.clientHeight };
   }
 
-  private computeFit(): void {
-    const { vw, vh } = this.viewport();
-    this.fitScale = Math.min(vw / this.nw, vh / this.nh);
-    this.tx0 = (vw - this.fitScale * this.nw) / 2;
-    this.ty0 = (vh - this.fitScale * this.nh) / 2;
-  }
-
-  reset(): void {
-    if (!this.nw) {
-      return;
-    }
-    this.computeFit();
-    this.s = this.fitScale;
-    this.tx = this.tx0;
-    this.ty = this.ty0;
-    this.wasModified = false;
-    this.apply();
-  }
-
-  private minScale(): number {
-    return this.fitScale;
-  }
-
-  private maxScale(): number {
-    return Math.max(8 * this.fitScale, 4);
-  }
-
   private clampScale(v: number): number {
-    return Math.min(Math.max(v, this.minScale()), this.maxScale());
+    return Math.min(Math.max(v, MIN_SCALE), MAX_SCALE);
   }
 
+  // Cursor-anchored zoom about the host centre. With transform
+  // M(p) = C + s*(p - C) + t, keeping the point under (ax, ay) fixed gives
+  // t' = a - C - (s'/s) * (a - C - t).
   private zoomAt(factor: number, ax: number, ay: number): void {
-    if (!this.nw) {
-      return;
-    }
     const sNew = this.clampScale(this.s * factor);
     if (sNew === this.s) {
       return;
     }
-    this.tx = ax - (sNew / this.s) * (ax - this.tx);
-    this.ty = ay - (sNew / this.s) * (ay - this.ty);
+    const { vw, vh } = this.viewport();
+    const cx = vw / 2;
+    const cy = vh / 2;
+    const k = sNew / this.s;
+    this.tx = ax - cx - k * (ax - cx - this.tx);
+    this.ty = ay - cy - k * (ay - cy - this.ty);
     this.s = sNew;
-    this.wasModified = true;
     this.clampPan();
     this.apply();
   }
@@ -103,11 +75,8 @@ export class ViewerController {
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault();
     const r = this.host.getBoundingClientRect();
-    const ax = e.clientX - r.left;
-    const ay = e.clientY - r.top;
-    const factor =
-      e.deltaY < 0 ? 1 + this.zoomStep : 1 / (1 + this.zoomStep);
-    this.zoomAt(factor, ax, ay);
+    const factor = e.deltaY < 0 ? 1 + this.zoomStep : 1 / (1 + this.zoomStep);
+    this.zoomAt(factor, e.clientX - r.left, e.clientY - r.top);
   };
 
   zoomIn(): void {
@@ -120,14 +89,18 @@ export class ViewerController {
     this.zoomAt(1 / (1 + this.zoomStep), vw / 2, vh / 2);
   }
 
-  private overflow(): { x: boolean; y: boolean } {
-    const { vw, vh } = this.viewport();
-    return { x: this.s * this.nw > vw + 0.5, y: this.s * this.nh > vh + 0.5 };
+  private canPan(): boolean {
+    return this.s > 1;
   }
 
-  private canPan(): boolean {
-    const o = this.overflow();
-    return o.x || o.y;
+  // Bound the translate to the overflow implied by the zoom so the image
+  // cannot be panned out of view. Range collapses to 0 as s approaches 1.
+  private clampPan(): void {
+    const { vw, vh } = this.viewport();
+    const mx = (Math.max(this.s, 1) - 1) * vw * 0.5;
+    const my = (Math.max(this.s, 1) - 1) * vh * 0.5;
+    this.tx = Math.min(mx, Math.max(-mx, this.tx));
+    this.ty = Math.min(my, Math.max(-my, this.ty));
   }
 
   private onDown = (e: MouseEvent): void => {
@@ -146,10 +119,8 @@ export class ViewerController {
     if (!this.panning) {
       return;
     }
-    const o = this.overflow();
-    this.tx = this.start.tx + (o.x ? e.clientX - this.start.x : 0);
-    this.ty = this.start.ty + (o.y ? e.clientY - this.start.y : 0);
-    this.wasModified = true;
+    this.tx = this.start.tx + (e.clientX - this.start.x);
+    this.ty = this.start.ty + (e.clientY - this.start.y);
     this.clampPan();
     this.apply();
   };
@@ -161,25 +132,9 @@ export class ViewerController {
     window.removeEventListener('mouseup', this.onUp);
   };
 
-  private clampPan(): void {
-    const { vw, vh } = this.viewport();
-    const cw = this.s * this.nw;
-    const ch = this.s * this.nh;
-    this.tx = cw <= vw ? (vw - cw) / 2 : Math.min(0, Math.max(vw - cw, this.tx));
-    this.ty = ch <= vh ? (vh - ch) / 2 : Math.min(0, Math.max(vh - ch, this.ty));
-  }
-
   private onResize(): void {
-    if (!this.nw) {
-      return;
-    }
-    if (!this.wasModified) {
-      this.reset();
-    } else {
-      this.computeFit();
-      this.clampPan();
-      this.apply();
-    }
+    this.clampPan();
+    this.apply();
   }
 
   private updateCursor(): void {
@@ -187,7 +142,7 @@ export class ViewerController {
   }
 
   private apply(): void {
-    this.img.style.transformOrigin = 'top left';
+    this.img.style.transformOrigin = 'center center';
     this.img.style.transform = `translate(${this.tx}px, ${this.ty}px) scale(${this.s})`;
     this.updateCursor();
   }
@@ -200,7 +155,6 @@ export class ViewerController {
     this.ro.disconnect();
     this.host.removeEventListener('wheel', this.onWheel);
     this.host.removeEventListener('mousedown', this.onDown);
-    this.img.removeEventListener('load', this.onImageReady);
     window.removeEventListener('mousemove', this.onMove);
     window.removeEventListener('mouseup', this.onUp);
   }
