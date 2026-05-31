@@ -1,6 +1,6 @@
 {
     "name": "jupyterlab_advanced_image_viewer_extension",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "JupyterLab extension for advanced image viewing: fit-to-screen, cursor-anchored wheel zoom, drag-to-pan, and Left/Right arrow keys to move to the previous and next image in a folder",
     "keywords": [
         "jupyter",
@@ -62,7 +62,8 @@
         "@jupyterlab/docregistry": "^4.0.0",
         "@jupyterlab/imageviewer": "^4.0.0",
         "@jupyterlab/settingregistry": "^4.0.0",
-        "@lumino/disposable": "^2.0.0"
+        "@lumino/disposable": "^2.0.0",
+        "@lumino/widgets": "^2.0.0"
     },
     "devDependencies": {
         "@jupyterlab/builder": "^4.0.0",
