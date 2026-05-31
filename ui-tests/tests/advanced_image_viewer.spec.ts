@@ -33,8 +33,10 @@ test.describe('Advanced Image Viewer', () => {
       viewer.locator('.jp-AdvancedImageViewer-panlayer > img')
     ).toHaveCount(1);
 
-    // Help is rendered as an accent-coloured link, not a "?" button.
-    const help = viewer.locator('.jp-AdvancedImageViewer-help-link');
+    // Help is rendered as an accent-coloured link, not a "?" button. It lives
+    // in the document toolbar (a sibling of the .jp-ImageViewer content), so
+    // it is located at page scope - only one viewer is open in this test.
+    const help = page.locator('.jp-AdvancedImageViewer-help-link');
     await expect(help).toHaveText('help');
     const color = await help.evaluate(el => getComputedStyle(el).color);
     expect(color).toBe('rgb(33, 150, 243)');
