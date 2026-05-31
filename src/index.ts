@@ -3,7 +3,12 @@ import {
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
-import { ToolbarButton } from '@jupyterlab/apputils';
+import {
+  Dialog,
+  showDialog,
+  Toolbar,
+  ToolbarButton
+} from '@jupyterlab/apputils';
 
 import { PathExt } from '@jupyterlab/coreutils';
 
@@ -14,6 +19,8 @@ import { IImageTracker, ImageViewer } from '@jupyterlab/imageviewer';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
 import { IDisposable } from '@lumino/disposable';
+
+import { Widget } from '@lumino/widgets';
 
 import { ViewerController } from './controller';
 
@@ -74,6 +81,25 @@ const plugin: JupyterFrontEndPlugin<void> = {
       return controllers.get(widget.content) ?? null;
     };
 
+    const showHelp = (): void => {
+      const body = new Widget();
+      body.addClass('jp-AdvancedImageViewer-help');
+      body.node.innerHTML = [
+        '<p>Interactive viewing layered on the standard image viewer.</p>',
+        '<ul>',
+        '<li><b>Wheel up / down</b> - zoom in / out at the cursor</li>',
+        '<li><b>Click and drag</b> - pan a zoomed-in image</li>',
+        '<li><b>+ / - / Fit</b> - zoom in, zoom out, reset to fit</li>',
+        '<li><b>Left / Right arrows</b> - previous / next image in the folder</li>',
+        '</ul>'
+      ].join('');
+      void showDialog({
+        title: 'Advanced Image Viewer',
+        body,
+        buttons: [Dialog.okButton({ label: 'Close' })]
+      });
+    };
+
     const attach = (widget: IDocumentWidget<ImageViewer>): void => {
       const viewer = widget.content;
       if (controllers.has(viewer)) {
@@ -117,6 +143,16 @@ const plugin: JupyterFrontEndPlugin<void> = {
           label: 'Fit',
           tooltip: 'Reset to fit',
           onClick: () => app.commands.execute(CommandIDs.resetFit)
+        })
+      );
+      widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
+      widget.toolbar.addItem(
+        'advanced-help',
+        new ToolbarButton({
+          label: '?',
+          tooltip: 'Keybindings and help',
+          className: 'jp-AdvancedImageViewer-help-button',
+          onClick: () => showHelp()
         })
       );
     };

@@ -3,3 +3,16 @@
 
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
+
+.jp-AdvancedImageViewer-help {
+  max-width: 360px;
+}
+
+.jp-AdvancedImageViewer-help ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.jp-AdvancedImageViewer-help li {
+  margin: 2px 0;
+}
