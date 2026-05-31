@@ -8,18 +8,22 @@ const SVG =
 const NAME = 'aiv-test.svg';
 
 test.describe('Advanced Image Viewer', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.contents.uploadContent(SVG, 'text', NAME);
+  // The default Galata file browser lives inside tmpPath, so the test image
+  // must be uploaded there (not the server root) and opened with the Image
+  // factory (an SVG is otherwise ambiguous between the editor and the viewer).
+  test.beforeEach(async ({ page, tmpPath }) => {
+    await page.contents.uploadContent(SVG, 'text', `${tmpPath}/${NAME}`);
   });
 
-  test.afterEach(async ({ page }) => {
-    await page.contents.deleteFile(NAME);
+  test.afterEach(async ({ page, tmpPath }) => {
+    await page.contents.deleteFile(`${tmpPath}/${NAME}`);
   });
 
   test('wraps the image in a pan layer and shows an accent help link', async ({
-    page
+    page,
+    tmpPath
   }) => {
-    await page.filebrowser.open(NAME);
+    await page.filebrowser.open(`${tmpPath}/${NAME}`, 'Image');
     const viewer = page.locator('.jp-ImageViewer').last();
     await viewer.waitFor();
 
@@ -46,9 +50,10 @@ test.describe('Advanced Image Viewer', () => {
   });
 
   test('stock rotate composes with our zoom (transforms do not clobber)', async ({
-    page
+    page,
+    tmpPath
   }) => {
-    await page.filebrowser.open(NAME);
+    await page.filebrowser.open(`${tmpPath}/${NAME}`, 'Image');
     const viewer = page.locator('.jp-ImageViewer').last();
     await viewer.waitFor();
     const img = viewer.locator('img');
