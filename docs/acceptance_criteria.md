@@ -93,6 +93,25 @@ unless stated; "baseline" = freshly opened image, before any interaction; refere
 - **H3 - no new console errors**: opening an image and zooming/panning/navigating produces no
   new uncaught errors attributable to the extension.
 
+## I. Stock keybinding coexistence
+
+- [ ] **I1 - stock keybindings work**: the standard image-viewer keys still act on the image -
+  `]` / `[` rotate clockwise / counter-clockwise, `h` / `v` flip horizontal / vertical, `0`
+  reset stock orientation, `i` invert colours. Each updates the image's own transform.
+- [ ] **I2 - functionality composes after stock keys**: after actuating any stock keybinding
+  (rotate / flip / etc.), all extension functionality still works AND composes with it - wheel
+  and toolbar zoom, drag-pan, and Fit operate while the rotation / flip stays applied. The
+  stock image transform and our pan-layer transform must not clobber each other (the v1.0.3
+  bug: my zoom erased a rotation).
+
+## J. Help link
+
+- [ ] **J1 - accent help link**: the toolbar shows a "help" link (not a "?" button) rendered in
+  the accent colour, at the right end of the toolbar.
+- [ ] **J2 - help popup**: clicking the link opens a short dialog listing the extension controls
+  (wheel zoom, drag-pan, +/-/Fit, Left/Right navigation) AND the standard viewer keys it
+  composes with (rotate `]` / `[`, flip `H` / `V`, invert `I`, and `=` / `-` / `0`).
+
 ## Verification method
 
 1. `make install`; confirm H1.
@@ -110,6 +129,7 @@ unless stated; "baseline" = freshly opened image, before any interaction; refere
 
 ## Definition of done
 
-All of A1-A7, B1-B4, C1-C4, D1, E1-E3, F1-F5, G1-G3, H1-H3 verified with recorded
-measurements on the reference files. Any tiny/fragment/off-position render, any inability to
-zoom out below fit, or any new tab on navigation is an automatic FAIL.
+All of A1-A7, B1-B4, C1-C4, D1, E1-E3, F1-F5, G1-G3, H1-H3, I1-I2, J1-J2 verified with
+recorded measurements on the reference files. Any tiny/fragment/off-position render, any
+inability to zoom out below fit, any new tab on navigation, or a stock rotate/flip that
+breaks zoom/pan/fit is an automatic FAIL.

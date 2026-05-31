@@ -86,11 +86,19 @@ const plugin: JupyterFrontEndPlugin<void> = {
       body.addClass('jp-AdvancedImageViewer-help');
       body.node.innerHTML = [
         '<p>Interactive viewing layered on the standard image viewer.</p>',
+        '<p class="jp-AdvancedImageViewer-help-section">This extension</p>',
         '<ul>',
         '<li><b>Wheel up / down</b> - zoom in / out at the cursor</li>',
         '<li><b>Click and drag</b> - pan a zoomed-in image</li>',
         '<li><b>+ / - / Fit</b> - zoom in, zoom out, reset to fit</li>',
         '<li><b>Left / Right arrows</b> - previous / next image in the folder</li>',
+        '</ul>',
+        '<p class="jp-AdvancedImageViewer-help-section">Standard viewer keys (compose with the above)</p>',
+        '<ul>',
+        '<li><b>] / [</b> - rotate clockwise / counter-clockwise</li>',
+        '<li><b>H / V</b> - flip horizontal / vertical</li>',
+        '<li><b>I</b> - invert colours</li>',
+        '<li><b>= / - / 0</b> - zoom in / out / reset</li>',
         '</ul>'
       ].join('');
       void showDialog({
@@ -146,15 +154,17 @@ const plugin: JupyterFrontEndPlugin<void> = {
         })
       );
       widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
-      widget.toolbar.addItem(
-        'advanced-help',
-        new ToolbarButton({
-          label: '?',
-          tooltip: 'Keybindings and help',
-          className: 'jp-AdvancedImageViewer-help-button',
-          onClick: () => showHelp()
-        })
-      );
+      const helpLink = new Widget({ node: document.createElement('a') });
+      const helpAnchor = helpLink.node as HTMLAnchorElement;
+      helpAnchor.textContent = 'help';
+      helpAnchor.href = '#';
+      helpAnchor.title = 'Keybindings and help';
+      helpAnchor.className = 'jp-AdvancedImageViewer-help-link';
+      helpAnchor.addEventListener('click', event => {
+        event.preventDefault();
+        showHelp();
+      });
+      widget.toolbar.addItem('advanced-help', helpLink);
     };
 
     tracker.forEach(widget => attach(widget));

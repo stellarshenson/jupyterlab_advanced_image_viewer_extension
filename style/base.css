@@ -4,8 +4,37 @@
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
 
+/* Pan/zoom layer wrapping the <img> so our transform composes with the stock
+   viewer's rotate/flip transform on the image itself. Fills the host. */
+.jp-AdvancedImageViewer-panlayer {
+  position: absolute;
+  inset: 0;
+  transform-origin: center center;
+}
+
+/* Help shown as an accent-coloured link at the right end of the toolbar.
+   The selector is scoped under .jp-Toolbar to beat JupyterLab's toolbar `a`
+   rule (otherwise the link renders in the default muted toolbar colour). */
+.jp-Toolbar a.jp-AdvancedImageViewer-help-link {
+  align-self: center;
+  margin: 0 8px;
+  color: var(--jp-brand-color1);
+  font-size: var(--jp-ui-font-size1);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.jp-Toolbar a.jp-AdvancedImageViewer-help-link:hover {
+  color: var(--jp-brand-color0);
+}
+
 .jp-AdvancedImageViewer-help {
-  max-width: 360px;
+  max-width: 380px;
+}
+
+.jp-AdvancedImageViewer-help-section {
+  margin: 12px 0 0;
+  font-weight: 600;
 }
 
 .jp-AdvancedImageViewer-help ul {

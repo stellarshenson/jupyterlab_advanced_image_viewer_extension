@@ -1,17 +1,18 @@
 // ViewerController adds zoom + pan ON TOP of JupyterLab's stock image viewer.
-// The stock viewer already fits the image with CSS (object-fit: contain,
-// max-width/height: 100%), so the identity transform IS the correct
-// fit-to-screen view for both raster and SVG. We never read naturalWidth /
-// naturalHeight (an SVG with only a viewBox reports a bogus intrinsic size).
-// Zoom is a single relative factor s (s = 1 is fit); pan is a translate.
-// transform-origin is the host centre, matching the centred object-fit layout.
+// The stock viewer OWNS the <img> transform - it writes rotate / flip / its own
+// scale there for its keybindings (], [, h, v, 0). If we also wrote the <img>
+// transform we would clobber that (and it would clobber ours). Instead we wrap
+// the <img> in a pan layer and apply our translate+scale to the LAYER; the two
+// transforms then compose. The stock CSS (object-fit: contain, max-width/height:
+// 100%) still fits the image inside the layer, so the identity layer transform
+// equals the correct fit-to-screen view, and stock rotate/flip keeps working.
 
 const MIN_SCALE = 0.05;
 const MAX_SCALE = 40;
 
 export class ViewerController {
   private host: HTMLElement;
-  private img: HTMLImageElement;
+  private layer: HTMLElement;
   private s = 1;
   private tx = 0;
   private ty = 0;
@@ -23,10 +24,20 @@ export class ViewerController {
 
   constructor(host: HTMLElement, img: HTMLImageElement, zoomStep: number) {
     this.host = host;
-    this.img = img;
     this.zoomStep = zoomStep;
     this.host.style.overflow = 'hidden';
-    this.img.style.transformOrigin = 'center center';
+    // Wrap the image so our zoom/pan compose with the stock rotate/flip
+    // transform that the viewer writes onto the <img> element itself. The
+    // layer fills the host (which is a positioned widget), so the stock
+    // object-fit/max-width CSS fits the image exactly as before.
+    const layer = document.createElement('div');
+    layer.className = 'jp-AdvancedImageViewer-panlayer';
+    const parent = img.parentNode;
+    if (parent) {
+      parent.insertBefore(layer, img);
+    }
+    layer.appendChild(img);
+    this.layer = layer;
     this.host.addEventListener('wheel', this.onWheel, { passive: false });
     this.host.addEventListener('mousedown', this.onDown);
     this.ro = new ResizeObserver(() => this.onResize());
@@ -142,8 +153,8 @@ export class ViewerController {
   }
 
   private apply(): void {
-    this.img.style.transformOrigin = 'center center';
-    this.img.style.transform = `translate(${this.tx}px, ${this.ty}px) scale(${this.s})`;
+    this.layer.style.transformOrigin = 'center center';
+    this.layer.style.transform = `translate(${this.tx}px, ${this.ty}px) scale(${this.s})`;
     this.updateCursor();
   }
 
@@ -157,5 +168,12 @@ export class ViewerController {
     this.host.removeEventListener('mousedown', this.onDown);
     window.removeEventListener('mousemove', this.onMove);
     window.removeEventListener('mouseup', this.onUp);
+    // Unwrap: restore the <img> as a direct child and drop the layer.
+    const img = this.layer.querySelector('img');
+    const parent = this.layer.parentNode;
+    if (img && parent) {
+      parent.insertBefore(img, this.layer);
+    }
+    this.layer.remove();
   }
 }
