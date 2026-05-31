@@ -38,8 +38,18 @@ test.describe('Advanced Image Viewer', () => {
     // it is located at page scope - only one viewer is open in this test.
     const help = page.locator('.jp-AdvancedImageViewer-help-link');
     await expect(help).toHaveText('help');
-    const color = await help.evaluate(el => getComputedStyle(el).color);
-    expect(color).toBe('rgb(33, 150, 243)');
+    // The link colour must equal the resolved --jp-brand-color1 accent
+    // (the exact rgb differs between themes/versions, so compare values).
+    const { color, brand } = await help.evaluate(el => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--jp-brand-color1)';
+      document.body.appendChild(probe);
+      const brand = getComputedStyle(probe).color;
+      probe.remove();
+      return { color: getComputedStyle(el).color, brand };
+    });
+    expect(color).toBe(brand);
+    expect(color).not.toBe('rgb(0, 0, 0)');
 
     // Clicking it opens the keybindings popup, listing both the extension
     // controls and the standard viewer keys it composes with.
