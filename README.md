@@ -10,6 +10,10 @@
 
 A JupyterLab 4 extension that makes the built-in image viewer interactive. Images open fitted to the panel just like the stock viewer, then you can zoom with the wheel, pan by dragging, and step through a folder of images with the arrow keys - all in a single viewer tab.
 
+![Advanced image viewer](https://raw.githubusercontent.com/stellarshenson/jupyterlab_advanced_image_viewer_extension/main/.resources/screenshot.png)
+
+The viewer toolbar adds zoom in / out / fit controls and a `help` link that lists every keybinding.
+
 ## Features
 
 - **Fit to screen** - every image opens scaled to fit the panel (same result as the stock viewer), and reset returns to that fit
