@@ -90,15 +90,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
         '<ul>',
         '<li><b>Wheel up / down</b> - zoom in / out at the cursor</li>',
         '<li><b>Click and drag</b> - pan a zoomed-in image</li>',
-        '<li><b>+ / - / Fit</b> - zoom in, zoom out, reset to fit</li>',
+        '<li><b>Toolbar buttons</b> - zoom in, zoom out, reset to fit</li>',
         '<li><b>Left / Right arrows</b> - previous / next image in the folder</li>',
         '</ul>',
         '<p class="jp-AdvancedImageViewer-help-section">Standard viewer keys (compose with the above)</p>',
         '<ul>',
+        '<li><b>= / - / 0</b> - zoom in / out / reset</li>',
         '<li><b>] / [</b> - rotate clockwise / counter-clockwise</li>',
         '<li><b>H / V</b> - flip horizontal / vertical</li>',
         '<li><b>I</b> - invert colours</li>',
-        '<li><b>= / - / 0</b> - zoom in / out / reset</li>',
         '</ul>'
       ].join('');
       void showDialog({
