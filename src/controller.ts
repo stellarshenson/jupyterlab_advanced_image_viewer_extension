@@ -19,7 +19,6 @@ export class ViewerController {
   private panning = false;
   private start = { x: 0, y: 0, tx: 0, ty: 0 };
   private zoomStep: number;
-  private ro: ResizeObserver;
   private disposed = false;
 
   constructor(host: HTMLElement, img: HTMLImageElement, zoomStep: number) {
@@ -40,8 +39,6 @@ export class ViewerController {
     this.layer = layer;
     this.host.addEventListener('wheel', this.onWheel, { passive: false });
     this.host.addEventListener('mousedown', this.onDown);
-    this.ro = new ResizeObserver(() => this.onResize());
-    this.ro.observe(this.host);
     this.apply();
   }
 
@@ -79,7 +76,6 @@ export class ViewerController {
     this.tx = ax - cx - k * (ax - cx - this.tx);
     this.ty = ay - cy - k * (ay - cy - this.ty);
     this.s = sNew;
-    this.clampPan();
     this.apply();
   }
 
@@ -100,24 +96,7 @@ export class ViewerController {
     this.zoomAt(1 / (1 + this.zoomStep), vw / 2, vh / 2);
   }
 
-  private canPan(): boolean {
-    return this.s > 1;
-  }
-
-  // Bound the translate to the overflow implied by the zoom so the image
-  // cannot be panned out of view. Range collapses to 0 as s approaches 1.
-  private clampPan(): void {
-    const { vw, vh } = this.viewport();
-    const mx = (Math.max(this.s, 1) - 1) * vw * 0.5;
-    const my = (Math.max(this.s, 1) - 1) * vh * 0.5;
-    this.tx = Math.min(mx, Math.max(-mx, this.tx));
-    this.ty = Math.min(my, Math.max(-my, this.ty));
-  }
-
   private onDown = (e: MouseEvent): void => {
-    if (!this.canPan()) {
-      return;
-    }
     e.preventDefault();
     this.panning = true;
     this.start = { x: e.clientX, y: e.clientY, tx: this.tx, ty: this.ty };
@@ -132,7 +111,6 @@ export class ViewerController {
     }
     this.tx = this.start.tx + (e.clientX - this.start.x);
     this.ty = this.start.ty + (e.clientY - this.start.y);
-    this.clampPan();
     this.apply();
   };
 
@@ -143,13 +121,10 @@ export class ViewerController {
     window.removeEventListener('mouseup', this.onUp);
   };
 
-  private onResize(): void {
-    this.clampPan();
-    this.apply();
-  }
-
+  // Pan is always available (canvas-style): show grab normally, grabbing
+  // while a drag is in progress (apply() re-runs on every pan move).
   private updateCursor(): void {
-    this.host.style.cursor = this.canPan() ? 'grab' : 'default';
+    this.host.style.cursor = this.panning ? 'grabbing' : 'grab';
   }
 
   private apply(): void {
@@ -163,7 +138,6 @@ export class ViewerController {
       return;
     }
     this.disposed = true;
-    this.ro.disconnect();
     this.host.removeEventListener('wheel', this.onWheel);
     this.host.removeEventListener('mousedown', this.onDown);
     window.removeEventListener('mousemove', this.onMove);

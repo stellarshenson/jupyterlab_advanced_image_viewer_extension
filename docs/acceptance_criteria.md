@@ -57,13 +57,14 @@ unless stated; "baseline" = freshly opened image, before any interaction; refere
 - **D1 - reset returns to baseline**: the "Fit"/reset action restores exactly the A6 identity
   baseline (same rendered rect as A1-A5) from any zoom/pan state.
 
-## E. Pan
+## E. Pan (canvas-style, always available)
 
-- **E1 - drag pans when zoomed in**: with scale > 1, press-and-drag moves the image.
-- **E2 - bounded**: the image can never be dragged entirely out of the host; some part is
-  always visible.
-- **E3 - no pan when fit/zoomed out**: at scale <= 1 there is nothing to pan (cursor not grab,
-  or drag is a no-op) - the image stays put.
+- **E1 - drag pans at any zoom**: press-and-drag moves the image at every scale, including at
+  fit (scale = 1) - the fitted image slides freely into the empty space, no snap-back.
+- **E2 - grab cursor always**: the viewer shows the `grab` cursor at rest and `grabbing` while
+  dragging, regardless of zoom level.
+- **E3 - Fit recenters**: drag offsets are not clamped; the "Fit"/reset action is the way back
+  to the centered baseline (see D1).
 
 ## F. Folder navigation
 

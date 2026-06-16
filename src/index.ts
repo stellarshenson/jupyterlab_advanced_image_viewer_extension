@@ -89,7 +89,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         '<p class="jp-AdvancedImageViewer-help-section">This extension</p>',
         '<ul>',
         '<li><b>Wheel up / down</b> - zoom in / out at the cursor</li>',
-        '<li><b>Click and drag</b> - pan a zoomed-in image</li>',
+        '<li><b>Click and drag</b> - pan the image at any zoom</li>',
         '<li><b>Toolbar buttons</b> - zoom in, zoom out, reset to fit</li>',
         '<li><b>Left / Right arrows</b> - previous / next image in the folder</li>',
         '</ul>',
