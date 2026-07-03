@@ -31,7 +31,8 @@ const CommandIDs = {
   zoomOut: 'advanced-image-viewer:zoom-out',
   resetFit: 'advanced-image-viewer:reset-fit',
   previous: 'advanced-image-viewer:previous-image',
-  next: 'advanced-image-viewer:next-image'
+  next: 'advanced-image-viewer:next-image',
+  copyClipboard: 'advanced-image-viewer:copy-to-clipboard'
 };
 
 const IMAGE_EXTS = new Set([
@@ -43,6 +44,10 @@ const IMAGE_EXTS = new Set([
   '.svg',
   '.webp'
 ]);
+
+// Raster formats that can be drawn to a canvas and copied as PNG. SVG is
+// excluded - the drawio/SVG extension already adds its own "Copy as PNG".
+const RASTER_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']);
 
 interface ISettingsState {
   navEnabled: boolean;
@@ -184,6 +189,65 @@ const plugin: JupyterFrontEndPlugin<void> = {
       label: 'Reset to Fit (Advanced Image Viewer)',
       isEnabled: () => currentController() !== null,
       execute: () => currentController()?.reset()
+    });
+
+    // Resolve the image widget under the context-menu target. Right-click does
+    // not activate the widget, so hit-test the clicked node rather than rely on
+    // tracker.currentWidget.
+    const contextImageWidget = (): IDocumentWidget<ImageViewer> | null => {
+      const node = app.contextMenuHitTest(n =>
+        n.classList.contains('jp-ImageViewer')
+      );
+      if (!node) {
+        return null;
+      }
+      return tracker.find(widget => widget.content.node === node) ?? null;
+    };
+
+    app.commands.addCommand(CommandIDs.copyClipboard, {
+      label: 'Copy to Clipboard',
+      // Raster only - SVG already has "Copy as PNG" from the drawio extension.
+      isVisible: () => {
+        const widget = contextImageWidget();
+        return (
+          widget !== null &&
+          RASTER_EXTS.has(PathExt.extname(widget.context.path).toLowerCase())
+        );
+      },
+      execute: async () => {
+        const img = contextImageWidget()?.content.node.querySelector('img');
+        if (!img) {
+          return;
+        }
+        // Copy the source pixels, not the on-screen zoom/pan/rotate view.
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        const blob = await new Promise<Blob | null>(resolve =>
+          canvas.toBlob(resolve, 'image/png')
+        );
+        if (!blob) {
+          return;
+        }
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': blob })
+          ]);
+        } catch (err) {
+          console.error('Advanced image viewer: clipboard copy failed', err);
+        }
+      }
+    });
+
+    app.contextMenu.addItem({
+      command: CommandIDs.copyClipboard,
+      selector: '.jp-ImageViewer',
+      rank: 0
     });
 
     const navigate = async (delta: number): Promise<void> => {

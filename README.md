@@ -21,6 +21,7 @@ The viewer toolbar adds zoom in / out / fit controls and a `help` link that list
 - **Drag to pan** - hold and drag to move the image at any zoom (canvas-style); the grab cursor is always available and Fit recenters
 - **Toolbar controls** - zoom in, zoom out, and reset-to-fit buttons on the viewer toolbar
 - **Arrow-key navigation** - Left and Right open the previous and next image in the same folder, advancing within one viewer instead of opening new tabs
+- **Copy to clipboard** - right-click a raster image (PNG/JPG/…) and choose "Copy to Clipboard" to copy it as PNG to the system clipboard
 
 ## Requirements
 
