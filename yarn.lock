@@ -2725,7 +2725,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jupyterlab/ui-components@npm:^4.5.7":
+"@jupyterlab/ui-components@npm:^4.0.0, @jupyterlab/ui-components@npm:^4.5.7":
   version: 4.5.7
   resolution: "@jupyterlab/ui-components@npm:4.5.7"
   dependencies:
@@ -7572,6 +7572,7 @@ __metadata:
     "@jupyterlab/imageviewer": ^4.0.0
     "@jupyterlab/settingregistry": ^4.0.0
     "@jupyterlab/testutils": ^4.0.0
+    "@jupyterlab/ui-components": ^4.0.0
     "@lumino/disposable": ^2.0.0
     "@lumino/widgets": ^2.0.0
     "@types/jest": ^29.2.0

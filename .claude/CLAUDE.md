@@ -55,7 +55,7 @@ These skills MUST be referenced when working on this project:
   `/home/lab/workspace/private/jupyterlab/@utils/jupyterlab-extensions/Makefile`. As soon as a newer
   version is found in the reference, update the local `Makefile` to match it
 - The version is declared on the first line (`# Makefile for Jupyterlab extensions version X.YZ`).
-  Local and reference are currently both at v1.32
+  Local and reference are currently both at v1.37
 
 ## Git Tracking
 

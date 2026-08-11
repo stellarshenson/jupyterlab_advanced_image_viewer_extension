@@ -4,6 +4,12 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## [1.0.11] - 2026-08-11
+
+### Added
+
+- Refresh button on the image viewer toolbar that reloads the image from disk, matching the control the HTML viewer provides
+
 ## [1.0.9] - 2026-07-03
 
 ### Added

@@ -18,6 +18,8 @@ import { IImageTracker, ImageViewer } from '@jupyterlab/imageviewer';
 
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
+import { refreshIcon } from '@jupyterlab/ui-components';
+
 import { IDisposable } from '@lumino/disposable';
 
 import { Widget } from '@lumino/widgets';
@@ -134,6 +136,20 @@ const plugin: JupyterFrontEndPlugin<void> = {
         controllers.delete(viewer);
       });
 
+      // Reload from disk, like the HTML viewer's refresh button. That button
+      // skips the reload while the model is dirty; an image model is never
+      // edited, so there is nothing here to discard.
+      widget.toolbar.addItem(
+        'advanced-refresh',
+        new ToolbarButton({
+          icon: refreshIcon,
+          tooltip: 'Reload image from disk',
+          onClick: async () => {
+            await widget.context.revert();
+            widget.update();
+          }
+        })
+      );
       widget.toolbar.addItem(
         'advanced-zoom-out',
         new ToolbarButton({
