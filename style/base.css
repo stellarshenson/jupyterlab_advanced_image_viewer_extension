@@ -12,6 +12,15 @@
   transform-origin: center center;
 }
 
+/* The stock rule that gives these two values is `.jp-ImageViewer > img`, a
+   direct-child selector the pan layer breaks. The stock rotate/flip transform
+   is written for a top-left origin, so without this the image jumps sideways
+   on rotate and the pan clamp then drags it to a border. */
+.jp-AdvancedImageViewer-panlayer > img {
+  box-sizing: border-box;
+  transform-origin: top left;
+}
+
 /* Help shown as an accent-coloured link at the right end of the toolbar.
    The selector is scoped under .jp-Toolbar to beat JupyterLab's toolbar `a`
    rule (otherwise the link renders in the default muted toolbar colour). */
