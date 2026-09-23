@@ -146,13 +146,15 @@ The Fit control returns the view to the untouched baseline from any state
 
 Drag to move the image at any zoom, bounded so the image can touch a viewport border but never leave it or expose a gap
 
-- [ ] `ACC-PAN-18` **Drag pans at any zoom** - HIGH; press-and-drag moves the image at every scale, including at fit
+- [x] `ACC-PAN-18` **Drag pans at any zoom** - HIGH; press-and-drag moves the image at every scale, including at fit
+  - evidence: 2026-09-23 isolated JupyterLab 4.6.4 running 1.1.1, 800x300 PNG: a +50,+50 drag at fit moved the pan layer from translate(0px, 0px) to translate(50px, 50px); at scale 1.4641 (four toolbar + clicks) the same drag moved it from translate(123.239px, 169.164px) to translate(173.239px, 219.164px); Galata drag specs green in CI run 35884503553
   - related: ACC-PAN-38, ACC-PAN-39 - the clamp that bounds this drag
   - test: at fit and at scale 1.5, drag 50px and read the pan layer transform
   - test-tags: E2E
   - log: 2026-09-02T08:58:31Z @kj imported from docs/acceptance_criteria.md
   - log: 2026-09-02T08:59:47Z @kj the 1.0.7 free-slide wording (unclamped offsets, no snap-back) is superseded by ACC-PAN-38 and ACC-PAN-39; dragging at any zoom stays true, the range is now bounded
   - log: 2026-09-02T12:21:02Z @kj held open: recorded evidence is from shipped 1.0.11, whose pan was unbounded; the uncommitted clamp changes the behaviour this was measured against, so it needs re-verification in a browser before it closes
+  - log: 2026-09-23T16:13:56Z @kj closed
 - [ ] `ACC-PAN-19` **Grab cursor always** - MEDIUM; the viewer shows the `grab` cursor at rest and `grabbing` while dragging, regardless of zoom level
   - test: read the computed cursor at fit, during a drag, and while zoomed
   - test-tags: E2E
@@ -284,11 +286,13 @@ The standard image-viewer keys keep working, and this extension composes with th
   - test: press each key and read `img.style.transform` and `img.style.filter`
   - test-tags: E2E
   - log: 2026-09-02T08:58:33Z @kj imported from docs/acceptance_criteria.md
-- [ ] `ACC-STOCK-35` **Functionality composes after stock keys** - HIGH; after any stock keybinding, wheel and toolbar zoom, drag-pan and Fit all still operate while the rotation or flip stays applied, with the stock image transform and the pan-layer transform not clobbering each other
+- [x] `ACC-STOCK-35` **Functionality composes after stock keys** - HIGH; after any stock keybinding, wheel and toolbar zoom, drag-pan and Fit all still operate while the rotation or flip stays applied, with the stock image transform and the pan-layer transform not clobbering each other
+  - evidence: 2026-09-23 isolated JupyterLab 4.6.4 running 1.1.1, 800x300 PNG: after ] the img keeps scale(1) matrix(0, 1, -1, 0, 0, 0) translate(0%, -100%) with transform-origin 0px 0px through wheel zoom (layer scale 1.1), toolbar + (scale 1.21), a -40,+30 drag (ty +30, tx held by the clamp at the left border) and Fit (layer back to translate(0px, 0px) scale(1)); the rotated rect is anchored at the host top-left
   - test: rotate with `]`, then zoom, pan and Fit, asserting both transforms survive each step
   - test-tags: E2E
   - log: 2026-09-02T08:58:33Z @kj imported from docs/acceptance_criteria.md
   - log: 2026-09-02T12:21:02Z @kj held open: wrapping the img in the pan layer dropped the stock transform-origin top left, because .jp-ImageViewer > img is a direct-child selector, so rotate and flip pivoted from the centre in 1.0.7 through 1.0.11; restated on .jp-AdvancedImageViewer-panlayer > img in style/base.css and awaiting browser re-verification
+  - log: 2026-09-23T16:13:56Z @kj closed
 
 ## Help link `HELP`
 

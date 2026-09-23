@@ -4,6 +4,12 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## [1.1.2] - 2026-09-23
+
+### Changed
+
+- Acceptance criteria for dragging at any zoom and for zoom, pan and Fit after a stock rotate are verified in a browser against 1.1.1 and recorded as met
+
 ## [1.1.1] - 2026-09-23
 
 ### Added
