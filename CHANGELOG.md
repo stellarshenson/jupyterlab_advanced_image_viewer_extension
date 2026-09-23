@@ -4,6 +4,13 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## [1.1.1] - 2026-09-23
+
+### Added
+
+- WebP images open in the image viewer, with pan, zoom, the toolbar, folder navigation and the stock rotate and flip keys. JupyterLab defines a `webp` file type but binds no image viewer to it, so a `.webp` opened in the text editor and failed with "not UTF-8 encoded"
+- Galata integration test that opens a WebP from the file browser and checks it decodes in the viewer
+
 ## [1.1.0] - 2026-09-02
 
 ### Added

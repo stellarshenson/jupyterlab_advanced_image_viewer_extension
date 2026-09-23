@@ -23,6 +23,7 @@ The viewer toolbar adds zoom in / out / fit controls and a `help` link that list
 - **Arrow-key navigation** - Left and Right open the previous and next image in the same folder, advancing within one viewer instead of opening new tabs
 - **Copy to clipboard** - right-click a raster image (PNG/JPG/…) and choose "Copy to Clipboard" to copy it as PNG to the system clipboard
 - **Refresh** - a toolbar refresh button reloads the image from disk, the same control the HTML viewer provides
+- **WebP support** - `.webp` files open in the image viewer with every feature above; stock JupyterLab opens them in the text editor
 
 ## Requirements
 
