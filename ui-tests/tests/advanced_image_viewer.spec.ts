@@ -16,6 +16,11 @@ const SMALL =
   'viewBox="0 0 200 150"><rect width="200" height="150" fill="#3366cc"/></svg>';
 const SMALL_NAME = 'aiv-test-small.svg';
 
+// A 200x150 lossless WebP, base64. JupyterLab binds no image viewer to the
+// webp file type, so without this extension it opens in the text editor.
+const WEBP = 'UklGRiQAAABXRUJQVlA4TBcAAAAvx0AlAAdQs86Uuf8BAEX6/58i+p+SCgA=';
+const WEBP_NAME = 'aiv-test.webp';
+
 test.describe('Advanced Image Viewer', () => {
   // The default Galata file browser lives inside tmpPath, so the test image
   // must be uploaded there (not the server root) and opened with the Image
@@ -105,6 +110,30 @@ test.describe('Advanced Image Viewer', () => {
     await expect(img).toHaveAttribute('style', /matrix/);
     const layerStyle = await layer.getAttribute('style');
     expect(layerStyle).toMatch(/scale\(1\.[0-9]/);
+  });
+
+  test('a webp file opens in the image viewer by default', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.contents.uploadContent(
+      WEBP,
+      'base64',
+      `${tmpPath}/${WEBP_NAME}`
+    );
+    // No factory argument: this is the file browser's double-click path,
+    // which takes the default viewer for the file type.
+    await page.filebrowser.open(`${tmpPath}/${WEBP_NAME}`);
+    const viewer = page.locator('.jp-ImageViewer').last();
+    await viewer.waitFor();
+    const img = viewer.locator('.jp-AdvancedImageViewer-panlayer > img');
+    await expect(img).toHaveCount(1);
+    await expect
+      .poll(() =>
+        img.evaluate((i: HTMLImageElement) => [i.naturalWidth, i.naturalHeight])
+      )
+      .toEqual([200, 150]);
+    await page.contents.deleteFile(`${tmpPath}/${WEBP_NAME}`);
   });
 
   // ---------------------------------------------------------------------

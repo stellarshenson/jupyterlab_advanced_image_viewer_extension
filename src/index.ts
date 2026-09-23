@@ -191,6 +191,18 @@ const plugin: JupyterFrontEndPlugin<void> = {
     tracker.forEach(widget => attach(widget));
     tracker.widgetAdded.connect((_, widget) => attach(widget));
 
+    // JupyterLab registers a 'webp' file type but binds no image viewer to it,
+    // so a .webp falls through to the text editor and fails with "not UTF-8
+    // encoded". Bind the stock 'Image' factory to it rather than a factory of
+    // our own: the document manager finds an open tab by path and factory
+    // name, and the file browser, the /tree route, the layout restorer and
+    // navigate() must all name the same factory or each opens its own tab.
+    // The stock factory then tracks the widget and sets its icon, as for a PNG.
+    const webp = app.docRegistry.getFileType('webp');
+    if (webp) {
+      app.docRegistry.addFileType(webp, ['Image']);
+    }
+
     app.commands.addCommand(CommandIDs.zoomIn, {
       label: 'Zoom In (Advanced Image Viewer)',
       isEnabled: () => currentController() !== null,
