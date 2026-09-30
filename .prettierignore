@@ -6,3 +6,5 @@ node_modules
 jupyterlab_advanced_image_viewer_extension
 .claude
 docs
+eslint.config.mjs
+.venv

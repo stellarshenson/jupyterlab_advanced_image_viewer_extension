@@ -27,7 +27,7 @@ The viewer toolbar adds zoom in / out / fit controls and a `help` link that list
 
 ## Requirements
 
-- JupyterLab >= 4.0.0
+- JupyterLab >= 4.6
 
 ## Install
 
