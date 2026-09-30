@@ -55,12 +55,13 @@ These skills MUST be referenced when working on this project:
   `/home/lab/workspace/private/jupyterlab/@utils/jupyterlab-extensions/Makefile`. As soon as a newer
   version is found in the reference, update the local `Makefile` to match it
 - The version is declared on the first line (`# Makefile for Jupyterlab extensions version X.YZ`).
-  Local and reference are currently both at v1.37
+  Local and reference are currently both at v1.44
 
 ## Git Tracking
 
-- **MANDATORY**: Always track `package.json` and `package-lock.json` in git - both must be committed
-  and kept in sync with dependency changes
+- **MANDATORY**: Always track `package.json` and `yarn.lock` (root and `ui-tests/`) in git - both
+  must be committed and kept in sync with dependency changes. There is no `package-lock.json`: the
+  Makefile (1.41+) and CI install with `jlpm` only
 
 ## Journal Rules (Project-Specific)
 
