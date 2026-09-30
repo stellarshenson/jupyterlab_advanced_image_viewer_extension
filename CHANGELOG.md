@@ -4,6 +4,22 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## [1.1.3] - 2026-09-30
+
+### Added
+
+- Galata integration test that reverses the file browser's name sort and checks that Right opens the image the file browser lists next
+
+### Changed
+
+- Updated to JupyterLab extension template 4.6.5: the extension builds with `@jupyter/builder` (Rspack) instead of the webpack-based builder, and lints with ESLint 9
+- Requires JupyterLab 4.6 or later. Dependency floors are raised to the tested versions, and every CI job runs on Python 3.13
+
+### Fixed
+
+- Left and Right now step through the images in the order the file browser lists them. Under a sort plugin such as a C-locale sort, which lists `.` before `_`, the viewer used its own order and skipped a file the file browser showed between two others
+- The CI build no longer fails on the template's endpoint-authentication check, which loads a server extension this package does not have
+
 ## [1.1.2] - 2026-09-23
 
 ### Changed

@@ -20,7 +20,7 @@ The viewer toolbar adds zoom in / out / fit controls and a `help` link that list
 - **Wheel zoom** - scroll to zoom in and out, anchored at the cursor; zoom out as far as you like
 - **Drag to pan** - hold and drag to move the image at any zoom; the image can touch a viewport border but never leave it, the grab cursor is always available, and Fit recenters
 - **Toolbar controls** - zoom in, zoom out, and reset-to-fit buttons on the viewer toolbar
-- **Arrow-key navigation** - Left and Right open the previous and next image in the same folder, advancing within one viewer instead of opening new tabs
+- **Arrow-key navigation** - Left and Right open the previous and next image in the same folder, in the order the file browser lists them, advancing within one viewer instead of opening new tabs
 - **Copy to clipboard** - right-click a raster image (PNG/JPG/…) and choose "Copy to Clipboard" to copy it as PNG to the system clipboard
 - **Refresh** - a toolbar refresh button reloads the image from disk, the same control the HTML viewer provides
 - **WebP support** - `.webp` files open in the image viewer with every feature above; stock JupyterLab opens them in the text editor
