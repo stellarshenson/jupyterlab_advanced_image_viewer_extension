@@ -205,12 +205,15 @@ Drag to move the image at any zoom, bounded so the image can touch a viewport bo
 
 Left and Right arrows step through the images in the same folder inside one viewer tab
 
-- [x] `ACC-NAV-21` **Arrow keys advance** - HIGH; Left and Right open the previous and next image in the same folder, ordered naturally
-  - evidence: JOURNAL entry 5 (v0.4.7): "real Left/Right arrow keys advancing within one tab (viewer focusable, confirmed both directions)" [JOURNAL.md entry 5; entry 4 records the same for ArrowRight]
+- [x] `ACC-NAV-21` **Arrow keys advance** - HIGH; Left and Right open the previous and next image in the same folder, in the order the file browser lists them when it shows that folder, natural name order otherwise
+  - evidence: 2026-09-30 isolated JupyterLab 4.6.4 with jupyterlab_file_browser_sorting_extension: from 01-two-repeating-loops-beautified.svg, Right, Right, Left, Left visit beautified_print, loops, beautified_print, beautified in the listed order; with the name sort reversed, Right from aiv-nav-2.svg opens aiv-nav-1.svg; Galata spec 'arrow keys follow the order the file browser shows' added
   - test: open the middle image of a folder, press Right then Left, assert the paths
   - test-tags: E2E
   - log: 2026-09-02T08:58:32Z @kj imported from docs/acceptance_criteria.md
   - log: 2026-09-02T12:20:41Z @kj closed: closed on recorded evidence from the shipped 1.0.11 verification
+  - log: 2026-09-30T12:11:28Z @kj amended text "Left and Right open the previous and next image in the same folder, ordered naturally" -> "HIGH; Left and Right open the previous and next image in the same folder, in the order the file browser lists them when it shows that folder, natural name order otherwise"
+  - log: 2026-09-30T12:11:28Z @kj reopened: reopened: order rule changed by DEF-NAV-1; the 1.0.11 evidence covers the old natural-order wording; evidence retired: JOURNAL entry 5 (v0.4.7): "real Left/Right arrow keys advancing within one tab (viewer focusable, confirmed both directions)" [JOURNAL.md entry 5; entry 4 records the same for ArrowRight]
+  - log: 2026-09-30T12:11:28Z @kj closed
 - [x] `ACC-NAV-22` **Single tab, no stacking** - HIGH; navigating does not increase the open image-tab count, so one image tab advances
   - evidence: JOURNAL entry 4: "ArrowRight advances within a single tab", and entry 5: "Left/Right arrow keys advancing within one tab" - the tab count does not grow because "nav opens next image and disposes the previous widget so one tab advances" [JOURNAL.md entries 4 and 5]
   - test: count image tabs before and after three navigations

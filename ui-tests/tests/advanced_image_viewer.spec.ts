@@ -136,6 +136,38 @@ test.describe('Advanced Image Viewer', () => {
     await page.contents.deleteFile(`${tmpPath}/${WEBP_NAME}`);
   });
 
+  // DEF-NAV-1: Right must open the image the file browser lists next. A
+  // descending name sort makes the listed order differ from the natural
+  // order, so a navigation that re-sorts the folder by name fails here.
+  test('arrow keys follow the order the file browser shows', async ({
+    page,
+    tmpPath
+  }) => {
+    for (const n of [1, 2, 3]) {
+      await page.contents.uploadContent(
+        SMALL,
+        'text',
+        `${tmpPath}/aiv-nav-${n}.svg`
+      );
+    }
+    await page.filebrowser.openDirectory(tmpPath);
+    await page.locator('.jp-DirListing-headerItem.jp-id-name').click();
+    await expect(
+      page.locator('.jp-DirListing-header .jp-mod-descending')
+    ).toHaveCount(1);
+
+    await page.filebrowser.open(`${tmpPath}/aiv-nav-2.svg`, 'Image');
+    const viewer = page.locator('.jp-ImageViewer').last();
+    await viewer.waitFor();
+    await viewer.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(
+      page.locator(
+        '#jp-main-dock-panel .lm-TabBar-tab.lm-mod-current .lm-TabBar-tabLabel'
+      )
+    ).toHaveText('aiv-nav-1.svg');
+  });
+
   // ---------------------------------------------------------------------
   // Pan clamp - ACC-PAN-38, 39, 40, 43.
   //

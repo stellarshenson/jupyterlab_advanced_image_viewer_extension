@@ -14,6 +14,8 @@ import { PathExt } from '@jupyterlab/coreutils';
 
 import { IDocumentWidget } from '@jupyterlab/docregistry';
 
+import { DirListing, IDefaultFileBrowser } from '@jupyterlab/filebrowser';
+
 import { IImageTracker, ImageViewer } from '@jupyterlab/imageviewer';
 
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
@@ -67,11 +69,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
     'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation.',
   autoStart: true,
   requires: [IImageTracker],
-  optional: [ISettingRegistry],
+  optional: [ISettingRegistry, IDefaultFileBrowser],
   activate: (
     app: JupyterFrontEnd,
     tracker: IImageTracker,
-    settingRegistry: ISettingRegistry | null
+    settingRegistry: ISettingRegistry | null,
+    fileBrowser: IDefaultFileBrowser | null
   ): void => {
     console.log(
       'JupyterLab extension jupyterlab_advanced_image_viewer_extension is activated!'
@@ -285,29 +288,41 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
       const path = widget.context.path;
       const dirPath = PathExt.dirname(path);
-      const listing = await app.serviceManager.contents.get(dirPath, {
-        content: true
-      });
-      const content = listing.content as Array<{
-        name: string;
-        path: string;
-        type: string;
-      }> | null;
-      if (!content) {
-        return;
+      const isImage = (item: { name: string; type: string }): boolean =>
+        item.type === 'file' &&
+        IMAGE_EXTS.has(PathExt.extname(item.name).toLowerCase());
+      // Step through the images in the order the file browser shows them
+      // when it lists this folder, so its sort key, its direction and any
+      // sort plugin decide what comes next: a C-locale sort puts '.' before
+      // '_' where localeCompare puts '_' first, and a re-sort here skipped
+      // files. FileBrowser keeps `listing` protected, but it is the only
+      // source of the displayed order. Otherwise fall back to natural name
+      // order, the stock file browser default.
+      let images: Array<{ name: string; path: string; type: string }> = [];
+      if (fileBrowser && fileBrowser.model.path === dirPath) {
+        const shown = (fileBrowser as unknown as { listing: DirListing })
+          .listing;
+        images = Array.from(shown.sortedItems()).filter(isImage);
       }
-      const images = content
-        .filter(
-          item =>
-            item.type === 'file' &&
-            IMAGE_EXTS.has(PathExt.extname(item.name).toLowerCase())
-        )
-        .sort((a, b) =>
+      if (!images.some(item => item.path === path)) {
+        const listing = await app.serviceManager.contents.get(dirPath, {
+          content: true
+        });
+        const content = listing.content as Array<{
+          name: string;
+          path: string;
+          type: string;
+        }> | null;
+        if (!content) {
+          return;
+        }
+        images = content.filter(isImage).sort((a, b) =>
           a.name.localeCompare(b.name, undefined, {
             numeric: true,
             sensitivity: 'base'
           })
         );
+      }
       if (images.length <= 1) {
         return;
       }
