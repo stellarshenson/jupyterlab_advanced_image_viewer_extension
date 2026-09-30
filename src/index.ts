@@ -147,6 +147,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         new ToolbarButton({
           icon: refreshIcon,
           tooltip: 'Reload image from disk',
+          noFocusOnClick: true,
           onClick: async () => {
             await widget.context.revert();
             widget.update();
@@ -158,6 +159,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         new ToolbarButton({
           label: '-',
           tooltip: 'Zoom out',
+          noFocusOnClick: true,
           onClick: () => app.commands.execute(CommandIDs.zoomOut)
         })
       );
@@ -166,6 +168,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         new ToolbarButton({
           label: '+',
           tooltip: 'Zoom in',
+          noFocusOnClick: true,
           onClick: () => app.commands.execute(CommandIDs.zoomIn)
         })
       );
@@ -174,6 +177,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         new ToolbarButton({
           label: 'Fit',
           tooltip: 'Reset to fit',
+          noFocusOnClick: true,
           onClick: () => app.commands.execute(CommandIDs.resetFit)
         })
       );
@@ -296,12 +300,17 @@ const plugin: JupyterFrontEndPlugin<void> = {
       // sort plugin decide what comes next: a C-locale sort puts '.' before
       // '_' where localeCompare puts '_' first, and a re-sort here skipped
       // files. FileBrowser keeps `listing` protected, but it is the only
-      // source of the displayed order. Otherwise fall back to natural name
-      // order, the stock file browser default.
+      // source of the displayed order. The listing re-sorts on a refresh only
+      // while it is visible, so a hidden one is re-sorted here; re-sorting a
+      // visible one would re-render every row on each step. Otherwise fall
+      // back to natural name order, the stock file browser default.
       let images: Array<{ name: string; path: string; type: string }> = [];
       if (fileBrowser && fileBrowser.model.path === dirPath) {
         const shown = (fileBrowser as unknown as { listing: DirListing })
           .listing;
+        if (!shown.isVisible) {
+          shown.sort(shown.sortState);
+        }
         images = Array.from(shown.sortedItems()).filter(isImage);
       }
       if (!images.some(item => item.path === path)) {

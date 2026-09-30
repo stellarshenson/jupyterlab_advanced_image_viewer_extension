@@ -147,7 +147,11 @@ export class ViewerController {
   }
 
   private onDown = (e: MouseEvent): void => {
+    // preventDefault stops the browser dragging the image out, and with it the
+    // focus a click would give the viewer; focus it here, or after a toolbar
+    // click the stock keys and Left/Right go to the button instead.
     e.preventDefault();
+    this.host.focus();
     this.panning = true;
     this.start = { x: e.clientX, y: e.clientY, tx: this.tx, ty: this.ty };
     this.host.style.cursor = 'grabbing';

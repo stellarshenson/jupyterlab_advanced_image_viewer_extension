@@ -297,6 +297,23 @@ describe('ViewerController', () => {
     c.dispose();
   });
 
+  // DEF-KEYS-2: the mousedown handler cancels the browser's image drag, which
+  // also cancels the focus a click gives; the viewer must take focus itself.
+  it('takes keyboard focus from a toolbar button when the image is pressed', () => {
+    host.tabIndex = 0;
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+    new ViewerController(host, img, 0.1);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    host.dispatchEvent(
+      new MouseEvent('mousedown', { clientX: 0, clientY: 0, cancelable: true })
+    );
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    expect(document.activeElement).toBe(host);
+    button.remove();
+  });
+
   it('stops observing the host and the image on dispose', () => {
     stubGeometry(80, 60);
     const c = new ViewerController(host, img, 0.1);
