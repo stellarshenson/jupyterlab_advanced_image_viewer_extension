@@ -4,6 +4,19 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## [1.1.4] - 2026-09-30
+
+### Added
+
+- Galata integration tests for every acceptance criterion that can run in CI, 30 specs in all
+- The Galata suite runs locally on the port set in `JUPYTER_TEST_PORT`, with its own settings folder, so it does not collide with a running JupyterLab
+
+### Fixed
+
+- The stock keys and Left/Right keep working after a click on a toolbar button (+, -, Fit, refresh) or on the image; before, the click left keyboard focus on the button
+- Left and Right find an image added to the folder while the file browser sidebar is collapsed
+- Left and Right no longer redraw the whole file browser listing on every step, which slowed each step in large folders
+
 ## [1.1.3] - 2026-09-30
 
 ### Added
