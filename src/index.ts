@@ -20,12 +20,15 @@ import { IImageTracker, ImageViewer } from '@jupyterlab/imageviewer';
 
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
+import { ITranslator, nullTranslator } from '@jupyterlab/translation';
+
 import { imageIcon, refreshIcon } from '@jupyterlab/ui-components';
 
 import { IDisposable } from '@lumino/disposable';
 
 import { Widget } from '@lumino/widgets';
 
+// eslint-disable-next-line jupyter/prefer-lazy-imports -- activation attaches the controller to restored image tabs at once
 import { ViewerController } from './controller';
 
 const PLUGIN_ID = 'jupyterlab_advanced_image_viewer_extension:plugin';
@@ -78,15 +81,19 @@ const plugin: JupyterFrontEndPlugin<void> = {
     'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation.',
   autoStart: true,
   requires: [IImageTracker],
-  optional: [ISettingRegistry, IDefaultFileBrowser],
+  optional: [ISettingRegistry, IDefaultFileBrowser, ITranslator],
   activate: (
     app: JupyterFrontEnd,
     tracker: IImageTracker,
     settingRegistry: ISettingRegistry | null,
-    fileBrowser: IDefaultFileBrowser | null
+    fileBrowser: IDefaultFileBrowser | null,
+    translator: ITranslator | null
   ): void => {
     console.log(
       'JupyterLab extension jupyterlab_advanced_image_viewer_extension is activated!'
+    );
+    const trans = (translator ?? nullTranslator).load(
+      'jupyterlab_advanced_image_viewer_extension'
     );
     const controllers = new WeakMap<ImageViewer, ViewerController>();
     const state: ISettingsState = { ...defaults };
@@ -121,9 +128,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
         '</ul>'
       ].join('');
       void showDialog({
-        title: 'Advanced Image Viewer',
+        title: trans.__('Advanced Image Viewer'),
         body,
-        buttons: [Dialog.okButton({ label: 'Close' })]
+        buttons: [Dialog.okButton({ label: trans.__('Close') })]
       });
     };
 
@@ -155,7 +162,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         'advanced-refresh',
         new ToolbarButton({
           icon: refreshIcon,
-          tooltip: 'Reload image from disk',
+          tooltip: trans.__('Reload image from disk'),
           noFocusOnClick: true,
           onClick: async () => {
             await widget.context.revert();
@@ -167,7 +174,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         'advanced-zoom-out',
         new ToolbarButton({
           label: '-',
-          tooltip: 'Zoom out',
+          tooltip: trans.__('Zoom out'),
           noFocusOnClick: true,
           onClick: () => app.commands.execute(CommandIDs.zoomOut)
         })
@@ -176,7 +183,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         'advanced-zoom-in',
         new ToolbarButton({
           label: '+',
-          tooltip: 'Zoom in',
+          tooltip: trans.__('Zoom in'),
           noFocusOnClick: true,
           onClick: () => app.commands.execute(CommandIDs.zoomIn)
         })
@@ -184,8 +191,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
       widget.toolbar.addItem(
         'advanced-reset-fit',
         new ToolbarButton({
-          label: 'Fit',
-          tooltip: 'Reset to fit',
+          label: trans.__('Fit'),
+          tooltip: trans.__('Reset to fit'),
           noFocusOnClick: true,
           onClick: () => app.commands.execute(CommandIDs.resetFit)
         })
@@ -193,9 +200,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
       widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
       const helpLink = new Widget({ node: document.createElement('a') });
       const helpAnchor = helpLink.node as HTMLAnchorElement;
-      helpAnchor.textContent = 'help';
+      helpAnchor.textContent = trans.__('help');
       helpAnchor.href = '#';
-      helpAnchor.title = 'Keybindings and help';
+      helpAnchor.title = trans.__('Keybindings and help');
       helpAnchor.className = 'jp-AdvancedImageViewer-help-link';
       helpAnchor.addEventListener('click', event => {
         event.preventDefault();
@@ -233,17 +240,20 @@ const plugin: JupyterFrontEndPlugin<void> = {
     );
 
     app.commands.addCommand(CommandIDs.zoomIn, {
-      label: 'Zoom In (Advanced Image Viewer)',
+      label: trans.__('Zoom In (Advanced Image Viewer)'),
+      describedBy: { args: { type: 'object', properties: {} } },
       isEnabled: () => currentController() !== null,
       execute: () => currentController()?.zoomIn()
     });
     app.commands.addCommand(CommandIDs.zoomOut, {
-      label: 'Zoom Out (Advanced Image Viewer)',
+      label: trans.__('Zoom Out (Advanced Image Viewer)'),
+      describedBy: { args: { type: 'object', properties: {} } },
       isEnabled: () => currentController() !== null,
       execute: () => currentController()?.zoomOut()
     });
     app.commands.addCommand(CommandIDs.resetFit, {
-      label: 'Reset to Fit (Advanced Image Viewer)',
+      label: trans.__('Reset to Fit (Advanced Image Viewer)'),
+      describedBy: { args: { type: 'object', properties: {} } },
       isEnabled: () => currentController() !== null,
       execute: () => currentController()?.reset()
     });
@@ -262,7 +272,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     };
 
     app.commands.addCommand(CommandIDs.copyClipboard, {
-      label: 'Copy to Clipboard',
+      label: trans.__('Copy to Clipboard'),
+      describedBy: { args: { type: 'object', properties: {} } },
       // Raster only - SVG already has "Copy as PNG" from the drawio extension.
       isVisible: () => {
         const widget = contextImageWidget();
@@ -381,12 +392,14 @@ const plugin: JupyterFrontEndPlugin<void> = {
     };
 
     app.commands.addCommand(CommandIDs.previous, {
-      label: 'Previous Image In Folder',
+      label: trans.__('Previous Image In Folder'),
+      describedBy: { args: { type: 'object', properties: {} } },
       isEnabled: () => state.navEnabled && tracker.currentWidget !== null,
       execute: () => navigate(-1)
     });
     app.commands.addCommand(CommandIDs.next, {
-      label: 'Next Image In Folder',
+      label: trans.__('Next Image In Folder'),
+      describedBy: { args: { type: 'object', properties: {} } },
       isEnabled: () => state.navEnabled && tracker.currentWidget !== null,
       execute: () => navigate(1)
     });

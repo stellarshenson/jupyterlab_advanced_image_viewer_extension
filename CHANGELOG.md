@@ -4,6 +4,14 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## [1.1.6] - 2026-10-05
+
+### Changed
+
+- Toolbar tooltips, command labels, the help link and the help dialog's title and button go through JupyterLab's translator, so a language pack can translate them. This adds `@jupyterlab/translation` as a dependency
+- Each of the six commands declares that it takes no arguments (`describedBy`)
+- The lint check passes with no warnings; it reported 22 since the update to extension template 4.6.5
+
 ## [1.1.5] - 2026-10-05
 
 ### Added
