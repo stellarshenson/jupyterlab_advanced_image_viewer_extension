@@ -20,7 +20,7 @@ import { IImageTracker, ImageViewer } from '@jupyterlab/imageviewer';
 
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
-import { refreshIcon } from '@jupyterlab/ui-components';
+import { imageIcon, refreshIcon } from '@jupyterlab/ui-components';
 
 import { IDisposable } from '@lumino/disposable';
 
@@ -46,12 +46,21 @@ const IMAGE_EXTS = new Set([
   '.gif',
   '.bmp',
   '.svg',
-  '.webp'
+  '.webp',
+  '.avif'
 ]);
 
 // Raster formats that can be drawn to a canvas and copied as PNG. SVG is
 // excluded - the drawio/SVG extension already adds its own "Copy as PNG".
-const RASTER_EXTS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']);
+const RASTER_EXTS = new Set([
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.bmp',
+  '.webp',
+  '.avif'
+]);
 
 interface ISettingsState {
   navEnabled: boolean;
@@ -209,6 +218,19 @@ const plugin: JupyterFrontEndPlugin<void> = {
     if (webp) {
       app.docRegistry.addFileType(webp, ['Image']);
     }
+    // JupyterLab registers no 'avif' file type at all, so add one with the
+    // same shape as its other image types, bound to the same factory.
+    app.docRegistry.addFileType(
+      {
+        name: 'avif',
+        displayName: 'Image',
+        mimeTypes: ['image/avif'],
+        extensions: ['.avif'],
+        icon: imageIcon,
+        fileFormat: 'base64'
+      },
+      ['Image']
+    );
 
     app.commands.addCommand(CommandIDs.zoomIn, {
       label: 'Zoom In (Advanced Image Viewer)',

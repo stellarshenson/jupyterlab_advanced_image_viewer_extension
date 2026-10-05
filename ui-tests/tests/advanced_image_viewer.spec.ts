@@ -17,9 +17,16 @@ const SMALL =
 const SMALL_NAME = 'aiv-test-small.svg';
 
 // A 200x150 lossless WebP, base64. JupyterLab binds no image viewer to the
-// webp file type, so without this extension it opens in the text editor.
+// webp file type, so without this extension it fails to open with a File
+// Load Error.
 const WEBP = 'UklGRiQAAABXRUJQVlA4TBcAAAAvx0AlAAdQs86Uuf8BAEX6/58i+p+SCgA=';
 const WEBP_NAME = 'aiv-test.webp';
+
+// A 200x150 AVIF, base64. JupyterLab has no avif file type, so without this
+// extension it fails to open with a File Load Error.
+const AVIF =
+  'AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADrbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAAAAAAAOcGl0bQAAAAAAAQAAAB5pbG9jAAAAAEQAAAEAAQAAAAEAAAETAAAAOQAAAChpaW5mAAAAAAABAAAAGmluZmUCAAAAAAEAAGF2MDFDb2xvcgAAAABqaXBycAAAAEtpcGNvAAAAFGlzcGUAAAAAAAAAyAAAAJYAAAAQcGl4aQAAAAADCAgIAAAADGF2MUOBAAwAAAAAE2NvbHJuY2x4AAEADQAGgAAAABdpcG1hAAAAAAAAAAEAAQQBAoMEAAAAQW1kYXQSAAoKGB3x5VogIaDQgDIpExHh4Xd0000wsAAAz8opx5R+XzMRWTyG0Cb1dhsrI8bqXhH3UP8744o=';
+const AVIF_NAME = 'aiv-test.avif';
 
 // A 200x150 PNG, base64, for the raster-only context menu item.
 const PNG =
@@ -152,6 +159,44 @@ test.describe('Advanced Image Viewer', () => {
       )
       .toEqual([200, 150]);
     await page.contents.deleteFile(`${tmpPath}/${WEBP_NAME}`);
+  });
+
+  // ACC-FIT-44: an avif file opens in the image viewer by default, with the
+  // toolbar zoom, the stock keys and the raster-only Copy to Clipboard item.
+  test('an avif file opens in the image viewer by default', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.contents.uploadContent(
+      AVIF,
+      'base64',
+      `${tmpPath}/${AVIF_NAME}`
+    );
+    // No factory argument: this is the file browser's double-click path,
+    // which takes the default viewer for the file type.
+    await page.filebrowser.open(`${tmpPath}/${AVIF_NAME}`);
+    const viewer = page.locator('.jp-ImageViewer').last();
+    await viewer.waitFor();
+    const img = viewer.locator('.jp-AdvancedImageViewer-panlayer > img');
+    await expect(img).toHaveCount(1);
+    await expect
+      .poll(() =>
+        img.evaluate((i: HTMLImageElement) => [i.naturalWidth, i.naturalHeight])
+      )
+      .toEqual([200, 150]);
+
+    await toolbarButton(page, '+').click();
+    expect(await scaleOf(viewer)).toBeCloseTo(1.1, 5);
+    await viewer.click();
+    await page.keyboard.press(']');
+    await expect(img).toHaveAttribute('style', /matrix\(0, 1, -1, 0, 0, 0\)/);
+
+    await viewer.click({ button: 'right' });
+    await expect(
+      page
+        .locator('.lm-Menu-itemLabel')
+        .filter({ hasText: 'Copy to Clipboard' })
+    ).toBeVisible();
   });
 
   // DEF-NAV-1: Right must open the image the file browser lists next. A
@@ -777,7 +822,8 @@ test.describe('Advanced Image Viewer', () => {
     ).toEqual([]);
   });
 
-  // ACC-NAV-25: files that are not images are skipped; webp is an image.
+  // ACC-NAV-25: files that are not images are skipped; webp and avif are
+  // images.
   // ACC-NAV-22: the step replaces the image tab instead of adding one.
   test('navigation skips files that are not images', async ({
     page,
@@ -787,16 +833,19 @@ test.describe('Advanced Image Viewer', () => {
     await page.contents.uploadContent(svgOf(200, 150), 'text', `${dir}/a.svg`);
     await page.contents.uploadContent('not an image', 'text', `${dir}/b.txt`);
     await page.contents.uploadContent(WEBP, 'base64', `${dir}/c.webp`);
+    await page.contents.uploadContent(AVIF, 'base64', `${dir}/d.avif`);
     await page.filebrowser.open(`${dir}/a.svg`, 'Image');
     await page.locator('.jp-ImageViewer').last().waitFor();
 
-    await page.locator('.jp-ImageViewer').last().focus();
-    await page.keyboard.press('ArrowRight');
-    await expect(currentTab(page)).toHaveText('c.webp');
+    for (const expected of ['c.webp', 'd.avif']) {
+      await page.locator('.jp-ImageViewer').last().focus();
+      await page.keyboard.press('ArrowRight');
+      await expect(currentTab(page)).toHaveText(expected);
+    }
     await expect(
       page
         .locator('#jp-main-dock-panel .lm-TabBar-tabLabel')
-        .filter({ hasText: /\.(svg|webp|txt)$/ })
+        .filter({ hasText: /\.(svg|webp|avif|txt)$/ })
     ).toHaveCount(1);
   });
 

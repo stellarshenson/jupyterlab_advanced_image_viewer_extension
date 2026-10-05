@@ -97,6 +97,13 @@ Every image opens fitted to the panel, matching the stock viewer pixel for pixel
   - log: 2026-09-02T12:20:41Z @kj closed: closed on recorded evidence from the shipped 1.0.11 verification
   - log: 2026-09-30T14:28:05Z @kj edited evidence "JOURNAL entry 4: a viewBox="0 0 800 60" image "reports a bogus naturalWidth=300,Height=23" yet the rewritten controller "never reads naturalWidth" and the file renders 918x69, matching the stock CSS fit [JOURNAL.md entry 4; corroborated by the measured 300 x 23 bogus intrinsic versus 918 x 68.8 rendered in docs/image_fit_reference.md]" -> "2026-09-30 A/B at 1500x950 vs stock (this extension disabled) on image-warping-correction-2.png, image-2.png, 03_growth_models.svg, 05_operations.svg: identical img rects, max diff 0.0 px; the viewBox-only SVGs report natural 300x23 yet render 1170x87.8 (viewBox 800:60), same as stock"
   - log: 2026-09-30T15:17:53Z @kj edited evidence "2026-09-30 A/B at 1500x950 vs stock (this extension disabled) on image-warping-correction-2.png, image-2.png, 03_growth_models.svg, 05_operations.svg: identical img rects, max diff 0.0 px; the viewBox-only SVGs report natural 300x23 yet render 1170x87.8 (viewBox 800:60), same as stock" -> "2026-09-30 A/B vs stock: viewBox-only SVGs report natural 300x23 yet render 1170x87.8, same as stock; Galata 'the image opens whole, at its aspect, and fits the host' asserts the viewBox-only fixture fills the host width at 800:60, red when the img width is capped"
+- [x] `ACC-FIT-44` **AVIF opens in the image viewer** - HIGH; a `.avif` file opens in the image viewer by default, from the file browser, with pan, zoom, the toolbar and the stock keys; arrow-key navigation includes it and the context menu offers Copy to Clipboard on it
+  - evidence: 2026-10-05: Galata 'an avif file opens in the image viewer by default' passes, 31/31 local with and without the sort plugin; red when the avif file type or the raster entry is removed; the user's 01-04.avif (209x240) opens in an isolated server, screenshot checked
+  - test: upload a 200x150 AVIF, double-click it, assert the viewer shows it at 200x150 inside the pan layer
+  - test-tags: E2E
+  - mechanism: 2026-10-05T16:18:12Z @kj stock JupyterLab registers no avif file type; the extension adds one (image/avif, base64) bound to the stock Image factory, and lists .avif among the image and raster extensions
+  - log: 2026-10-05T16:18:12Z @kj added
+  - log: 2026-10-05T16:34:20Z @kj closed
 
 ## Zoom `ZOOM`
 
@@ -282,12 +289,14 @@ Left and Right arrows step through the images in the same folder inside one view
   - log: 2026-09-02T08:58:32Z @kj imported from docs/acceptance_criteria.md
   - log: 2026-09-30T14:20:03Z @kj closed
   - log: 2026-09-30T15:17:53Z @kj edited evidence "spec 'navigation stops at the first and the last image' passes (Galata 27/27 local 2026-09-30), red when navigation wraps around" -> "2026-09-30: Galata 'navigation stops at the first and the last image' passes, 30/30 local: Left on the first and Right on the last keep the tab, open no dialog and log no error naming the extension; red when navigation wraps around"
-- [x] `ACC-NAV-25` **Image files only** - MEDIUM; only png, jpg, jpeg, gif, bmp, svg and webp files participate, and other files in the folder are skipped
-  - evidence: spec 'navigation skips files that are not images' passes (Galata 27/27 local 2026-09-30; .txt skipped, .webp included), red when .txt counts as an image
+- [x] `ACC-NAV-25` **Image files only** - MEDIUM; only png, jpg, jpeg, gif, bmp, svg, webp and avif files participate, and other files in the folder are skipped
+  - evidence: 2026-10-05: Galata 'navigation skips files that are not images' passes, 31/31 local: Right from a.svg skips b.txt, opens c.webp, then d.avif, one image tab; red when .txt counts as an image and when .avif is removed from the image list
   - test: place a .txt between two images, navigate across it, assert it is skipped
   - test-tags: UNIT, E2E
   - log: 2026-09-02T08:58:32Z @kj imported from docs/acceptance_criteria.md
   - log: 2026-09-30T14:20:03Z @kj closed
+  - log: 2026-10-05T16:18:12Z @kj amended text "only png, jpg, jpeg, gif, bmp, svg and webp files participate, and other files in the folder are skipped" -> "MEDIUM; only png, jpg, jpeg, gif, bmp, svg, webp and avif files participate, and other files in the folder are skipped"; reason: AVIF support added 2026-10-05
+  - log: 2026-10-05T16:34:20Z @kj edited evidence "spec 'navigation skips files that are not images' passes (Galata 27/27 local 2026-09-30; .txt skipped, .webp included), red when .txt counts as an image" -> "2026-10-05: Galata 'navigation skips files that are not images' passes, 31/31 local: Right from a.svg skips b.txt, opens c.webp, then d.avif, one image tab; red when .txt counts as an image and when .avif is removed from the image list"
 - [x] `ACC-NAV-26` **Copy to clipboard for raster** - MEDIUM; the image-viewer context menu offers Copy to Clipboard on raster images and hides it on SVG, copying source pixels as PNG rather than the on-screen view
   - evidence: 2026-09-30: Galata 'Copy to Clipboard is offered on a PNG and hidden on an SVG' passes, 30/30 local: after toolbar + the clipboard PNG is 200x150, the source size; the SVG menu opens without the item; red when the copy takes the on-screen size
   - test: right-click a PNG and an SVG, assert the item is visible then hidden, and read the clipboard back after clicking it
