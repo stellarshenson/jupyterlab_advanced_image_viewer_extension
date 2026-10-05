@@ -4,6 +4,13 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## [1.1.5] - 2026-10-05
+
+### Added
+
+- AVIF images open in the image viewer, with pan, zoom, the toolbar, folder navigation, Copy to Clipboard and the stock rotate and flip keys. JupyterLab defines no `avif` file type, so a double-click on an `.avif` file ended in a File Load Error
+- Galata integration test that opens an AVIF file by double-click, and the mixed-folder navigation test now steps onto an AVIF file
+
 ## [1.1.4] - 2026-09-30
 
 ### Added
