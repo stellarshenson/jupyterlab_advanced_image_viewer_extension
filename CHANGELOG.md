@@ -4,6 +4,17 @@
 
 <!-- <END NEW CHANGELOG ENTRY> -->
 
+## [1.1.8] - 2026-10-12
+
+### Added
+
+- Galata integration test that fails when a label appears twice in the context menu of an image's tab or of the image. It guards against a second "Show in File Browser" item, which `jupyterlab_terminal_show_in_file_browser_extension` before its version 1.0.27 put on every tab
+
+### Changed
+
+- Build tooling updated to Makefile 1.45: `make install` also installs the optional dependency groups of `pyproject.toml`
+- Version 1.1.7 was a local build and is not published; this release follows 1.1.6
+
 ## [1.1.6] - 2026-10-05
 
 ### Changed
