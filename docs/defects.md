@@ -75,3 +75,18 @@ Packaging, the Makefile and the GitHub Actions workflows
   - log: 2026-09-30T12:23:19Z @kj reported: CI red on b3e493e; error '_load_jupyter_server_extension function was not found'
   - log: 2026-09-30T13:21:21Z @kj closed: fixed in c20ff79: check_auth step and script removed, template answer kind: frontend
 
+## Context menu `MENU`
+
+Items in the tab context menu and the image context menu
+
+- [x] `DEF-MENU-6` **Two Show in File Browser items on the tab menu** - CRITICAL; with a terminal open, the image tab's context menu shows two enabled items labelled `Show in File Browser`; upper moves the file browser to the last-focused terminal's working directory, lower to the image; only one item with that label may exist; fix belongs in `jupyterlab_terminal_show_in_file_browser_extension`
+  - evidence: spec `no context menu item appears twice on an image` red against terminal extension 1.0.26 as released, green against its rebuilt build; Galata 32/32 here and 4/4 in the terminal extension, port 8899, 2026-10-12
+  - repro: open a terminal, open an image, right-click the image's tab: two `Show in File Browser` items
+  - test-tags: E2E
+  - root-cause: 2026-10-12T03:25:51Z @kj `jupyterlab_terminal_show_in_file_browser_extension` `schema/plugin.json` adds `terminal:show-in-file-browser` on selector `#jp-main-dock-panel .lm-DockPanel-tabBar .lm-TabBar-tab`, which matches every main-area tab; enabled whenever a terminal exists; same label as stock `docmanager:show-in-file-browser`
+  - log: 2026-10-12T03:25:51Z @kj added
+  - log: 2026-10-12T03:26:05Z @kj reported: "must be only one item with such name - critical defect"; "first one behaves bad", second one not checked; severity set by the reporter
+  - log: 2026-10-12T03:26:05Z @kj measured on an isolated server, port 8899, one terminal open: upper item `terminal:show-in-file-browser` moved the file browser to the server root 3 of 3 clicks; lower item `docmanager:show-in-file-browser` moved it to the image 3 of 3 clicks; no single item alternated
+  - log: 2026-10-12T03:44:01Z @kj closed: fixed: terminal extension shows its item only when the context menu was opened on a terminal's tab or inside a terminal (`isVisible` in its `src/index.ts`); uncommitted in both repositories, terminal extension release pending
+  - log: 2026-10-12T04:31:18Z @kj terminal extension 1.0.27 released to npm and PyPI with the fix; its CI green on 5fa71b8 with 4 Galata tests
+

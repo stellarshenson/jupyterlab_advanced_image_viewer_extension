@@ -912,6 +912,52 @@ test.describe('Advanced Image Viewer', () => {
     await expect(item).toBeHidden();
   });
 
+  // DEF-MENU-6: no label appears twice in the context menu of an image's tab
+  // or of the image itself. A terminal is open because a terminal extension
+  // once put its own "Show in File Browser" on every tab, and that item was
+  // enabled only while a terminal existed. Disabled items count: they are
+  // shown too.
+  test('no context menu item appears twice on an image', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.contents.uploadContent(PNG, 'base64', `${tmpPath}/${PNG_NAME}`);
+    await page.evaluate(async () => {
+      await (window as any).jupyterapp.commands.execute('terminal:create-new');
+    });
+    await page.locator('.jp-Terminal').waitFor();
+    await page.filebrowser.open(`${tmpPath}/${PNG_NAME}`, 'Image');
+    const viewer = page.locator(
+      '.jp-MainAreaWidget:not(.lm-mod-hidden) .jp-ImageViewer'
+    );
+    await viewer.waitFor();
+    // A hidden item and a separator stay in the DOM; neither is a shown label.
+    const labels = (): Promise<string[]> =>
+      page
+        .locator(
+          '.lm-Menu-item:not([data-type="separator"]):visible .lm-Menu-itemLabel'
+        )
+        .allTextContents();
+    const repeated = (shown: string[]): string[] =>
+      shown.filter((label, i) => shown.indexOf(label) !== i);
+
+    await page
+      .locator('.lm-DockPanel-tabBar .lm-TabBar-tab', { hasText: PNG_NAME })
+      .click({ button: 'right' });
+    await expect(page.locator('.lm-Menu')).toBeVisible();
+    const onTab = await labels();
+    expect(onTab).toContain('Show in File Browser');
+    expect(repeated(onTab)).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.lm-Menu')).toBeHidden();
+
+    await viewer.click({ button: 'right' });
+    await expect(page.locator('.lm-Menu')).toBeVisible();
+    const onImage = await labels();
+    expect(onImage).toContain('Copy to Clipboard');
+    expect(repeated(onImage)).toEqual([]);
+  });
+
   // ACC-SET-28: the schema holds exactly navEnabled and zoomStep, and the
   // navigation keys are fixed bindings, not settings.
   test('the settings schema holds navEnabled and zoomStep only', async ({
