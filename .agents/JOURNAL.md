@@ -96,3 +96,6 @@ This journal tracks substantive work on documents, diagrams, and documentation c
 
 31. **Task [Short] - Hi-res screenshots finished** (v1.2.1): Run `wf_9bfd60b9-fc1` captured, verified and embedded the three README images<br>
     **Result**: Image 3184x2024, audio 3184x724, video 3184x2024 at deviceScaleFactor 2, dark theme, 2.5 MB in all; audio and video referenced from the README.
+
+32. **Task - CI test hardening, journal layout and 4K README screenshots** (v1.2.2): Made the media Galata specs pass on a stock CI lab and replaced the README images with full-window 4K shots<br>
+    **Result**: ACC-KEYS-64-SCOPE typed into an uploaded notebook, which a fresh lab opens behind a Select Kernel dialog that blocked it to the 60 s timeout; it now types into a text file in the stock editor. ACC-MEDIA-73-MENU demanded a context menu on the media content, which stock JupyterLab does not register; the content check runs when a menu opens while the tab menu check stays strict. ACC-VIDEO-56-PLAYER read playbackRate before Plyr's zero-delay speed timer; it polls now. `.prettierignore` skips `.agents`, where `journal-tools layout` moved the journal. Screenshots at 3840x2160 show the whole window with `/media-demo` and no selected row. Build green on `06cef5c`; Check Release still fails in the releaser's mock sdist upload with 400 on an sdist that uploaded on `f8dc1a5`.

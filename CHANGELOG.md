@@ -2,6 +2,18 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.2] - 2026-10-28
+
+### Changed
+
+- The README images are 3840x2160 screenshots of the whole JupyterLab window - menu bar, file browser, tab bar, viewer and status bar - in the dark theme
+- The README names the audio and video viewers in the intro, documents the help dialog and the 1 s minimum loop region, and says that seeking in a file over 100 MB needs a server that serves byte ranges
+- The journal lives in `.agents/JOURNAL.md` with a `.claude/JOURNAL.md` symlink, and prettier skips it
+
+### Fixed
+
+- The integration tests pass on a stock JupyterLab: the media-key scope test types into a text file instead of a kernel-backed notebook, the context-menu test checks duplicate labels wherever a menu opens, and the video speed test waits for Plyr to apply the rate before reading it
+
 ## [1.2.1] - 2026-10-28
 
 ### Added
