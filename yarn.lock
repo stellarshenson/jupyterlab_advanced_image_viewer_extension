@@ -2669,7 +2669,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jupyterlab/services@npm:^7.6.4":
+"@jupyterlab/services@npm:^7.6.0, @jupyterlab/services@npm:^7.6.4":
   version: 7.6.4
   resolution: "@jupyterlab/services@npm:7.6.4"
   dependencies:
@@ -5010,6 +5010,13 @@ __metadata:
   version: 3.2.3
   resolution: "csstype@npm:3.2.3"
   checksum: cb882521b3398958a1ce6ca98c011aec0bde1c77ecaf8a1dd4db3b112a189939beae3b1308243b2fe50fc27eb3edeb0f73a5a4d91d928765dc6d5ecc7bda92ee
+  languageName: node
+  linkType: hard
+
+"custom-event-polyfill@npm:^1.0.7":
+  version: 1.0.7
+  resolution: "custom-event-polyfill@npm:1.0.7"
+  checksum: f9ff2cf13e482a75b3cf83dce9e2c6e3063c5ac1b9c23ac440e4f27e875b0873445b11811237f3f30aeb1216e9ad20f9f9d30ccf5b1b658a4e50dd0b3e67b629
   languageName: node
   linkType: hard
 
@@ -7600,6 +7607,7 @@ __metadata:
     "@jupyterlab/docregistry": ^4.6.0
     "@jupyterlab/filebrowser": ^4.6.0
     "@jupyterlab/imageviewer": ^4.6.0
+    "@jupyterlab/services": ^7.6.0
     "@jupyterlab/settingregistry": ^4.6.0
     "@jupyterlab/testutils": ^4.6.0
     "@jupyterlab/translation": ^4.6.0
@@ -7617,6 +7625,7 @@ __metadata:
     jest: ^29.7.0
     mkdirp: ^1.0.3
     npm-run-all2: ^7.0.1
+    plyr: ^3.8.0
     prettier: ^3.9.0
     rimraf: ^5.0.1
     stylelint: ^15.11.0
@@ -7626,6 +7635,7 @@ __metadata:
     stylelint-prettier: ^4.1.0
     typescript: ~5.8.0
     typescript-eslint: ^8.71.0
+    wavesurfer.js: ^8.0.0
     yjs: ^13.6.0
   languageName: unknown
   linkType: soft
@@ -7740,6 +7750,13 @@ __metadata:
   version: 1.2.4
   resolution: "lines-and-columns@npm:1.2.4"
   checksum: 0c37f9f7fa212b38912b7145e1cd16a5f3cd34d782441c3e6ca653485d326f58b3caccda66efce1c5812bde4961bbde3374fae4b0d11bf1226152337f3894aa5
+  languageName: node
+  linkType: hard
+
+"loadjs@npm:^4.3.0":
+  version: 4.3.0
+  resolution: "loadjs@npm:4.3.0"
+  checksum: 47f882e590d71425b0fb3e78fc12168ceaf10b76c128879af262578c4893edee1dbcab26b0b26c8e342be6544bf9382d50bfeae597453a8e78f1fa825bcd7c7c
   languageName: node
   linkType: hard
 
@@ -8546,6 +8563,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"plyr@npm:^3.8.0":
+  version: 3.8.5
+  resolution: "plyr@npm:3.8.5"
+  dependencies:
+    custom-event-polyfill: ^1.0.7
+    loadjs: ^4.3.0
+    rangetouch: ^2.0.1
+    url-polyfill: ^1.1.14
+  checksum: 58ed4cdc4639b9e22ec383ba6a07068ee58a4bc777d2b96d4e0c3c97a53bb8626d4cbe047adfec4eec84d086ef5f97f0ccd7cdb6a0f12e08a47ad32d6c2250db
+  languageName: node
+  linkType: hard
+
 "points-on-curve@npm:0.2.0, points-on-curve@npm:^0.2.0":
   version: 0.2.0
   resolution: "points-on-curve@npm:0.2.0"
@@ -8773,6 +8802,13 @@ __metadata:
   version: 5.1.1
   resolution: "quick-lru@npm:5.1.1"
   checksum: a516faa25574be7947969883e6068dbe4aa19e8ef8e8e0fd96cddd6d36485e9106d85c0041a27153286b0770b381328f4072aa40d3b18a19f5f7d2b78b94b5ed
+  languageName: node
+  linkType: hard
+
+"rangetouch@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "rangetouch@npm:2.0.1"
+  checksum: 2aa7c0901d28356ef0c02021656ed7d11fc6652f01ffe92806862fc4593e75f7a5d52d4455fa1b0ab2123d438e03dc091315949dbfad9562a680440ac0dfeb7d
   languageName: node
   linkType: hard
 
@@ -9890,6 +9926,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"url-polyfill@npm:^1.1.14":
+  version: 1.1.14
+  resolution: "url-polyfill@npm:1.1.14"
+  checksum: a1ed653f8386804206f7af5f05b3885d3e59fd1162f8aececd4998738fa7e16cad89269f3f455f2225e49cd83c851f9ec739a0b97613447202c749569353dfc7
+  languageName: node
+  linkType: hard
+
 "util-deprecate@npm:^1.0.2":
   version: 1.0.2
   resolution: "util-deprecate@npm:1.0.2"
@@ -10038,6 +10081,13 @@ __metadata:
   dependencies:
     makeerror: 1.0.12
   checksum: ad7a257ea1e662e57ef2e018f97b3c02a7240ad5093c392186ce0bcf1f1a60bbadd520d073b9beb921ed99f64f065efb63dfc8eec689a80e569f93c1c5d5e16c
+  languageName: node
+  linkType: hard
+
+"wavesurfer.js@npm:^8.0.0":
+  version: 8.0.3
+  resolution: "wavesurfer.js@npm:8.0.3"
+  checksum: 64a5d6f8e2d64678d7b3dd85914b7e2a7d7bb83322b092e6eaed80293cfc2e665df5b6ee724f67b5bd493cbaad4bbfee8ab4b9f9c8fd8efdf557df457a7de4f8
   languageName: node
   linkType: hard
 
