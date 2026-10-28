@@ -181,9 +181,11 @@ test.describe('Video viewer', () => {
       .filter({ hasText: '1.5×' });
     await expect(rate).toHaveCount(1);
     await rate.click();
-    expect(
-      await media(page).evaluate((m: HTMLMediaElement) => m.playbackRate)
-    ).toBe(1.5);
+    // Plyr applies the speed from a zero-delay timer, so the element's rate
+    // follows the click a task later.
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.playbackRate))
+      .toBe(1.5);
 
     // Fullscreen fills the screen although fitVideo writes inline pixel
     // sizes on the player (DEF-MEDIA-8). Headless Chromium may refuse the
