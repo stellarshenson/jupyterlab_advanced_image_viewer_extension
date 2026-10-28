@@ -5,6 +5,7 @@ node_modules
 !/package.json
 jupyterlab_advanced_image_viewer_extension
 .claude
+.agents
 docs
 eslint.config.mjs
 .venv
