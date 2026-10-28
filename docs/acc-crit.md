@@ -398,3 +398,213 @@ A help link on the toolbar lists the controls this extension adds and the stock 
   - log: 2026-09-02T08:58:33Z @kj imported from docs/acceptance_criteria.md
   - log: 2026-09-02T12:20:42Z @kj closed: closed on recorded evidence from the shipped 1.0.11 verification
   - log: 2026-09-30T14:28:05Z @kj edited evidence "Galata spec clicks the link and asserts the dialog contains 'previous / next image', 'rotate clockwise' and 'flip horizontal'; JOURNAL entry 10 records the duplicate removal so each control is listed once ("replaced the + / - / Fit line ... so zoom shows once") [ui-tests/tests/advanced_image_viewer.spec.ts lines 60-68; JOURNAL.md entry 10]" -> "spec 'wraps the image in a pan layer and shows an accent help link' passes (Galata 29/29 local 2026-09-30; the dialog lists previous / next image, rotate clockwise, flip horizontal)"
+
+## Audio viewer `AUDIO`
+
+Audio files open in a waveform player built on wavesurfer.js
+
+- log: 2026-10-28T13:59:51Z @kj category created
+
+- [x] `ACC-AUDIO-45-WAVE` **Waveform view** - HIGH; an audio file opens in one tab with its waveform drawn by wavesurfer.js, the played part in the accent colour, a playback line, and a time ruler above the waveform
+  - evidence: ACC-AUDIO-45-WAVE waveform, ruler and playback line in the accent colour passes, Galata 76/76 local
+  - test: open a generated 60 s WAV, assert the waveform, the ruler and the playback line render with non-zero size
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:51Z @kj added
+  - log: 2026-10-28T16:14:52Z @kj closed
+- [x] `ACC-AUDIO-46-SEEK` **Click seeks** - CRITICAL; a click anywhere on the waveform moves playback to the time under the click within 0.5 s, paused or playing, at every point from the start to the end of the file
+  - evidence: ACC-AUDIO-46-SEEK a click on the waveform seeks on a server without byte ranges passes, Galata 76/76 local
+  - test: click at 25% and 75% of a 60 s WAV, assert currentTime 15 s and 45 s within 0.5 s
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:51Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-47-OVERVIEW` **Overview seeks the whole file** - HIGH; a strip above the waveform shows the whole file with the zoomed part outlined; a click or a drag on it moves playback to that point of the file and scrolls the waveform to show it
+  - evidence: ACC-AUDIO-47-OVERVIEW the overview strip seeks the whole file and scrolls the waveform passes, Galata 76/76 local
+  - test: zoom in, click the strip at 90% of a 60 s WAV, assert currentTime 54 s within 0.5 s and the playback line inside the waveform view
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:51Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-48-ZOOM` **Waveform zoom** - MEDIUM; the mouse wheel over the waveform and the toolbar - and + buttons zoom the waveform out and in; Fit shows the whole file; during playback the view scrolls to keep the playback line visible
+  - evidence: ACC-AUDIO-48-ZOOM plus, minus, Fit and the wheel zoom the waveform passes, Galata 76/76 local
+  - test: press + twice, assert the shown duration shrinks; press Fit, assert it equals the file duration
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:52Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-49-HOVER` **Time under the mouse** - LOW; hovering over the waveform shows the time under the mouse pointer
+  - evidence: ACC-AUDIO-49-HOVER hovering shows the time under the mouse passes, Galata 76/76 local
+  - test: hover at 50% of a 60 s WAV, read 00:30 within 0.5 s
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:52Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-50-LOOP` **Loop a region** - MEDIUM; a drag on the waveform marks a region and turns Loop on; with Loop on, playback returns to the region start when it reaches the region end; turning Loop off removes the region
+  - evidence: ACC-AUDIO-50-LOOP a drag marks a loop region and Loop off removes it passes, Galata 76/76 local
+  - test: drag from 10 s to 20 s, play from 18 s, assert currentTime between 10 s and 13 s after 3 s; click Loop, assert no region
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:52Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-51-CONTROLS` **Playback controls** - HIGH; the toolbar has Play/Pause, back 5 s, forward 5 s, Loop and a speed choice of 0.5x, 0.75x, 1x, 1.25x, 1.5x and 2x, each acting on the open file
+  - evidence: ACC-AUDIO-51-CONTROLS play, back, forward, loop and speed act on the file passes, Galata 76/76 local
+  - test: from 10 s click forward twice, assert 20 s; pick 2x, assert playbackRate 2
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:52Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-52-TIME` **Current time and duration** - MEDIUM; the viewer shows the current time and the duration, updated during playback and after every seek
+  - evidence: ACC-AUDIO-52-TIME the current time and the duration update on a seek passes, Galata 76/76 local
+  - test: seek to 15 s in a 60 s WAV, read 00:15.0 / 01:00.0
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:52Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-53-DETAILS` **Audio file details** - LOW; the toolbar shows the format taken from the file extension, the channel count, the file size and the duration
+  - evidence: ACC-AUDIO-53-DETAILS the toolbar shows format, channels, size and duration passes, Galata 76/76 local
+  - test: open the 60 s mono WAV, read WAV, mono, its size and 01:00
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:53Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-54-LARGE` **Large audio file** - HIGH; a file over 100 MB is not decoded in the browser; it opens and plays with a working seek bar and a line saying that the waveform is skipped above 100 MB
+  - evidence: Jest the waveform limit suite and ACC-AUDIO-54-LARGE a file over 100 MB plays without a waveform and seeks pass, Galata 76/76 local
+  - test: unit test the size limit; open a file reported over the limit, assert the seek bar works and the line shows
+  - test-tags: UNIT, E2E
+  - log: 2026-10-28T13:59:53Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+- [x] `ACC-AUDIO-55-ERROR` **Unreadable audio** - MEDIUM; every audio file type JupyterLab registers opens in this viewer; a file the browser cannot decode shows an error line in the viewer, never an empty or stuck panel
+  - evidence: ACC-AUDIO-55-ERROR every audio type opens here and an unreadable file shows an error passes, Galata 76/76 local
+  - test: open a WAV and a corrupt .mp3, assert the waveform and the error line
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:53Z @kj added
+  - log: 2026-10-28T16:14:53Z @kj closed
+
+## Video viewer `VIDEO`
+
+Video files open in a Plyr player
+
+- log: 2026-10-28T13:59:53Z @kj category created
+
+- [x] `ACC-VIDEO-56-PLAYER` **Plyr player** - HIGH; a video file opens in one tab in a Plyr player with its control bar: play, seek bar, current time, mute, volume, speed menu, picture-in-picture and full screen
+  - evidence: ACC-VIDEO-56-PLAYER the video opens in one tab in a Plyr player with its control bar passes, Galata 76/76 local
+  - test: open the video fixture, assert the Plyr control bar and each of these buttons
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:53Z @kj added
+  - log: 2026-10-28T16:14:57Z @kj closed
+- [x] `ACC-VIDEO-57-SEEK` **Video seek** - CRITICAL; a click on the seek bar moves playback to the time under the click within 0.5 s, at every point from the start to the end of the file
+  - evidence: ACC-VIDEO-57-SEEK a click on the seek bar moves playback to that point passes, Galata 76/76 local
+  - test: click the seek bar at 50% of the fixture, assert currentTime half the duration within 0.5 s
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:54Z @kj added
+  - log: 2026-10-28T16:14:57Z @kj closed
+- [x] `ACC-VIDEO-58-FIT` **Video fit** - MEDIUM; the whole frame is visible and centred at every panel size, with the aspect ratio kept
+  - evidence: ACC-VIDEO-58-FIT the whole frame is visible and centred at every panel size passes, Galata 76/76 local
+  - test: resize the panel twice, assert the video rect inside the panel and the aspect ratio within 1%
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:54Z @kj added
+  - log: 2026-10-28T16:14:57Z @kj closed
+- [x] `ACC-VIDEO-59-DETAILS` **Video file details** - LOW; the toolbar shows the format taken from the file extension, the frame size in pixels, the file size and the duration
+  - evidence: ACC-VIDEO-59-DETAILS the toolbar shows format, frame size, size and duration passes, Galata 76/76 local
+  - test: open the fixture, read its format, frame size, file size and duration
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:54Z @kj added
+  - log: 2026-10-28T16:14:57Z @kj closed
+- [x] `ACC-VIDEO-60-ACCENT` **Accent colour** - LOW; the played part of the seek bar and the highlighted Plyr buttons use --jp-brand-color1 in the light and the dark theme
+  - evidence: ACC-VIDEO-60-ACCENT the seek bar and the highlighted buttons use the brand colour passes, Galata 76/76 local
+  - test: compare the computed colour with the resolved --jp-brand-color1 in both themes
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:54Z @kj added
+  - log: 2026-10-28T16:14:57Z @kj closed
+
+## Media keys `KEYS`
+
+Keyboard control of a focused audio or video tab
+
+- log: 2026-10-28T13:59:55Z @kj category created
+
+- [x] `ACC-KEYS-61-ARROWS` **Arrow keys seek** - HIGH; in a focused audio or video tab, Left and Right move playback 5 s back and forward, once per key press, stopping at the start and the end
+  - evidence: ACC-KEYS-61-ARROWS Left and Right move playback 5 s and stop at the ends, and the video variant once per press, pass, Galata 76/76 local
+  - test: from 10 s press Right, assert 15 s; press Left twice, assert 5 s; in an audio and a video tab
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:55Z @kj added
+  - log: 2026-10-28T16:14:57Z @kj closed
+- [x] `ACC-KEYS-62-SPACE` **Space plays and pauses** - MEDIUM; Space toggles play and pause in a focused audio or video tab
+  - evidence: ACC-KEYS-62-SPACE Space plays and pauses passes in the audio and the video viewer, Galata 76/76 local
+  - test: press Space twice, assert playing then paused
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:55Z @kj added
+  - log: 2026-10-28T16:14:57Z @kj closed
+- [x] `ACC-KEYS-63-PAGE` **Page keys change file** - HIGH; Page Up and Page Down open the previous and next file of the same kind, audio or video, in the folder, in the order the file browser lists them, inside one tab, stopping at the first and the last file; the folder navigation setting turns this off
+  - evidence: ACC-KEYS-63-PAGE Page Up and Page Down open the previous and next audio file, and the video variant, pass, Galata 76/76 local
+  - test: with three WAV files press Page Down twice and Page Up once, assert the paths and one audio tab
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:55Z @kj added
+  - log: 2026-10-28T16:14:58Z @kj closed
+- [x] `ACC-KEYS-64-SCOPE` **Keys stay in media tabs** - HIGH; these keys act only in a focused audio or video tab; notebooks, editors and the image viewer keep their behaviour, and Left and Right still change the image in the image viewer
+  - evidence: ACC-KEYS-64-SCOPE the media keys act only in a focused media tab, and the video variant, pass, Galata 76/76 local
+  - test: press Left and Space in a notebook cell, assert normal editing; press Right in the image viewer, assert the next image
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:55Z @kj added
+  - log: 2026-10-28T16:14:58Z @kj closed
+
+## Media integration `MEDIA`
+
+How the audio and video viewers fit into JupyterLab
+
+- log: 2026-10-28T13:59:55Z @kj category created
+
+- [x] `ACC-MEDIA-65-STOCK` **Stock viewers disabled** - HIGH; while this extension is installed, @jupyterlab/audio-extension:plugin and @jupyterlab/video-extension:plugin are disabled; a double click opens the new viewer, and Open With on an audio or video file lists only the new viewer
+  - evidence: ACC-MEDIA-65-STOCK the stock audio and video viewers are disabled and the stock video viewer is disabled pass, Galata 76/76 local
+  - test: read the widget factories for a .wav and a video path, assert one each, from this extension
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:55Z @kj added
+  - log: 2026-10-28T16:15:01Z @kj closed
+- [x] `ACC-MEDIA-66-TOOLBAR` **Toolbar matches the image viewer** - MEDIUM; the media toolbar starts with the same Reload button as the image viewer, waveform zoom uses the same -, + and Fit buttons with the same tooltips, and the help link sits at the right end
+  - evidence: ACC-MEDIA-66-TOOLBAR the audio toolbar matches the image viewer toolbar and the video toolbar starts with Reload and ends with help pass, Galata 76/76 local
+  - test: compare the toolbar items of an audio, a video and an image tab
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:56Z @kj added
+  - log: 2026-10-28T16:15:01Z @kj closed
+- [x] `ACC-MEDIA-67-HELP` **Help link as in the image viewer** - LOW; the toolbar shows an underlined help text link in the accent colour at the right end, never a ? icon; it opens a dialog listing the media controls and keys, each once, with a Close button
+  - evidence: ACC-MEDIA-67-HELP the help link lists each media control once and each video control and key once pass, Galata 76/76 local
+  - test: read the link text, colour and position; open the dialog and count each control once
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:56Z @kj added
+  - log: 2026-10-28T16:15:01Z @kj closed
+- [x] `ACC-MEDIA-68-RELOAD` **Reload from disk** - LOW; Reload reads the file again, so a changed file shows its new waveform or picture and its new duration
+  - evidence: ACC-MEDIA-68-RELOAD Reload reads the changed file again passes in the audio and the video viewer, Galata 76/76 local
+  - test: overwrite the 60 s WAV with a 30 s one, click Reload, assert 00:30.0
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:56Z @kj added
+  - log: 2026-10-28T16:15:01Z @kj closed
+- [x] `ACC-MEDIA-69-RESTORE` **Tab restore** - MEDIUM; open audio and video tabs open again after a page reload, on the same files
+  - evidence: ACC-MEDIA-69-RESTORE an audio tab and a video tab open again after a page reload pass, Galata 76/76 local
+  - test: open an audio and a video tab, reload the page, assert both tabs and their paths
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:56Z @kj added
+  - log: 2026-10-28T16:15:01Z @kj closed
+- [x] `ACC-MEDIA-70-LOCAL` **No third-party requests** - HIGH; opening and using the viewers sends requests only to the lab's own server; the Plyr icons and its blank video are bundled
+  - evidence: ACC-MEDIA-70-LOCAL opening and playing audio and video requests only the lab pass, Galata 76/76 local
+  - test: record every page request while opening and playing audio and video, assert each URL is on the lab origin
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:56Z @kj added
+  - log: 2026-10-28T16:15:01Z @kj closed
+- [x] `ACC-MEDIA-71-STREAM` **No content download through the contents API** - HIGH; opening a media file never fetches its content through the contents API; the player reads the file from its file URL
+  - evidence: ACC-MEDIA-71-STREAM the file is never read through the contents API passes in the audio and the video viewer, Galata 76/76 local
+  - test: open a video, assert no /api/contents request with content=1 for its path
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:57Z @kj added
+  - log: 2026-10-28T16:15:01Z @kj closed
+- [x] `ACC-MEDIA-72-CLOSE` **Closing stops playback** - MEDIUM; closing a playing audio or video tab stops the sound and removes its media element
+  - evidence: ACC-MEDIA-72-CLOSE closing a playing tab stops it and removes its element passes in the audio and the video viewer, Galata 76/76 local
+  - test: play, close the tab, assert no media element is left playing
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:57Z @kj added
+  - log: 2026-10-28T16:15:01Z @kj closed
+- [x] `ACC-MEDIA-73-MENU` **One item per label** - CRITICAL; the context menus of an audio tab, a video tab and their content show each label once
+  - evidence: ACC-MEDIA-73-MENU no context menu item appears twice on an audio tab, and the video variant, pass, Galata 76/76 local
+  - test: extend 'no context menu item appears twice' to an audio and a video tab
+  - test-tags: E2E
+  - log: 2026-10-28T13:59:57Z @kj added
+  - log: 2026-10-28T16:15:02Z @kj closed
+- [x] `ACC-MEDIA-74-BUFFER` **Small files seek without byte ranges** - CRITICAL; audio and video files up to 100 MB are downloaded once from the file URL and played from the downloaded copy, so seeking works on a server without byte ranges; larger files play from the file URL
+  - evidence: ACC-MEDIA-74-BUFFER audio and video up to 100 MB are downloaded once and seek without byte ranges pass, Galata 76/76 local
+  - related: DEF-MEDIA-7-SEEK - the seek failure this works around for files up to 100 MB
+  - test: serve /files/ as status 200 without Accept-Ranges through page.route, open a WAV and the video fixture, seek to 50%, assert currentTime within 0.5 s
+  - test-tags: E2E
+  - log: 2026-10-28T14:26:15Z @kj added
+  - log: 2026-10-28T16:15:02Z @kj closed
+

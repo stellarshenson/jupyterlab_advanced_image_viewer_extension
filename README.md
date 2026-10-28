@@ -25,6 +25,16 @@ The viewer toolbar adds zoom in / out / fit controls and a `help` link that list
 - **Refresh** - a toolbar refresh button reloads the image from disk, the same control the HTML viewer provides
 - **WebP and AVIF support** - `.webp` and `.avif` files open in the image viewer with every feature above; stock JupyterLab does not open them and shows a File Load Error
 
+## Audio and video viewers
+
+Audio files open in a waveform player built on wavesurfer.js and video files in a Plyr player. The extension disables the stock JupyterLab audio and video viewers, so a double click on a media file opens these instead.
+
+- **Audio controls** - play/pause, back and forward 5 s, Loop, a speed choice of 0.5x to 2x, waveform zoom with - / + / Fit, an overview strip that seeks anywhere in the file, the time under the mouse, and a drag-marked loop region
+- **Video controls** - play/pause, a seek bar, the current time, mute and volume, a speed menu, picture in picture and full screen, in a player fitted to the panel with the aspect ratio kept
+- **Keys in a focused media tab** - Space plays and pauses, Left and Right seek 5 s, and Page Up / Page Down open the previous and next file of the same kind in the folder, in the order the file browser lists them (the folder navigation setting turns this off)
+- **File details** - the toolbar shows the format, the size and the duration, plus the channel count for audio and the frame size for video
+- **100 MB limit** - a file up to 100 MB is downloaded once from its file URL and played from that copy, so seeking works on a server without byte ranges; above 100 MB the audio waveform is skipped and either file plays from its URL
+
 ## Requirements
 
 - JupyterLab >= 4.6

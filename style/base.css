@@ -54,3 +54,95 @@
 .jp-AdvancedImageViewer-help li {
   margin: 2px 0;
 }
+
+/* Audio and video viewers. The content is a focusable column: the waveform
+   (with its overview strip and time ruler inside wavesurfer's shadow root),
+   the time read-out, and a message line for a skipped waveform or an error. */
+.jp-AdvancedMediaViewer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px 32px 16px;
+  overflow: auto;
+  outline: none;
+  color: var(--jp-ui-font-color1);
+  background: var(--jp-layout-color0);
+}
+
+/* The waveform drives the audio element; it shows only as the native player
+   of a file too large for a waveform. */
+.jp-AdvancedMediaViewer-audio .jp-AdvancedMediaViewer-media {
+  width: 100%;
+}
+
+.jp-AdvancedMediaViewer-audio .jp-AdvancedMediaViewer-media:not([controls]) {
+  display: none;
+}
+
+.jp-AdvancedMediaViewer-wave ::part(minimap-overlay) {
+  box-sizing: border-box;
+  border: 1px solid var(--jp-brand-color1);
+  border-radius: 2px;
+}
+
+.jp-AdvancedMediaViewer-status {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--jp-ui-font-size2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Video viewer: the frame fills the space under the toolbar and centres the
+   player; the player box itself is sized in script to the video's ratio, so
+   the whole picture shows at any panel size. */
+.jp-AdvancedMediaViewer-frame {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+/* The accent of the played part of the seek bar and of the highlighted
+   buttons. */
+.jp-AdvancedMediaViewer-video .plyr {
+  --plyr-color-main: var(--jp-brand-color1);
+
+  min-width: 0;
+}
+
+/* fitVideo writes inline pixel sizes on the player, which beat Plyr's own
+   fullscreen rule and keep the panel size on a black screen. Plyr uses the
+   fallback class where the Fullscreen API is unavailable; its own rule makes
+   that element fixed and inset, so only the size needs the override. */
+/* stylelint-disable selector-class-pattern -- Plyr's own class name */
+.jp-AdvancedMediaViewer-video .plyr:fullscreen,
+.jp-AdvancedMediaViewer-video .plyr--fullscreen-fallback {
+  width: 100% !important;
+  height: 100% !important;
+}
+/* stylelint-enable selector-class-pattern */
+
+.jp-AdvancedMediaViewer-status > :last-child,
+.jp-AdvancedMediaViewer-message,
+.jp-Toolbar .jp-AdvancedMediaViewer-details {
+  color: var(--jp-ui-font-color2);
+  font-size: var(--jp-ui-font-size1);
+}
+
+.jp-Toolbar .jp-AdvancedMediaViewer-details {
+  align-self: center;
+  margin: 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.jp-Toolbar .jp-AdvancedMediaViewer-speed {
+  align-self: center;
+  height: 22px;
+  margin-left: 6px;
+  color: var(--jp-ui-font-color1);
+  background: var(--jp-layout-color1);
+  border: var(--jp-border-width) solid var(--jp-border-color1);
+  border-radius: 2px;
+  font-size: var(--jp-ui-font-size1);
+}

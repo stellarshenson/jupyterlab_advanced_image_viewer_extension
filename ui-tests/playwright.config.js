@@ -11,6 +11,10 @@ const BASE_URL = `http://localhost:${PORT}`;
 
 module.exports = {
   ...baseConfig,
+  // Playwright defaults to half the cores (32 on this workstation), and that
+  // many Lab pages loading at once exceed the 15 s readiness wait; the sibling
+  // extensions pin one worker for the same reason.
+  workers: 1,
   use: { ...baseConfig.use, baseURL: BASE_URL },
   webServer: {
     command: 'jlpm start',

@@ -2,6 +2,31 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.1] - 2026-10-28
+
+### Added
+
+- Audio viewer on wavesurfer.js 8: the waveform, an overview strip that seeks anywhere in the file, a time ruler, the time under the mouse, a drag-marked loop region, a 0.5x to 2x speed choice and zoom with - / + / Fit
+- Video viewer on Plyr 3.8: play and pause, a seek bar, the current time, mute, volume, speed, picture in picture and full screen, in a player fitted to the panel with the aspect ratio kept; the icon sprite and the blank video are bundled, so no request leaves the lab host
+- Media keys in a focused audio or video tab: Space plays and pauses, Left and Right seek 5 s, and Page Up and Page Down open the previous or next file of the same kind in the folder; the folder navigation setting turns this off
+- A help dialog for each media viewer, and a toolbar with Reload, the playback controls and the file details
+- The extension disables JupyterLab's stock audio and video viewers, so a double-click on a media file opens these viewers
+
+### Changed
+
+- Folder navigation is shared by the image viewer and the media viewers, so Page Up and Page Down follow the file browser order too
+- Audio and video files up to 100 MB are downloaded once and played from that copy, so seeking works on a server that serves `/files/` without byte ranges; larger files play from the file URL and need the platform's byte-range fix
+- Versions 1.1.9 and 1.2.0 were local builds and are not published; this release follows 1.1.8
+
+### Fixed
+
+- Full screen fills the screen: the player's inline size no longer overrides the fullscreen layout
+- The zoom buttons are disabled when a file over 100 MB is shown without a waveform, instead of doing nothing
+- The unplayed waveform reaches the 3:1 contrast ratio the accessibility guideline asks of graphical content
+- An unplayable file shows a plain sentence instead of the browser's raw media error, and the message line is announced to assistive technology
+- Times of an hour or more read as `h:mm:ss` instead of unbounded minutes
+- A slightly moving click on the waveform no longer arms a sub-second loop; a loop region needs at least 1 s
+
 <!-- <END NEW CHANGELOG ENTRY> -->
 
 ## [1.1.8] - 2026-10-12

@@ -90,3 +90,71 @@ Items in the tab context menu and the image context menu
   - log: 2026-10-12T03:44:01Z @kj closed: fixed: terminal extension shows its item only when the context menu was opened on a terminal's tab or inside a terminal (`isVisible` in its `src/index.ts`); uncommitted in both repositories, terminal extension release pending
   - log: 2026-10-12T04:31:18Z @kj terminal extension 1.0.27 released to npm and PyPI with the fix; its CI green on 5fa71b8 with 4 Galata tests
 
+## Media viewers `MEDIA`
+
+Audio and video playback in JupyterLab
+
+- log: 2026-10-28T14:06:54Z @kj category created
+
+- [x] `DEF-MEDIA-7-SEEK` **Stock audio viewer cannot seek** - MAJOR; owner: "sound doesn't allow to scroll the audio file"; stock Audio Viewer and Video Viewer seek bar fails: MP3, FLAC, M4A, MP4, WebM return to 0 s, WAV and OGG show no duration; fix: /files/ served with byte ranges, or the player given a blob URL; `/galaxalab/etc/jupyter/files_handler.py`
+  - evidence: platform fix owned by galaxalab (DownloadableFilesHandler sends 200 without byte ranges); this extension plays every file up to 100 MB from a downloaded blob, which seeks on that server, and files over 100 MB play from the URL and need the platform fix
+  - attachment: defects/DEF-MEDIA-7-SEEK-files-range.md sha256:dd52194dfb6de9a6 edited:2026-10-28T14:19:59Z
+  - repro: open a 60 s MP3 in the stock Audio Viewer on a server with the GalaxaLab config, set currentTime = 30 or click the middle of the seek bar; currentTime stays 0
+  - test-tags: E2E
+  - root-cause: 2026-10-28T14:06:54Z @kj GalaxaLab config sets c.ContentsManager.files_handler_class = DownloadableFilesHandler, a jupyter_server FilesHandler subclass, not AuthenticatedFileHandler; FilesHandler ignores Range, sends 200 chunked, no Accept-Ranges, no Content-Length; Chrome: MP3, FLAC, M4A, MP4, WebM seekable [0,0], seek returns to 0; WAV, OGG duration Infinity, a seek bar click lands at the wrong time
+  - log: 2026-10-28T14:06:54Z @kj added
+  - log: 2026-10-28T14:20:01Z @kj attached defects/DEF-MEDIA-7-SEEK-files-range.md sha256:dd52194dfb6de9a6
+  - log: 2026-10-28T14:20:04Z @kj handed to the owner: fix is the DownloadableFilesHandler base class in the galaxalab repository, see the attached document
+  - log: 2026-10-28T17:19:22Z @kj closed
+- [x] `DEF-MEDIA-8-MEDIA` **Fullscreen keeps the panel-sized player** - MAJOR; Clicking Fullscreen on a video keeps the player at the panel-fit size on a black screen instead of filling the screen; the help dialog and the README promise a full screen
+  - evidence: ACC-VIDEO-56-PLAYER asserts the .plyr container covers the viewport after the Fullscreen click and the fitted size returns on Escape, native fullscreen path, Galata 75/75
+  - repro: open a video in a panel smaller than the screen and click the Plyr Fullscreen control; the player box keeps its pixel size instead of matching the viewport
+  - test-tags: E2E
+  - root-cause: 2026-10-28T16:40:40Z @kj fitVideo writes inline width and height in px on the Plyr container (src/video.ts L114-L117); inline values beat Plyr's stylesheet rule .plyr:fullscreen{width:100%;height:100%}
+  - log: 2026-10-28T16:40:40Z @kj added
+  - log: 2026-10-28T17:48:43Z @kj closed
+- [x] `DEF-MEDIA-9-MEDIA` **Audio zoom buttons do nothing above 100 MB** - MEDIUM; For an audio file over 100 MB the minus, plus and Fit buttons stay enabled and do nothing, because the waveform is skipped and there is nothing to zoom
+  - evidence: ACC-AUDIO-54-LARGE asserts the zoom buttons are disabled when the waveform is skipped, ACC-AUDIO-48-ZOOM asserts they are enabled otherwise, Galata 75/75
+  - repro: open an audio file whose model size is over 100 MB, then click minus, plus or Fit; the view does not change and no message explains why
+  - test-tags: E2E
+  - root-cause: 2026-10-28T16:40:40Z @kj the over-limit branch of AudioViewer.load destroys the wavesurfer player and shows native controls; zoomBy returns when getDecodedData is null, while the shared addZoomButtons leaves the buttons enabled
+  - log: 2026-10-28T16:40:40Z @kj added
+  - log: 2026-10-28T17:48:43Z @kj closed
+- [x] `DEF-MEDIA-10-MEDIA` **Unplayed waveform is 2.68:1 in the light theme** - MEDIUM; The unplayed part of the waveform renders at 2.68:1 against the white panel, below the 3:1 WCAG 1.4.11 asks of graphical content
+  - evidence: ACC-AUDIO-45-WAVE computes the unplayed waveform contrast against the panel and asserts at least 3:1, Galata 75/75
+  - repro: open an audio file in the light theme and read the wave colour: --jp-ui-font-color3 resolves to rgba(0,0,0,.38) on white, 2.68:1
+  - test-tags: E2E
+  - root-cause: 2026-10-28T16:40:41Z @kj the waveform colour comes from --jp-ui-font-color3 in AudioViewer.colours(); that token is a muted text colour, not a 3:1 graphics colour
+  - log: 2026-10-28T16:40:41Z @kj added
+  - log: 2026-10-28T17:48:43Z @kj closed
+- [x] `DEF-MEDIA-11-MEDIA` **Unplayable file shows the browser's raw MediaError text** - MINOR; An unreadable media file shows the browser's raw MediaError message instead of a plain sentence; the message line is announced as of round 2 (role=status), so only the wording remains
+  - evidence: ACC-AUDIO-55-ERROR asserts the plain sentence and no browser jargon, Galata 75/75
+  - repro: open a file whose decode fails; the line reads e.g. 'Failed to load because no supported source was found' and nothing is announced
+  - test-tags: E2E
+  - root-cause: 2026-10-28T17:14:16Z @kj round 2 added role=status to the message element, so the line is now announced; the remaining cause is that the error listener interpolates media.error.message instead of a plain sentence
+  - root-cause: 2026-10-28T16:41:01Z @kj the error listener interpolates media.error.message into the message element (src/media.ts L41-L48); the element carries no role or aria-live
+  - log: 2026-10-28T16:41:01Z @kj added
+  - log: 2026-10-28T17:14:16Z @kj edited title "Unplayable file shows raw MediaError text, never announced" -> "Unplayable file shows the browser's raw MediaError text"; text "An unreadable media file shows the browser's raw MediaError message, and the message line has no role or aria-live, so a screen reader is told nothing" -> "An unreadable media file shows the browser's raw MediaError message instead of a plain sentence; the message line is announced as of round 2 (role=status), so only the wording remains"; reason: the role=status attribute added in review round 2 closes the announced half; the raw MediaError text remains
+  - log: 2026-10-28T17:48:43Z @kj closed
+- [x] `DEF-MEDIA-12-MEDIA` **Times over an hour print as unbounded minutes** - MINOR; A 104 minute file prints 104:00 instead of 1:44:00 in the details, the status line, the ruler and the loop label
+  - evidence: Jest 28/28, case 'uses hours for a total of an hour or more' pins 1:44:00.0 and 1:00:00
+  - repro: open an audio file longer than 60 minutes and read the details line or the ruler; the minutes run past 59
+  - test-tags: UNIT
+  - root-cause: 2026-10-28T16:41:01Z @kj formatTime in src/mediautil.ts has no hours branch; it prints mm:ss with the minutes unbounded
+  - log: 2026-10-28T16:41:01Z @kj added
+  - log: 2026-10-28T17:48:43Z @kj closed
+- [x] `DEF-MEDIA-13-MEDIA` **A slight drag arms a sub-second loop** - MINOR; A click on the waveform that moves three pixels or more creates a sub-second region and turns Loop on, so the click does not seek where it landed
+  - evidence: ACC-AUDIO-50-LOOP asserts a 4 px jitter drag creates no region and Loop stays off while the deliberate 10 s drag survives, Galata 75/75
+  - repro: press on the waveform, move 4 px and release; a region under a second appears, Loop turns on, and playback does not move to the clicked point
+  - test-tags: E2E
+  - root-cause: 2026-10-28T16:41:01Z @kj enableDragSelection passes no minLength (src/audio.ts L282-L284); the Region default is 0 and the drag threshold is 3 px
+  - log: 2026-10-28T16:41:01Z @kj added
+  - log: 2026-10-28T17:48:44Z @kj closed
+- [x] `DEF-MEDIA-14-MEDIA` **Speed change keeps focus in the select, so the first Space opens it** - MINOR; After choosing a playback speed with the mouse the select keeps the focus: the first Space opens the speed dropdown instead of playing or pausing, and the media keys act again only after a click or Tab back to the viewer
+  - evidence: not fixed by owner decision: one click or a Tab back to the viewer restores the media keys, and the only known fix (this.node.focus() on change) stopped keyboard users stepping the select more than once; reverted in review round 2
+  - repro: open an audio file, change the speed with the mouse, then press Space; the speed dropdown opens and playback does not toggle
+  - test-tags: E2E
+  - root-cause: 2026-10-28T17:06:46Z @kj the speed select sits in the toolbar, outside the .jp-AdvancedMediaViewer selector the media key bindings match, and its change listener leaves the focus on the select; the round-1 fix (this.node.focus()) was reverted because it broke keyboard stepping of the select
+  - log: 2026-10-28T17:06:46Z @kj added
+  - log: 2026-10-28T17:19:22Z @kj closed
+

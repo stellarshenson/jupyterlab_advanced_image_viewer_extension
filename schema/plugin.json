@@ -8,7 +8,7 @@
     "navEnabled": {
       "type": "boolean",
       "title": "Enable folder navigation",
-      "description": "When enabled, the Left/Right arrow keys open the previous or next image in the same folder.",
+      "description": "When enabled, the Left/Right arrow keys open the previous or next image in the same folder, and Page Up/Page Down open the previous or next audio or video file of the same kind.",
       "default": true
     },
     "zoomStep": {

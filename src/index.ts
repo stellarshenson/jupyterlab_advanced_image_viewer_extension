@@ -1,4 +1,5 @@
 import {
+  ILayoutRestorer,
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
@@ -7,29 +8,46 @@ import {
   Dialog,
   showDialog,
   Toolbar,
-  ToolbarButton
+  WidgetTracker
 } from '@jupyterlab/apputils';
 
 import { PathExt } from '@jupyterlab/coreutils';
 
 import { IDocumentWidget } from '@jupyterlab/docregistry';
 
-import { DirListing, IDefaultFileBrowser } from '@jupyterlab/filebrowser';
+import { IDefaultFileBrowser } from '@jupyterlab/filebrowser';
 
 import { IImageTracker, ImageViewer } from '@jupyterlab/imageviewer';
+
+import { Contents, IDefaultDrive } from '@jupyterlab/services';
 
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 
-import { imageIcon, refreshIcon } from '@jupyterlab/ui-components';
+import { imageIcon } from '@jupyterlab/ui-components';
 
 import { IDisposable } from '@lumino/disposable';
 
 import { Widget } from '@lumino/widgets';
 
+// eslint-disable-next-line jupyter/prefer-lazy-imports -- the layout restorer opens saved audio tabs at activation; wavesurfer.js itself loads on first use
+import { AudioViewer } from './audio';
+
 // eslint-disable-next-line jupyter/prefer-lazy-imports -- activation attaches the controller to restored image tabs at once
 import { ViewerController } from './controller';
+
+// eslint-disable-next-line jupyter/prefer-lazy-imports -- activation registers the media widget factories at once
+import { MediaFactory, MediaViewer } from './media';
+
+import { SEEK_STEP } from './mediautil';
+
+import { navigate } from './navigate';
+
+import { addHelpLink, addReloadButton, addZoomButtons } from './toolbar';
+
+// eslint-disable-next-line jupyter/prefer-lazy-imports -- the layout restorer opens saved video tabs at activation; Plyr itself loads on first use
+import { VideoViewer } from './video';
 
 const PLUGIN_ID = 'jupyterlab_advanced_image_viewer_extension:plugin';
 
@@ -39,8 +57,20 @@ const CommandIDs = {
   resetFit: 'advanced-image-viewer:reset-fit',
   previous: 'advanced-image-viewer:previous-image',
   next: 'advanced-image-viewer:next-image',
-  copyClipboard: 'advanced-image-viewer:copy-to-clipboard'
+  copyClipboard: 'advanced-image-viewer:copy-to-clipboard',
+  seekBack: 'advanced-media-viewer:seek-back',
+  seekForward: 'advanced-media-viewer:seek-forward',
+  togglePlay: 'advanced-media-viewer:toggle-play',
+  previousFile: 'advanced-media-viewer:previous-file',
+  nextFile: 'advanced-media-viewer:next-file'
 };
+
+const AUDIO_FACTORY = 'AdvancedAudioViewer';
+const VIDEO_FACTORY = 'AdvancedVideoViewer';
+
+// Opens a media file without its content, so no media file is ever read
+// through the contents API; the player reads it from its file URL.
+const MEDIA_PROVIDER = 'advanced-media-provider';
 
 const IMAGE_EXTS = new Set([
   '.png',
@@ -78,16 +108,23 @@ const defaults: ISettingsState = {
 const plugin: JupyterFrontEndPlugin<void> = {
   id: PLUGIN_ID,
   description:
-    'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation.',
+    'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation; audio viewer with a waveform, and media keys.',
   autoStart: true,
-  requires: [IImageTracker],
-  optional: [ISettingRegistry, IDefaultFileBrowser, ITranslator],
+  requires: [IImageTracker, IDefaultDrive],
+  optional: [
+    ISettingRegistry,
+    IDefaultFileBrowser,
+    ITranslator,
+    ILayoutRestorer
+  ],
   activate: (
     app: JupyterFrontEnd,
     tracker: IImageTracker,
+    drive: Contents.IDrive,
     settingRegistry: ISettingRegistry | null,
     fileBrowser: IDefaultFileBrowser | null,
-    translator: ITranslator | null
+    translator: ITranslator | null,
+    restorer: ILayoutRestorer | null
   ): void => {
     console.log(
       'JupyterLab extension jupyterlab_advanced_image_viewer_extension is activated!'
@@ -158,57 +195,23 @@ const plugin: JupyterFrontEndPlugin<void> = {
       // Reload from disk, like the HTML viewer's refresh button. That button
       // skips the reload while the model is dirty; an image model is never
       // edited, so there is nothing here to discard.
-      widget.toolbar.addItem(
-        'advanced-refresh',
-        new ToolbarButton({
-          icon: refreshIcon,
-          tooltip: trans.__('Reload image from disk'),
-          noFocusOnClick: true,
-          onClick: async () => {
-            await widget.context.revert();
-            widget.update();
-          }
-        })
+      addReloadButton(
+        widget.toolbar,
+        trans.__('Reload image from disk'),
+        async () => {
+          await widget.context.revert();
+          widget.update();
+        }
       );
-      widget.toolbar.addItem(
-        'advanced-zoom-out',
-        new ToolbarButton({
-          label: '-',
-          tooltip: trans.__('Zoom out'),
-          noFocusOnClick: true,
-          onClick: () => app.commands.execute(CommandIDs.zoomOut)
-        })
-      );
-      widget.toolbar.addItem(
-        'advanced-zoom-in',
-        new ToolbarButton({
-          label: '+',
-          tooltip: trans.__('Zoom in'),
-          noFocusOnClick: true,
-          onClick: () => app.commands.execute(CommandIDs.zoomIn)
-        })
-      );
-      widget.toolbar.addItem(
-        'advanced-reset-fit',
-        new ToolbarButton({
-          label: trans.__('Fit'),
-          tooltip: trans.__('Reset to fit'),
-          noFocusOnClick: true,
-          onClick: () => app.commands.execute(CommandIDs.resetFit)
-        })
+      addZoomButtons(
+        widget.toolbar,
+        trans,
+        () => void app.commands.execute(CommandIDs.zoomOut),
+        () => void app.commands.execute(CommandIDs.zoomIn),
+        () => void app.commands.execute(CommandIDs.resetFit)
       );
       widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
-      const helpLink = new Widget({ node: document.createElement('a') });
-      const helpAnchor = helpLink.node as HTMLAnchorElement;
-      helpAnchor.textContent = trans.__('help');
-      helpAnchor.href = '#';
-      helpAnchor.title = trans.__('Keybindings and help');
-      helpAnchor.className = 'jp-AdvancedImageViewer-help-link';
-      helpAnchor.addEventListener('click', event => {
-        event.preventDefault();
-        showHelp();
-      });
-      widget.toolbar.addItem('advanced-help', helpLink);
+      addHelpLink(widget.toolbar, trans, showHelp);
     };
 
     tracker.forEach(widget => attach(widget));
@@ -318,91 +321,293 @@ const plugin: JupyterFrontEndPlugin<void> = {
       rank: 0
     });
 
-    const navigate = async (delta: number): Promise<void> => {
-      const widget = tracker.currentWidget;
-      if (!widget) {
-        return;
-      }
-      const path = widget.context.path;
-      const dirPath = PathExt.dirname(path);
-      const isImage = (item: { name: string; type: string }): boolean =>
-        item.type === 'file' &&
-        IMAGE_EXTS.has(PathExt.extname(item.name).toLowerCase());
-      // Step through the images in the order the file browser shows them
-      // when it lists this folder, so its sort key, its direction and any
-      // sort plugin decide what comes next: a C-locale sort puts '.' before
-      // '_' where localeCompare puts '_' first, and a re-sort here skipped
-      // files. FileBrowser keeps `listing` protected, but it is the only
-      // source of the displayed order. The listing re-sorts on a refresh only
-      // while it is visible, so a hidden one is re-sorted here; re-sorting a
-      // visible one would re-render every row on each step. Otherwise fall
-      // back to natural name order, the stock file browser default.
-      let images: Array<{ name: string; path: string; type: string }> = [];
-      if (fileBrowser && fileBrowser.model.path === dirPath) {
-        const shown = (fileBrowser as unknown as { listing: DirListing })
-          .listing;
-        if (!shown.isVisible) {
-          shown.sort(shown.sortState);
-        }
-        images = Array.from(shown.sortedItems()).filter(isImage);
-      }
-      if (!images.some(item => item.path === path)) {
-        const listing = await app.serviceManager.contents.get(dirPath, {
-          content: true
-        });
-        const content = listing.content as Array<{
-          name: string;
-          path: string;
-          type: string;
-        }> | null;
-        if (!content) {
-          return;
-        }
-        images = content.filter(isImage).sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, {
-            numeric: true,
-            sensitivity: 'base'
-          })
-        );
-      }
-      if (images.length <= 1) {
-        return;
-      }
-      const idx = images.findIndex(item => item.path === path);
-      if (idx === -1) {
-        return;
-      }
-      const target =
-        delta < 0 ? Math.max(0, idx - 1) : Math.min(images.length - 1, idx + 1);
-      if (target === idx) {
-        return;
-      }
-      // Advance within a single viewer: open the next image, then close the
-      // previous one. The stock image viewer binds each file to its own
-      // DocumentWidget, so an in-place file swap is not possible; opening and
-      // disposing the previous widget leaves one image tab that advances.
-      const previous = widget;
-      await app.commands.execute('docmanager:open', {
-        path: images[target].path,
-        factory: 'Image'
-      });
-      if (!previous.isDisposed && previous !== tracker.currentWidget) {
-        previous.dispose();
-      }
-    };
+    const navigateImages = (delta: number): Promise<void> =>
+      navigate(app, fileBrowser, tracker, IMAGE_EXTS, 'Image', delta);
 
     app.commands.addCommand(CommandIDs.previous, {
       label: trans.__('Previous Image In Folder'),
       describedBy: { args: { type: 'object', properties: {} } },
       isEnabled: () => state.navEnabled && tracker.currentWidget !== null,
-      execute: () => navigate(-1)
+      execute: () => navigateImages(-1)
     });
     app.commands.addCommand(CommandIDs.next, {
       label: trans.__('Next Image In Folder'),
       describedBy: { args: { type: 'object', properties: {} } },
       isEnabled: () => state.navEnabled && tracker.currentWidget !== null,
-      execute: () => navigate(1)
+      execute: () => navigateImages(1)
     });
+
+    // ---------------------------------------------------------------------
+    // Media viewers. They replace JupyterLab's audio and video viewers, which
+    // package.json disables, and share the toolbar parts, the help link and
+    // the folder navigation of the image viewer above.
+    // ---------------------------------------------------------------------
+
+    drive.contentProviderRegistry?.register(MEDIA_PROVIDER, {
+      get: (path: string, options?: Contents.IFetchOptions) =>
+        drive.get(path, {
+          ...options,
+          contentProviderId: undefined,
+          content: false
+        }),
+      save: (path: string, options: Partial<Contents.IModel> = {}) =>
+        drive.save(path, { ...options, contentProviderId: undefined })
+    });
+
+    // Audio and video widgets share one tracker, so the media keys and tab
+    // restore find either kind.
+    const mediaTracker = new WidgetTracker<IDocumentWidget<MediaViewer>>({
+      namespace: 'advanced-media-viewer'
+    });
+    restorer?.restore(mediaTracker, {
+      command: 'docmanager:open',
+      args: widget => ({
+        path: widget.context.path,
+        factory: widget.content.factory
+      }),
+      name: widget => widget.context.path
+    });
+    // The file extensions of each media kind, by the factory that opens it;
+    // folder navigation steps through files of the same kind.
+    const mediaExts = new Map<string, Set<string>>();
+
+    // Every file type JupyterLab registers with a MIME type of this kind, as
+    // the stock viewers bind them.
+    const fileTypesOf = (kind: 'audio' | 'video') =>
+      Array.from(app.docRegistry.fileTypes()).filter(type =>
+        type.mimeTypes.some(mime => mime.startsWith(`${kind}/`))
+      );
+
+    const showMediaHelp = (kind: 'audio' | 'video'): void => {
+      const body = new Widget();
+      body.addClass('jp-AdvancedImageViewer-help');
+      const section = (title: string, items: string[][]): void => {
+        const heading = document.createElement('p');
+        heading.className = 'jp-AdvancedImageViewer-help-section';
+        heading.textContent = title;
+        const list = document.createElement('ul');
+        for (const [keys, text] of items) {
+          const item = document.createElement('li');
+          const bold = document.createElement('b');
+          bold.textContent = keys;
+          item.append(bold, ` - ${text}`);
+          list.append(item);
+        }
+        body.node.append(heading, list);
+      };
+      section(trans.__('Keys'), [
+        [trans.__('Space'), trans.__('play / pause')],
+        [
+          trans.__('Left / Right'),
+          trans.__('back / forward %1 seconds', SEEK_STEP)
+        ],
+        [
+          trans.__('Page Up / Page Down'),
+          trans.__('previous / next file of the same kind in the folder')
+        ]
+      ]);
+      if (kind === 'audio') {
+        section(trans.__('Waveform'), [
+          [trans.__('Click'), trans.__('move playback to that point')],
+          [
+            trans.__('Overview strip'),
+            trans.__('click or drag to move playback anywhere in the file')
+          ],
+          [trans.__('Drag'), trans.__('mark a region and loop it')],
+          [
+            trans.__('Wheel, - / + / Fit'),
+            trans.__('zoom out / in, show the whole file')
+          ],
+          [trans.__('Loop'), trans.__('loop the region; off removes it')],
+          [trans.__('Speed'), trans.__('play at 0.5x to 2x the normal speed')]
+        ]);
+      } else {
+        section(trans.__('Player'), [
+          [trans.__('Play / pause'), trans.__('start or stop playback')],
+          [
+            trans.__('Seek bar'),
+            trans.__('click or drag to move playback to that point')
+          ],
+          [
+            trans.__('Current time'),
+            trans.__('the time played and the length of the file')
+          ],
+          [trans.__('Mute'), trans.__('turn the sound off and on')],
+          [trans.__('Volume'), trans.__('set the sound level')],
+          [trans.__('Speed'), trans.__('choose a playback speed')],
+          [
+            trans.__('Picture in picture'),
+            trans.__('play in a small floating window')
+          ],
+          [trans.__('Full screen'), trans.__('fill the screen with the video')]
+        ]);
+      }
+      void showDialog({
+        title: trans.__('Media Viewer'),
+        body,
+        buttons: [Dialog.okButton({ label: trans.__('Close') })]
+      });
+    };
+
+    const trackMedia = (widget: IDocumentWidget<MediaViewer>): void => {
+      void mediaTracker.add(widget);
+      widget.context.pathChanged.connect(() => void mediaTracker.save(widget));
+      const icon = app.docRegistry
+        .getFileTypesForPath(widget.context.path)
+        .find(type => type.icon)?.icon;
+      if (icon) {
+        widget.title.icon = icon;
+      }
+    };
+
+    const audioTypes = fileTypesOf('audio');
+    mediaExts.set(
+      AUDIO_FACTORY,
+      new Set(([] as string[]).concat(...audioTypes.map(t => t.extensions)))
+    );
+    const audioFactory = new MediaFactory(
+      {
+        name: AUDIO_FACTORY,
+        label: trans.__('Audio Viewer'),
+        fileTypes: audioTypes.map(type => type.name),
+        defaultFor: audioTypes.map(type => type.name),
+        readOnly: true,
+        modelName: 'base64',
+        contentProviderId: MEDIA_PROVIDER,
+        translator: translator ?? nullTranslator
+      },
+      context =>
+        new AudioViewer({
+          context,
+          factory: AUDIO_FACTORY,
+          contents: app.serviceManager.contents,
+          trans
+        })
+    );
+    app.docRegistry.addWidgetFactory(audioFactory);
+    audioFactory.widgetCreated.connect((_, widget) => {
+      const viewer = widget.content as AudioViewer;
+      trackMedia(widget);
+      addReloadButton(
+        widget.toolbar,
+        trans.__('Reload audio from disk'),
+        async () => {
+          await widget.context.revert();
+          await viewer.load();
+        }
+      );
+      viewer.addControls(widget.toolbar);
+      widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
+      widget.toolbar.addItem(
+        'advanced-details',
+        new Widget({ node: viewer.details })
+      );
+      addHelpLink(widget.toolbar, trans, () => showMediaHelp('audio'));
+    });
+
+    const videoTypes = fileTypesOf('video');
+    mediaExts.set(
+      VIDEO_FACTORY,
+      new Set(([] as string[]).concat(...videoTypes.map(t => t.extensions)))
+    );
+    const videoFactory = new MediaFactory(
+      {
+        name: VIDEO_FACTORY,
+        label: trans.__('Video Viewer'),
+        fileTypes: videoTypes.map(type => type.name),
+        defaultFor: videoTypes.map(type => type.name),
+        readOnly: true,
+        modelName: 'base64',
+        contentProviderId: MEDIA_PROVIDER,
+        translator: translator ?? nullTranslator
+      },
+      context =>
+        new VideoViewer({
+          context,
+          factory: VIDEO_FACTORY,
+          contents: app.serviceManager.contents,
+          trans
+        })
+    );
+    app.docRegistry.addWidgetFactory(videoFactory);
+    videoFactory.widgetCreated.connect((_, widget) => {
+      const viewer = widget.content as VideoViewer;
+      trackMedia(widget);
+      addReloadButton(
+        widget.toolbar,
+        trans.__('Reload video from disk'),
+        async () => {
+          await widget.context.revert();
+          await viewer.load();
+        }
+      );
+      widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
+      widget.toolbar.addItem(
+        'advanced-details',
+        new Widget({ node: viewer.details })
+      );
+      addHelpLink(widget.toolbar, trans, () => showMediaHelp('video'));
+    });
+
+    const currentMedia = (): MediaViewer | null =>
+      mediaTracker.currentWidget?.content ?? null;
+    const navigateMedia = (delta: number): Promise<void> => {
+      const viewer = currentMedia();
+      const exts = viewer && mediaExts.get(viewer.factory);
+      if (!viewer || !exts) {
+        return Promise.resolve();
+      }
+      return navigate(
+        app,
+        fileBrowser,
+        mediaTracker,
+        exts,
+        viewer.factory,
+        delta
+      );
+    };
+
+    app.commands.addCommand(CommandIDs.seekBack, {
+      label: trans.__('Back %1 Seconds (Media Viewer)', SEEK_STEP),
+      describedBy: { args: { type: 'object', properties: {} } },
+      isEnabled: () => currentMedia() !== null,
+      execute: () => currentMedia()?.seekBy(-SEEK_STEP)
+    });
+    app.commands.addCommand(CommandIDs.seekForward, {
+      label: trans.__('Forward %1 Seconds (Media Viewer)', SEEK_STEP),
+      describedBy: { args: { type: 'object', properties: {} } },
+      isEnabled: () => currentMedia() !== null,
+      execute: () => currentMedia()?.seekBy(SEEK_STEP)
+    });
+    app.commands.addCommand(CommandIDs.togglePlay, {
+      label: trans.__('Play / Pause (Media Viewer)'),
+      describedBy: { args: { type: 'object', properties: {} } },
+      isEnabled: () => currentMedia() !== null,
+      execute: () => currentMedia()?.togglePlay()
+    });
+    app.commands.addCommand(CommandIDs.previousFile, {
+      label: trans.__('Previous Media File In Folder'),
+      describedBy: { args: { type: 'object', properties: {} } },
+      isEnabled: () => state.navEnabled && currentMedia() !== null,
+      execute: () => navigateMedia(-1)
+    });
+    app.commands.addCommand(CommandIDs.nextFile, {
+      label: trans.__('Next Media File In Folder'),
+      describedBy: { args: { type: 'object', properties: {} } },
+      isEnabled: () => state.navEnabled && currentMedia() !== null,
+      execute: () => navigateMedia(1)
+    });
+    for (const [command, key] of [
+      [CommandIDs.seekBack, 'ArrowLeft'],
+      [CommandIDs.seekForward, 'ArrowRight'],
+      [CommandIDs.togglePlay, 'Space']
+    ]) {
+      app.commands.addKeyBinding({
+        command,
+        keys: [key],
+        selector: '.jp-AdvancedMediaViewer'
+      });
+    }
 
     const bindKeys = (): void => {
       keyBindings.forEach(b => b.dispose());
@@ -422,6 +627,20 @@ const plugin: JupyterFrontEndPlugin<void> = {
           command: CommandIDs.next,
           keys: ['ArrowRight'],
           selector: '.jp-ImageViewer'
+        })
+      );
+      keyBindings.push(
+        app.commands.addKeyBinding({
+          command: CommandIDs.previousFile,
+          keys: ['PageUp'],
+          selector: '.jp-AdvancedMediaViewer'
+        })
+      );
+      keyBindings.push(
+        app.commands.addKeyBinding({
+          command: CommandIDs.nextFile,
+          keys: ['PageDown'],
+          selector: '.jp-AdvancedMediaViewer'
         })
       );
     };
