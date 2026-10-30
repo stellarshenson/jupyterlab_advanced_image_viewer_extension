@@ -463,7 +463,7 @@ test.describe('Advanced Image Viewer', () => {
           '@jupyterlab/apputils-extension:settings'
         );
         await registry.set(
-          'jupyterlab_advanced_image_viewer_extension:plugin',
+          '@stellarshenson/jupyterlab-advanced-image-viewer-extension:plugin',
           k,
           v
         );
@@ -968,7 +968,7 @@ test.describe('Advanced Image Viewer', () => {
         '@jupyterlab/apputils-extension:settings'
       );
       const settings = await registry.load(
-        'jupyterlab_advanced_image_viewer_extension:plugin'
+        '@stellarshenson/jupyterlab-advanced-image-viewer-extension:plugin'
       );
       const bindings = (window as any).jupyterapp.commands.keyBindings;
       const keysOf = (command: string) =>

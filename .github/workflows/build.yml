@@ -43,7 +43,7 @@ jobs:
         python -m pip install .
 
         jupyter labextension list
-        jupyter labextension list 2>&1 | grep -ie "jupyterlab_advanced_image_viewer_extension.*OK"
+        jupyter labextension list 2>&1 | grep -ie "@stellarshenson/jupyterlab-advanced-image-viewer-extension.*OK"
         python -m jupyterlab.browser_check
 
     - name: Package the extension
@@ -84,7 +84,7 @@ jobs:
         pip install "jupyterlab>=4.6,<5" jupyterlab_advanced_image_viewer_extension*.whl
 
         jupyter labextension list
-        jupyter labextension list 2>&1 | grep -ie "jupyterlab_advanced_image_viewer_extension.*OK"
+        jupyter labextension list 2>&1 | grep -ie "@stellarshenson/jupyterlab-advanced-image-viewer-extension.*OK"
         python -m jupyterlab.browser_check --no-browser-test
 
   integration-tests:

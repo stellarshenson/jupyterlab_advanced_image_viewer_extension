@@ -47,8 +47,8 @@ artifacts = ["jupyterlab_advanced_image_viewer_extension/labextension"]
 exclude = [".github", "binder"]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"jupyterlab_advanced_image_viewer_extension/labextension" = "share/jupyter/labextensions/jupyterlab_advanced_image_viewer_extension"
-"install.json" = "share/jupyter/labextensions/jupyterlab_advanced_image_viewer_extension/install.json"
+"jupyterlab_advanced_image_viewer_extension/labextension" = "share/jupyter/labextensions/@stellarshenson/jupyterlab-advanced-image-viewer-extension"
+"install.json" = "share/jupyter/labextensions/@stellarshenson/jupyterlab-advanced-image-viewer-extension/install.json"
 
 [tool.hatch.build.hooks.version]
 path = "jupyterlab_advanced_image_viewer_extension/_version.py"

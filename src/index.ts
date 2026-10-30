@@ -49,7 +49,8 @@ import { addHelpLink, addReloadButton, addZoomButtons } from './toolbar';
 // eslint-disable-next-line jupyter/prefer-lazy-imports -- the layout restorer opens saved video tabs at activation; Plyr itself loads on first use
 import { VideoViewer } from './video';
 
-const PLUGIN_ID = 'jupyterlab_advanced_image_viewer_extension:plugin';
+const PLUGIN_ID =
+  '@stellarshenson/jupyterlab-advanced-image-viewer-extension:plugin';
 
 const CommandIDs = {
   zoomIn: 'advanced-image-viewer:zoom-in',
@@ -127,7 +128,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     restorer: ILayoutRestorer | null
   ): void => {
     console.log(
-      'JupyterLab extension jupyterlab_advanced_image_viewer_extension is activated!'
+      'JupyterLab extension @stellarshenson/jupyterlab-advanced-image-viewer-extension is activated!'
     );
     const trans = (translator ?? nullTranslator).load(
       'jupyterlab_advanced_image_viewer_extension'

@@ -12,5 +12,5 @@ except ImportError:
 def _jupyter_labextension_paths():
     return [{
         "src": "labextension",
-        "dest": "jupyterlab_advanced_image_viewer_extension"
+        "dest": "@stellarshenson/jupyterlab-advanced-image-viewer-extension"
     }]

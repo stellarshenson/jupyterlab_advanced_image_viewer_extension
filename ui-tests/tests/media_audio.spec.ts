@@ -733,7 +733,7 @@ test.describe('Audio viewer', () => {
         '@jupyterlab/apputils-extension:settings'
       );
       await registry.set(
-        'jupyterlab_advanced_image_viewer_extension:plugin',
+        '@stellarshenson/jupyterlab-advanced-image-viewer-extension:plugin',
         'navEnabled',
         false
       );
