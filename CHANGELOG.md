@@ -2,6 +2,31 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.8] - 2026-11-03
+
+### Added
+
+- Mesh viewer on three.js for STL, PLY, OBJ, 3MF, GLB and STEP files, with STEP read by occt-import-js in a Web Worker: orbit, pan and zoom at the cursor, Fit, flat and wireframe shading, a ground grid, an orthographic projection, ten standard views, three lighting styles, a read-out of format, triangles, dimensions and size, Page Up / Page Down to the next mesh file, a help link and a 1 GiB limit
+
+### Changed
+
+- Makefile 1.48
+
+### Fixed
+
+- Save and Save As in an audio, video or mesh tab no longer empty the file on disk, and the refusal now shows a visible message
+- Opening an audio, video or mesh file no longer copies it into .ipynb_checkpoints, and no longer makes the server read the whole file for a content hash
+- A video over 100 MB shows Loading... until its metadata arrives instead of a black player, and a lost connection to the server says so and offers Reload
+- A viewer whose code was replaced by an install says to reload the page instead of showing a raw ChunkLoadError
+- Reload and File > Reload from Disk read the file again, and on a deleted file show one sentence instead of a dialog
+- The audio speed choice holds after Reload
+- A short drag on the waveform seeks instead of being lost
+- Video controls wrap in a narrow panel, so Play and Fullscreen stay inside the player, and a file with sound only shows its details
+- A WebM recording up to 100 MB with no duration in its header shows its length and seeks
+- A theme change no longer erases the waveform
+- An audio file whose waveform cannot be decoded plays in the native player with a sentence that says so
+- Mesh viewer: smooth shading without seams, the Studio environment built off the main thread, a size limit no reader exceeds, and a lost-context sentence that names a real control
+
 ## [1.2.7] - 2026-10-31
 
 ### Changed

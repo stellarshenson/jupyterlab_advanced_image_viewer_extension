@@ -9,6 +9,17 @@
     "lib": ["DOM", "ES2018", "ES2020.Intl"],
     "module": "esnext",
     "moduleResolution": "node",
+    // The GLTFLoader declarations reach KTX2Loader and meshopt, whose imports
+    // resolve only through an exports map this project's resolution ignores.
+    "paths": {
+      "meshoptimizer/decoder": [
+        "./node_modules/meshoptimizer/meshopt_decoder.d.ts"
+      ],
+      "meshoptimizer/simplifier": [
+        "./node_modules/meshoptimizer/meshopt_simplifier.d.ts"
+      ],
+      "three/webgpu": ["./node_modules/@types/three/build/three.webgpu.d.ts"]
+    },
     "noEmitOnError": true,
     "noImplicitAny": true,
     "noUnusedLocals": true,

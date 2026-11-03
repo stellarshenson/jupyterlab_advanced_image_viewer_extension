@@ -70,5 +70,12 @@ The change takes effect after the next GalaxaLab image rebuild. The running cont
 
 ## Effect on this extension's media viewers
 
-- The audio viewer loads a file of up to 100 MB as a blob to draw the waveform, so it seeks on any server, with or without this fix
-- The video viewer, and the audio viewer for files over 100 MB, play from the `/files/` URL, so they seek only after this fix
+- The audio and video viewers download a file of up to 100 MB (`WAVEFORM_LIMIT` in `src/mediautil.ts`, `100 * 1024 * 1024` bytes) and play it from the downloaded blob, so they seek on any server
+- The audio and video viewers play a larger file from the `/files/` URL, so they seek only on a server that answers byte ranges
+
+## Status
+
+The fix is in the platform file `/galaxalab/etc/jupyter/files_handler.py`, dated 2026-10-28. `DownloadableFilesHandler` now subclasses `AuthenticatedFileHandler`.
+
+- On an isolated server on port 8899, a request with `Range: bytes=1000-1999` answered 206 for all 7 files, with `Accept-Ranges: bytes`, `Content-Length: 1000`, the right `Content-Range` and a `Content-Security-Policy` ending `sandbox allow-scripts allow-downloads`
+- The `/files/` handler root is now `~/workspace`, set by `c.ContentsManager.files_handler_params` in `/galaxalab/etc/jupyter/jupyter_lab_config.py`, so the check must request the path under that root. A path relative to the server's `root_dir` answered 404 for all 7 files

@@ -1,6 +1,6 @@
 import { expect, test } from '@jupyterlab/galata';
 
-import { readFileSync } from 'fs';
+import { readFileSync, truncateSync, writeFileSync } from 'fs';
 
 import * as path from 'path';
 
@@ -20,6 +20,13 @@ const SHORT = readFileSync(path.join(__dirname, 'fixtures', 'clip-short.mp4'));
 const NAME = 'clip.mp4';
 const FACTORY = 'AdvancedVideoViewer';
 const SHOWN = '.jp-MainAreaWidget:not(.lm-mod-hidden)';
+// WAVEFORM_LIMIT of src/mediautil.ts.
+const LIMIT = 100 * 1024 * 1024;
+const LOST =
+  'The connection to the server was lost; press Reload to try again.';
+const STALE = 'This viewer was updated; reload the page to use it.';
+// The chunks of this extension that load when the first file opens.
+const CHUNKS = '**/jupyterlab-advanced-image-viewer-extension/static/*.js*';
 
 test.describe('Video viewer', () => {
   test.beforeEach(async ({ page, tmpPath }) => {
@@ -34,6 +41,7 @@ test.describe('Video viewer', () => {
     page.locator(`${SHOWN} .jp-AdvancedMediaViewer`);
   const media = (page: any) =>
     page.locator(`${SHOWN} .jp-AdvancedMediaViewer-media`);
+  const message = (page: any) => viewer(page).locator('[role="status"]');
   const toolbar = (page: any) => page.locator(`${SHOWN} .jp-Toolbar`);
   const details = (page: any) =>
     toolbar(page).locator('.jp-AdvancedMediaViewer-details');
@@ -105,6 +113,55 @@ test.describe('Video viewer', () => {
         video: box(`${shown} .jp-AdvancedMediaViewer-media`)
       };
     }, SHOWN);
+
+  // The contents API reports the file over the limit, so it plays from its URL.
+  const overLimit = (page: any, name = NAME) =>
+    page.route(`**/api/contents/**/${name}?*`, async (route: any) => {
+      const response = await route.fetch();
+      const model = await response.json();
+      await route.fulfill({ response, json: { ...model, size: 2 * LIMIT } });
+    });
+
+  // A 2.5 s browser recording as base64: a WebM with no duration in its header,
+  // with sound only or with a picture from a canvas as well.
+  const record = (page: any, picture: boolean): Promise<string> =>
+    page.evaluate(async (withPicture: boolean) => {
+      const audio = new AudioContext();
+      const tone = audio.createOscillator();
+      const sound = audio.createMediaStreamDestination();
+      tone.connect(sound);
+      tone.start();
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 180;
+      const draw = canvas.getContext('2d')!;
+      const frames = setInterval(() => {
+        draw.fillStyle = `hsl(${Date.now() % 360} 80% 50%)`;
+        draw.fillRect(0, 0, 320, 180);
+      }, 40);
+      const recorder = new MediaRecorder(
+        new MediaStream([
+          ...sound.stream.getTracks(),
+          ...(withPicture ? canvas.captureStream(25).getTracks() : [])
+        ]),
+        { mimeType: 'video/webm' }
+      );
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = event => chunks.push(event.data);
+      const stopped = new Promise(resolve => (recorder.onstop = resolve));
+      // In chunks: without them Chromium writes the duration into the file.
+      recorder.start(200);
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      recorder.stop();
+      await stopped;
+      clearInterval(frames);
+      await audio.close();
+      const reader = new FileReader();
+      const read = new Promise(resolve => (reader.onload = resolve));
+      reader.readAsDataURL(new Blob(chunks));
+      await read;
+      return (reader.result as string).split(',')[1];
+    }, picture);
 
   // A colour as the browser resolves it, to compare #rrggbb with rgb().
   const resolved = (page: any, colour: string): Promise<string> =>
@@ -314,6 +371,110 @@ test.describe('Video viewer', () => {
         .not.toBe(Math.round(box.width));
       box = await check();
     }
+  });
+
+  // DEF-MEDIA-26-NARROW-CONTROLS
+  test('DEF-MEDIA-26-NARROW-CONTROLS the seek bar keeps its width in a narrow panel', async ({
+    page,
+    tmpPath
+  }) => {
+    await open(page, `${tmpPath}/${NAME}`);
+    const beside = `${tmpPath}/beside.txt`;
+    await page.contents.uploadContent('beside', 'text', beside);
+    // A second document beside the player halves the panel.
+    await page.evaluate(async (file: string) => {
+      await (window as any).jupyterapp.commands.execute('docmanager:open', {
+        path: file,
+        factory: 'Editor',
+        options: { mode: 'split-right' }
+      });
+    }, beside);
+    const player = viewer(page).locator('.plyr');
+    await expect
+      .poll(async () => (await player.boundingBox())!.width)
+      .toBeLessThan(500);
+    const seek = (await viewer(page)
+      .locator('[data-plyr="seek"]')
+      .boundingBox())!;
+    expect(seek.width).toBeGreaterThanOrEqual(200);
+    // Play and Fullscreen stay inside the player.
+    const edges = (box: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }) => ({
+      ...box,
+      right: box.x + box.width,
+      bottom: box.y + box.height
+    });
+    const outer = edges((await player.boundingBox())!);
+    for (const control of ['play', 'fullscreen']) {
+      expectInside(
+        edges(
+          (await player
+            .locator(`.plyr__controls [data-plyr="${control}"]`)
+            .boundingBox())!
+        ),
+        outer
+      );
+    }
+  });
+
+  // DEF-MEDIA-27-WEBM-DURATION
+  test('DEF-MEDIA-27-WEBM-DURATION a browser recording shows its length and seeks', async ({
+    page,
+    tmpPath
+  }) => {
+    for (const [file, picture, read] of [
+      ['recording.webm', true, /^WEBM · 320×180 · .+ KB · 00:0[23]$/],
+      ['voice.webm', false, /^WEBM · [^×]+ KB · 00:0[23]$/]
+    ] as const) {
+      await page.contents.uploadContent(
+        await record(page, picture),
+        'base64',
+        `${tmpPath}/${file}`
+      );
+      await open(page, `${tmpPath}/${file}`);
+      await expect(details(page)).toHaveText(read);
+      await expect.poll(() => currentTime(page)).toBe(0);
+      const duration: number = await media(page).evaluate(
+        (m: HTMLMediaElement) => m.duration
+      );
+      expect(duration).toBeGreaterThan(2);
+      expect(duration).toBeLessThan(4);
+
+      const box = (await viewer(page)
+        .locator('[data-plyr="seek"]')
+        .boundingBox())!;
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await expect
+        .poll(() => currentTime(page))
+        .toBeGreaterThan(duration / 2 - 0.5);
+      expect(await currentTime(page)).toBeLessThan(duration / 2 + 0.5);
+    }
+  });
+
+  // DEF-MEDIA-30-LARGE-RECORDING. The wait gives a duration scan time to end: it
+  // only moves the duration away from Infinity if it runs.
+  test('DEF-MEDIA-30-LARGE-RECORDING a browser recording over 100 MB plays from its URL with no duration scan', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.contents.uploadContent(
+      await record(page, true),
+      'base64',
+      `${tmpPath}/large.webm`
+    );
+    await overLimit(page, 'large.webm');
+    await open(page, `${tmpPath}/large.webm`);
+    await page.waitForTimeout(1000);
+    const player = await playerInfo(page);
+    expect(player.src).toContain('/files/');
+    expect(player.duration).toBe(Infinity);
+    expect(await currentTime(page)).toBe(0);
+    await expect(message(page)).toHaveText('');
+    await expect(details(page)).toHaveText(/--:--$/);
   });
 
   // ACC-VIDEO-59-DETAILS
@@ -685,6 +846,69 @@ test.describe('Video viewer', () => {
     expect((await playerInfo(page)).src.startsWith('blob:')).toBe(true);
   });
 
+  // DEF-MEDIA-16-RELOAD-DELETED
+  test('DEF-MEDIA-16-RELOAD-DELETED Reload on a deleted file shows one sentence and no dialog, and Reload on the restored file plays it', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/${NAME}`;
+    await open(page, file);
+    await expect(details(page)).toHaveText(/./);
+    expect(await page.contents.deleteFile(file)).toBe(true);
+    await button(page, 'Reload video from disk').click();
+    const message = viewer(page).locator('[role="status"]');
+    await expect(message).toHaveText(
+      'This file cannot be read from the server.'
+    );
+    await expect(page.locator('.jp-Dialog')).toHaveCount(0);
+    await expect(details(page)).toHaveText('');
+    // Nothing of the old file stays.
+    expect(
+      await media(page).evaluate((m: HTMLMediaElement) => m.getAttribute('src'))
+    ).toBeNull();
+    await expect(message).toHaveText(
+      'This file cannot be read from the server.'
+    );
+
+    await page.contents.uploadContent(SHORT.toString('base64'), 'base64', file);
+    await button(page, 'Reload video from disk').click();
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
+      .toBeCloseTo(10, 0);
+    await expect(message).toHaveText('');
+    await expect(details(page)).toHaveText('MP4 · 320×180 · 91.7 KB · 00:10');
+  });
+
+  // DEF-MEDIA-17-CHECKPOINT
+  test('DEF-MEDIA-17-CHECKPOINT opening a video file writes no checkpoint, and the viewer still works', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/${NAME}`;
+    await open(page, file);
+    // JupyterLab writes the checkpoint as the document opens.
+    await page.waitForTimeout(1000);
+    const checkpoints = () =>
+      page.evaluate(
+        (path: string) =>
+          (window as any).jupyterapp.serviceManager.contents.listCheckpoints(
+            path
+          ),
+        file
+      );
+    expect(await checkpoints()).toEqual([]);
+    await expect(details(page)).toHaveText('MP4 · 320×180 · 181.6 KB · 00:20');
+    await media(page).evaluate((m: HTMLMediaElement) => m.play());
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(0.2);
+    await media(page).evaluate((m: HTMLMediaElement) => m.pause());
+
+    await button(page, 'Reload video from disk').click();
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
+      .toBeCloseTo(20, 0);
+    expect(await checkpoints()).toEqual([]);
+  });
+
   // ACC-MEDIA-69-RESTORE
   test('ACC-MEDIA-69-RESTORE a video tab opens again after a page reload', async ({
     page,
@@ -761,6 +985,7 @@ test.describe('Video viewer', () => {
     expect(contents.length).toBeGreaterThan(0);
     for (const url of contents) {
       expect(new URL(url).searchParams.get('content')).toBe('0');
+      expect(new URL(url).searchParams.get('hash')).toBe('0');
     }
   });
 
@@ -903,5 +1128,210 @@ test.describe('Video viewer', () => {
     const large = await playerInfo(page);
     expect(large.src).toContain('/files/');
     expect(large.src.startsWith('blob:')).toBe(false);
+  });
+
+  // DEF-MEDIA-22-LARGE-VIDEO. No route fakes the size: a free box after the
+  // movie, which the format ignores, pads the fixture past the limit. The file
+  // is sparse and lies in the temporary server root.
+  test('DEF-MEDIA-22-LARGE-VIDEO a real file over 100 MB plays from its URL, and Loading... stays until the metadata', async ({
+    page,
+    tmpPath
+  }) => {
+    const padding = LIMIT + 1024 * 1024;
+    const box = Buffer.alloc(8);
+    box.writeUInt32BE(box.length + padding, 0);
+    box.write('free', 4);
+    const file = path.join(
+      process.env.JUPYTERLAB_GALATA_ROOT_DIR!,
+      tmpPath,
+      'large.mp4'
+    );
+    writeFileSync(file, Buffer.concat([CLIP, box]));
+    truncateSync(file, CLIP.length + box.length + padding);
+
+    // In the capture phase, so it runs before the viewer's own listener.
+    await page.evaluate((shown: string) => {
+      document.addEventListener(
+        'loadedmetadata',
+        () => {
+          (window as any).atMetadata = document.querySelector(
+            `${shown} [role="status"]`
+          )?.textContent;
+        },
+        { capture: true, once: true }
+      );
+    }, SHOWN);
+    await open(page, `${tmpPath}/large.mp4`);
+    expect(await page.evaluate(() => (window as any).atMetadata)).toBe(
+      'Loading...'
+    );
+    await expect(message(page)).toHaveText('');
+
+    expect(
+      await page.evaluate(
+        () => (window as any).jupyterapp.shell.currentWidget.content.size
+      )
+    ).toBeGreaterThan(LIMIT);
+    const player = await playerInfo(page);
+    expect(player.src).toContain('/files/');
+    expect(player.src.startsWith('blob:')).toBe(false);
+    expect(player.duration).toBeCloseTo(20, 0);
+    await expect(details(page)).toHaveText('MP4 · 320×180 · 101.2 MB · 00:20');
+    await seek(page, 15);
+    expect(await currentTime(page)).toBeCloseTo(15, 0);
+  });
+
+  // DEF-MEDIA-22-LARGE-VIDEO
+  test('DEF-MEDIA-22-LARGE-VIDEO a file request that never answers keeps Loading...', async ({
+    page,
+    tmpPath
+  }) => {
+    await overLimit(page);
+    let asked = (): void => undefined;
+    const requested = new Promise<void>(resolve => (asked = resolve));
+    await page.route(`**/files/**/${NAME}*`, () => asked());
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await requested;
+    await page.waitForTimeout(1000);
+    await expect(message(page)).toHaveText('Loading...');
+  });
+
+  // DEF-MEDIA-22-LARGE-VIDEO. Before the metadata Chromium reports a failed
+  // request as an unsupported source, the code a damaged file also gets.
+  test('DEF-MEDIA-22-LARGE-VIDEO a failed file request says the connection was lost, and Reload plays the file', async ({
+    page,
+    tmpPath
+  }) => {
+    await overLimit(page);
+    const files = `**/files/**/${NAME}*`;
+    await page.route(files, (route: any) => route.abort('failed'));
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expect(message(page)).toHaveText(LOST);
+
+    await page.unroute(files);
+    await button(page, 'Reload video from disk').click();
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
+      .toBeCloseTo(20, 0);
+    await expect(message(page)).toHaveText('');
+    await expect(details(page)).toHaveText('MP4 · 320×180 · 200.0 MB · 00:20');
+  });
+
+  // DEF-MEDIA-22-LARGE-VIDEO. After the metadata Chromium retries a failed
+  // request for about 30 s, then reports MEDIA_ERR_NETWORK.
+  test('DEF-MEDIA-22-LARGE-VIDEO a connection lost after the metadata says so, and Reload plays the file', async ({
+    page,
+    tmpPath
+  }) => {
+    test.setTimeout(120000);
+    await overLimit(page);
+    const files = `**/files/**/${NAME}*`;
+    let served = 0;
+    await page.route(files, async (route: any) => {
+      if (++served > 1) {
+        return route.abort('failed');
+      }
+      const end = 32 * 1024 - 1;
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes 0-${end}/${CLIP.length}`,
+          'Content-Type': 'video/mp4'
+        },
+        body: CLIP.subarray(0, end + 1)
+      });
+    });
+    await open(page, `${tmpPath}/${NAME}`);
+    await expect(message(page)).toHaveText('');
+    await media(page).evaluate((m: HTMLMediaElement) => {
+      m.currentTime = 15;
+    });
+    await expect(message(page)).toHaveText(LOST, { timeout: 45000 });
+
+    await page.unroute(files);
+    await button(page, 'Reload video from disk').click();
+    await expect(message(page)).toHaveText('');
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.error))
+      .toBeNull();
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
+      .toBeCloseTo(20, 0);
+  });
+
+  // DEF-MEDIA-23-STALE-CHUNK. A page left open across an install asks for
+  // chunk names that no longer exist; on a fresh page a blocked chunk fails the
+  // same way.
+  test('DEF-MEDIA-23-STALE-CHUNK a missing player chunk asks for a page reload', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.route(CHUNKS, (route: any) => route.abort('failed'));
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expect(message(page)).toHaveText(STALE);
+    await expect(viewer(page)).not.toContainText('ChunkLoadError');
+    expect(
+      await media(page).evaluate((m: HTMLMediaElement) => m.controls)
+    ).toBe(false);
+  });
+
+  // DEF-MEDIA-18-SAVE-EMPTIES
+  test('DEF-MEDIA-18-SAVE-EMPTIES Ctrl+S after a rename keeps the video file and its player', async ({
+    page,
+    request,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/${NAME}`;
+    await open(page, file);
+    expect((await playerInfo(page)).duration).toBeGreaterThan(0);
+
+    // A rename makes the document model writable again.
+    const renamed = `${tmpPath}/renamed.mp4`;
+    expect(await page.contents.renameFile(file, renamed)).toBe(true);
+    await expect(currentTab(page)).toHaveText('renamed.mp4');
+
+    // Ctrl+S is refused through the notification system, shows no error dialog
+    // and writes nothing. The notification stays in the bell's list, so its
+    // count is the evidence of the refusal.
+    const bell = () =>
+      page.locator('.jp-Notification-Status').innerText().then(Number);
+    const before = await bell();
+    await viewer(page).focus();
+    await page.keyboard.press('Control+s');
+    await expect.poll(bell, { timeout: 5000 }).toBe(before + 1);
+    // DEF-MEDIA-33-SAVE-TOAST: the refusal also shows as a toast; the newest
+    // toast is the first in the DOM.
+    await expect(
+      page
+        .locator('.Toastify__toast-container .jp-Notification-Toast-warning')
+        .filter({
+          hasText: 'This viewer does not save files, so the file is unchanged.'
+        })
+        .first()
+    ).toBeVisible();
+    await expect(page.locator('.jp-Dialog')).toHaveCount(0);
+    const saved = await page.evaluate(async (path: string) => {
+      const model = await (
+        window as any
+      ).jupyterapp.serviceManager.contents.get(path, { content: true });
+      return model.content as string;
+    }, renamed);
+    // The server wraps its base64 at 76 characters; the bytes are the same.
+    expect(saved.replace(/\s+/g, '')).toBe(CLIP.toString('base64'));
+    expect((await playerInfo(page)).duration).toBeGreaterThan(0);
+
+    // Delete the file behind the context's back, so the context still holds
+    // the writable model from the rename. Its save path then finds a 404 and
+    // writes the empty document model through the default contents provider;
+    // Ctrl+S must leave the file absent.
+    expect((await request.delete(`/api/contents/${renamed}`)).status()).toBe(
+      204
+    );
+    const beforeDeleted = await bell();
+    await page.keyboard.press('Control+s');
+    await expect.poll(bell, { timeout: 5000 }).toBe(beforeDeleted + 1);
+    await expect(page.locator('.jp-Dialog')).toHaveCount(0);
+    expect((await request.get(`/api/contents/${renamed}`)).status()).toBe(404);
   });
 });

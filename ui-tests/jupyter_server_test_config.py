@@ -24,5 +24,10 @@ c.LabApp.user_settings_dir = mkdtemp(prefix="galata-settings-")
 # where the extension is not installed, as in CI.
 c.GalaxaHubMotd.open_on_start = False
 
+# The workstation image's jupyter_lab_config.py roots /files/ at the user's
+# workspace through ContentsManager, so a viewer that reads a test file from its
+# file URL gets 404. This narrower section wins whichever file loads last.
+c.FileContentsManager.files_handler_params = {"path": c.ServerApp.root_dir}
+
 # Uncomment to set server log level to debug level
 # c.ServerApp.log_level = "DEBUG"

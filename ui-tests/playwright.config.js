@@ -1,7 +1,18 @@
 /**
  * Configuration for Playwright using default from @jupyterlab/galata
  */
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 const baseConfig = require('@jupyterlab/galata/lib/playwright-config');
+
+// A fixed server root, so a test can copy a file too large for the contents API
+// into it. Galata reads the variable for its own root, and this module runs in
+// the test worker and in the process that starts the server.
+const ROOT = path.join(os.tmpdir(), 'galata-root');
+fs.mkdirSync(ROOT, { recursive: true });
+process.env.JUPYTERLAB_GALATA_ROOT_DIR = ROOT;
 
 // The test server port. CI keeps 8888; locally a developer's own lab often holds
 // 8888, and galata's server config refuses to move (port_retries = 0), so the

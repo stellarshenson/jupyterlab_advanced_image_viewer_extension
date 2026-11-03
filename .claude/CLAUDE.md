@@ -49,6 +49,27 @@ These skills MUST be referenced when working on this project:
   `.nodeenv`, version increment, build, and install flow
 - Use `make build`, `make test`, `make clean`, `make mrproper` for their respective operations
 
+## Upgrading Viewer Libraries
+
+The viewers bundle libraries that release often. Releases in the 12 months to 2026-10-31:
+`wavesurfer.js` 18, `three` 13, `@types/three` 13, `plyr` 2, `occt-import-js` 0. Upgrade only on the
+Star Colonel's request, one library per commit. `@jupyterlab/*` and the template follow
+`references/jupyterlab-upgrades.md` of the `jupyterlab-extension` skill, not this section.
+
+| Library | Current range allows | How to move it | Read after moving it |
+|---|---|---|---|
+| `three` + `@types/three` | 0.187.x only | Edit both ranges in `package.json` to the same new minor | [Migration guide](https://github.com/mrdoob/three.js/wiki/Migration-Guide) for every skipped release; `three/examples/jsm/` imports in `src/meshscene.ts` (`three/addons/` does not resolve under this project's `moduleResolution`) |
+| `wavesurfer.js` | every 8.x | `jlpm up -R wavesurfer.js`, which changes only `yarn.lock` | `wavesurfer.js/dist/plugins/*` imports in `src/audio.ts` |
+| `plyr` | every 3.x from 3.8 | `jlpm up -R plyr`, which changes only `yarn.lock` | Copy `node_modules/plyr/dist/plyr.svg` over `style/plyr.svg` when their symbol ids differ, because `src/video.ts` bundles that copy |
+| `occt-import-js` | 0.0.23 only | Edit the range in `package.json` | `dist/` file names used by the STEP reader, licence still LGPL-2.1, wheel still lists the WASM file and licence texts |
+
+- **Latest version** - `npm view <package> version`; the installed one is in `node_modules/<package>/package.json`
+- **`@types/three`** - can publish days after `three` (0.186.0 came 3 days later). Wait for the same minor, never mix minors
+- **Install** - `make -o increment_version install`, because plain `make install` raises the version. `git diff package.json yarn.lock` must show only this library
+- **Gates** - `make test`, `jlpm run lint:check`, then Galata through `~/.claude/skills/jupyterlab-extension/scripts/galata-bwrap.sh` on the whole suite
+- **`three` only** - read one rendered screenshot as well, because the Galata tests count pixels and a change of rendering defaults can pass them
+- **A failed upgrade** - stay on the installed version and file the failure with `pm-tools add docs/defects.md`. Never raise a range to a version that has not passed these gates
+
 ## Makefile Version Tracking
 
 - **MANDATORY**: Always compare the local `Makefile` version header against the reference Makefile at

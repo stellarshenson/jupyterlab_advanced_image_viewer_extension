@@ -406,71 +406,82 @@ Audio files open in a waveform player built on wavesurfer.js
 - log: 2026-10-28T13:59:51Z @kj category created
 
 - [x] `ACC-AUDIO-45-WAVE` **Waveform view** - HIGH; an audio file opens in one tab with its waveform drawn by wavesurfer.js, the played part in the accent colour, a playback line, and a time ruler above the waveform
-  - evidence: ACC-AUDIO-45-WAVE waveform, ruler and playback line in the accent colour passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-45-WAVE in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open a generated 60 s WAV, assert the waveform, the ruler and the playback line render with non-zero size
   - test-tags: E2E
   - log: 2026-10-28T13:59:51Z @kj added
   - log: 2026-10-28T16:14:52Z @kj closed
+  - log: 2026-11-03T10:12:12Z @kj edited evidence "ACC-AUDIO-45-WAVE waveform, ruler and playback line in the accent colour passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-45-WAVE in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-46-SEEK` **Click seeks** - CRITICAL; a click anywhere on the waveform moves playback to the time under the click within 0.5 s, paused or playing, at every point from the start to the end of the file
-  - evidence: ACC-AUDIO-46-SEEK a click on the waveform seeks on a server without byte ranges passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-46-SEEK in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: click at 25% and 75% of a 60 s WAV, assert currentTime 15 s and 45 s within 0.5 s
   - test-tags: E2E
   - log: 2026-10-28T13:59:51Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:27Z @kj edited evidence "ACC-AUDIO-46-SEEK a click on the waveform seeks on a server without byte ranges passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-46-SEEK in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-47-OVERVIEW` **Overview seeks the whole file** - HIGH; a strip above the waveform shows the whole file with the zoomed part outlined; a click or a drag on it moves playback to that point of the file and scrolls the waveform to show it
-  - evidence: ACC-AUDIO-47-OVERVIEW the overview strip seeks the whole file and scrolls the waveform passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-47-OVERVIEW in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: zoom in, click the strip at 90% of a 60 s WAV, assert currentTime 54 s within 0.5 s and the playback line inside the waveform view
   - test-tags: E2E
   - log: 2026-10-28T13:59:51Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-AUDIO-47-OVERVIEW the overview strip seeks the whole file and scrolls the waveform passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-47-OVERVIEW in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-48-ZOOM` **Waveform zoom** - MEDIUM; the mouse wheel over the waveform and the toolbar - and + buttons zoom the waveform out and in; Fit shows the whole file; during playback the view scrolls to keep the playback line visible
-  - evidence: ACC-AUDIO-48-ZOOM plus, minus, Fit and the wheel zoom the waveform passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-48-ZOOM in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: press + twice, assert the shown duration shrinks; press Fit, assert it equals the file duration
   - test-tags: E2E
   - log: 2026-10-28T13:59:52Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-AUDIO-48-ZOOM plus, minus, Fit and the wheel zoom the waveform passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-48-ZOOM in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-49-HOVER` **Time under the mouse** - LOW; hovering over the waveform shows the time under the mouse pointer
-  - evidence: ACC-AUDIO-49-HOVER hovering shows the time under the mouse passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-49-HOVER in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: hover at 50% of a 60 s WAV, read 00:30 within 0.5 s
   - test-tags: E2E
   - log: 2026-10-28T13:59:52Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-49-HOVER hovering shows the time under the mouse passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-49-HOVER in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-50-LOOP` **Loop a region** - MEDIUM; a drag on the waveform marks a region and turns Loop on; with Loop on, playback returns to the region start when it reaches the region end; turning Loop off removes the region
-  - evidence: ACC-AUDIO-50-LOOP a drag marks a loop region and Loop off removes it passes, Galata 76/76 local
+  - evidence: 2 tests titled ACC-AUDIO-50-LOOP in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: drag from 10 s to 20 s, play from 18 s, assert currentTime between 10 s and 13 s after 3 s; click Loop, assert no region
   - test-tags: E2E
   - log: 2026-10-28T13:59:52Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-50-LOOP a drag marks a loop region and Loop off removes it passes, Galata 76/76 local" -> "2 tests titled ACC-AUDIO-50-LOOP in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-51-CONTROLS` **Playback controls** - HIGH; the toolbar has Play/Pause, back 5 s, forward 5 s, Loop and a speed choice of 0.5x, 0.75x, 1x, 1.25x, 1.5x and 2x, each acting on the open file
-  - evidence: ACC-AUDIO-51-CONTROLS play, back, forward, loop and speed act on the file passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-51-CONTROLS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: from 10 s click forward twice, assert 20 s; pick 2x, assert playbackRate 2
   - test-tags: E2E
   - log: 2026-10-28T13:59:52Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-AUDIO-51-CONTROLS play, back, forward, loop and speed act on the file passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-51-CONTROLS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-52-TIME` **Current time and duration** - MEDIUM; the viewer shows the current time and the duration, updated during playback and after every seek
-  - evidence: ACC-AUDIO-52-TIME the current time and the duration update on a seek passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-52-TIME in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: seek to 15 s in a 60 s WAV, read 00:15.0 / 01:00.0
   - test-tags: E2E
   - log: 2026-10-28T13:59:52Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-52-TIME the current time and the duration update on a seek passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-52-TIME in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-53-DETAILS` **Audio file details** - LOW; the toolbar shows the format taken from the file extension, the channel count, the file size and the duration
-  - evidence: ACC-AUDIO-53-DETAILS the toolbar shows format, channels, size and duration passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-53-DETAILS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open the 60 s mono WAV, read WAV, mono, its size and 01:00
   - test-tags: E2E
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-53-DETAILS the toolbar shows format, channels, size and duration passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-53-DETAILS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-54-LARGE` **Large audio file** - HIGH; a file over 100 MB is not decoded in the browser; it opens and plays with a working seek bar and a line saying that the waveform is skipped above 100 MB
-  - evidence: Jest the waveform limit suite and ACC-AUDIO-54-LARGE a file over 100 MB plays without a waveform and seeks pass, Galata 76/76 local
+  - evidence: Jest the waveform limit suite in mediautil.spec.ts passed, logs/media-close5-test.log 48/48; 1 test titled ACC-AUDIO-54-LARGE in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: unit test the size limit; open a file reported over the limit, assert the seek bar works and the line shows
   - test-tags: UNIT, E2E
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "Jest the waveform limit suite and ACC-AUDIO-54-LARGE a file over 100 MB plays without a waveform and seeks pass, Galata 76/76 local" -> "Jest the waveform limit suite in mediautil.spec.ts passed, logs/media-close5-test.log 48/48; 1 test titled ACC-AUDIO-54-LARGE in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-AUDIO-55-ERROR` **Unreadable audio** - MEDIUM; every audio file type JupyterLab registers opens in this viewer; a file the browser cannot decode shows an error line in the viewer, never an empty or stuck panel
-  - evidence: ACC-AUDIO-55-ERROR every audio type opens here and an unreadable file shows an error passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-AUDIO-55-ERROR in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open a WAV and a corrupt .mp3, assert the waveform and the error line
   - test-tags: E2E
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-55-ERROR every audio type opens here and an unreadable file shows an error passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-55-ERROR in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 
 ## Video viewer `VIDEO`
 
@@ -479,35 +490,40 @@ Video files open in a Plyr player
 - log: 2026-10-28T13:59:53Z @kj category created
 
 - [x] `ACC-VIDEO-56-PLAYER` **Plyr player** - HIGH; a video file opens in one tab in a Plyr player with its control bar: play, seek bar, current time, mute, volume, speed menu, picture-in-picture and full screen
-  - evidence: ACC-VIDEO-56-PLAYER the video opens in one tab in a Plyr player with its control bar passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-VIDEO-56-PLAYER in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open the video fixture, assert the Plyr control bar and each of these buttons
   - test-tags: E2E
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:57Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-VIDEO-56-PLAYER the video opens in one tab in a Plyr player with its control bar passes, Galata 76/76 local" -> "1 test titled ACC-VIDEO-56-PLAYER in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-VIDEO-57-SEEK` **Video seek** - CRITICAL; a click on the seek bar moves playback to the time under the click within 0.5 s, at every point from the start to the end of the file
-  - evidence: ACC-VIDEO-57-SEEK a click on the seek bar moves playback to that point passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-VIDEO-57-SEEK in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: click the seek bar at 50% of the fixture, assert currentTime half the duration within 0.5 s
   - test-tags: E2E
   - log: 2026-10-28T13:59:54Z @kj added
   - log: 2026-10-28T16:14:57Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-VIDEO-57-SEEK a click on the seek bar moves playback to that point passes, Galata 76/76 local" -> "1 test titled ACC-VIDEO-57-SEEK in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-VIDEO-58-FIT` **Video fit** - MEDIUM; the whole frame is visible and centred at every panel size, with the aspect ratio kept
-  - evidence: ACC-VIDEO-58-FIT the whole frame is visible and centred at every panel size passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-VIDEO-58-FIT in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: resize the panel twice, assert the video rect inside the panel and the aspect ratio within 1%
   - test-tags: E2E
   - log: 2026-10-28T13:59:54Z @kj added
   - log: 2026-10-28T16:14:57Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-VIDEO-58-FIT the whole frame is visible and centred at every panel size passes, Galata 76/76 local" -> "1 test titled ACC-VIDEO-58-FIT in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-VIDEO-59-DETAILS` **Video file details** - LOW; the toolbar shows the format taken from the file extension, the frame size in pixels, the file size and the duration
-  - evidence: ACC-VIDEO-59-DETAILS the toolbar shows format, frame size, size and duration passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-VIDEO-59-DETAILS in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open the fixture, read its format, frame size, file size and duration
   - test-tags: E2E
   - log: 2026-10-28T13:59:54Z @kj added
   - log: 2026-10-28T16:14:57Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-VIDEO-59-DETAILS the toolbar shows format, frame size, size and duration passes, Galata 76/76 local" -> "1 test titled ACC-VIDEO-59-DETAILS in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-VIDEO-60-ACCENT` **Accent colour** - LOW; the played part of the seek bar and the highlighted Plyr buttons use --jp-brand-color1 in the light and the dark theme
-  - evidence: ACC-VIDEO-60-ACCENT the seek bar and the highlighted buttons use the brand colour passes, Galata 76/76 local
+  - evidence: 1 test titled ACC-VIDEO-60-ACCENT in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: compare the computed colour with the resolved --jp-brand-color1 in both themes
   - test-tags: E2E
   - log: 2026-10-28T13:59:54Z @kj added
   - log: 2026-10-28T16:14:57Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-VIDEO-60-ACCENT the seek bar and the highlighted buttons use the brand colour passes, Galata 76/76 local" -> "1 test titled ACC-VIDEO-60-ACCENT in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 
 ## Media keys `KEYS`
 
@@ -516,29 +532,33 @@ Keyboard control of a focused audio or video tab
 - log: 2026-10-28T13:59:55Z @kj category created
 
 - [x] `ACC-KEYS-61-ARROWS` **Arrow keys seek** - HIGH; in a focused audio or video tab, Left and Right move playback 5 s back and forward, once per key press, stopping at the start and the end
-  - evidence: ACC-KEYS-61-ARROWS Left and Right move playback 5 s and stop at the ends, and the video variant once per press, pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-KEYS-61-ARROWS, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: from 10 s press Right, assert 15 s; press Left twice, assert 5 s; in an audio and a video tab
   - test-tags: E2E
   - log: 2026-10-28T13:59:55Z @kj added
   - log: 2026-10-28T16:14:57Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-KEYS-61-ARROWS Left and Right move playback 5 s and stop at the ends, and the video variant once per press, pass, Galata 76/76 local" -> "2 tests titled ACC-KEYS-61-ARROWS, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-KEYS-62-SPACE` **Space plays and pauses** - MEDIUM; Space toggles play and pause in a focused audio or video tab
-  - evidence: ACC-KEYS-62-SPACE Space plays and pauses passes in the audio and the video viewer, Galata 76/76 local
+  - evidence: 2 tests titled ACC-KEYS-62-SPACE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: press Space twice, assert playing then paused
   - test-tags: E2E
   - log: 2026-10-28T13:59:55Z @kj added
   - log: 2026-10-28T16:14:57Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-KEYS-62-SPACE Space plays and pauses passes in the audio and the video viewer, Galata 76/76 local" -> "2 tests titled ACC-KEYS-62-SPACE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-KEYS-63-PAGE` **Page keys change file** - HIGH; Page Up and Page Down open the previous and next file of the same kind, audio or video, in the folder, in the order the file browser lists them, inside one tab, stopping at the first and the last file; the folder navigation setting turns this off
-  - evidence: ACC-KEYS-63-PAGE Page Up and Page Down open the previous and next audio file, and the video variant, pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-KEYS-63-PAGE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: with three WAV files press Page Down twice and Page Up once, assert the paths and one audio tab
   - test-tags: E2E
   - log: 2026-10-28T13:59:55Z @kj added
   - log: 2026-10-28T16:14:58Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-KEYS-63-PAGE Page Up and Page Down open the previous and next audio file, and the video variant, pass, Galata 76/76 local" -> "2 tests titled ACC-KEYS-63-PAGE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-KEYS-64-SCOPE` **Keys stay in media tabs** - HIGH; these keys act only in a focused audio or video tab; notebooks, editors and the image viewer keep their behaviour, and Left and Right still change the image in the image viewer
-  - evidence: ACC-KEYS-64-SCOPE the media keys act only in a focused media tab, and the video variant, pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-KEYS-64-SCOPE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: press Left and Space in a notebook cell, assert normal editing; press Right in the image viewer, assert the next image
   - test-tags: E2E
   - log: 2026-10-28T13:59:55Z @kj added
   - log: 2026-10-28T16:14:58Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-KEYS-64-SCOPE the media keys act only in a focused media tab, and the video variant, pass, Galata 76/76 local" -> "2 tests titled ACC-KEYS-64-SCOPE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 
 ## Media integration `MEDIA`
 
@@ -547,64 +567,317 @@ How the audio and video viewers fit into JupyterLab
 - log: 2026-10-28T13:59:55Z @kj category created
 
 - [x] `ACC-MEDIA-65-STOCK` **Stock viewers disabled** - HIGH; while this extension is installed, @jupyterlab/audio-extension:plugin and @jupyterlab/video-extension:plugin are disabled; a double click opens the new viewer, and Open With on an audio or video file lists only the new viewer
-  - evidence: ACC-MEDIA-65-STOCK the stock audio and video viewers are disabled and the stock video viewer is disabled pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-65-STOCK, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: read the widget factories for a .wav and a video path, assert one each, from this extension
   - test-tags: E2E
   - log: 2026-10-28T13:59:55Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-MEDIA-65-STOCK the stock audio and video viewers are disabled and the stock video viewer is disabled pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-65-STOCK, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-66-TOOLBAR` **Toolbar matches the image viewer** - MEDIUM; the media toolbar starts with the same Reload button as the image viewer, waveform zoom uses the same -, + and Fit buttons with the same tooltips, and the help link sits at the right end
-  - evidence: ACC-MEDIA-66-TOOLBAR the audio toolbar matches the image viewer toolbar and the video toolbar starts with Reload and ends with help pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-66-TOOLBAR, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: compare the toolbar items of an audio, a video and an image tab
   - test-tags: E2E
   - log: 2026-10-28T13:59:56Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-MEDIA-66-TOOLBAR the audio toolbar matches the image viewer toolbar and the video toolbar starts with Reload and ends with help pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-66-TOOLBAR, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-67-HELP` **Help link as in the image viewer** - LOW; the toolbar shows an underlined help text link in the accent colour at the right end, never a ? icon; it opens a dialog listing the media controls and keys, each once, with a Close button
-  - evidence: ACC-MEDIA-67-HELP the help link lists each media control once and each video control and key once pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-67-HELP, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: read the link text, colour and position; open the dialog and count each control once
   - test-tags: E2E
   - log: 2026-10-28T13:59:56Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-MEDIA-67-HELP the help link lists each media control once and each video control and key once pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-67-HELP, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-68-RELOAD` **Reload from disk** - LOW; Reload reads the file again, so a changed file shows its new waveform or picture and its new duration
-  - evidence: ACC-MEDIA-68-RELOAD Reload reads the changed file again passes in the audio and the video viewer, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-68-RELOAD, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: overwrite the 60 s WAV with a 30 s one, click Reload, assert 00:30.0
   - test-tags: E2E
   - log: 2026-10-28T13:59:56Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
+  - log: 2026-11-03T10:12:30Z @kj edited evidence "ACC-MEDIA-68-RELOAD Reload reads the changed file again passes in the audio and the video viewer, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-68-RELOAD, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-69-RESTORE` **Tab restore** - MEDIUM; open audio and video tabs open again after a page reload, on the same files
-  - evidence: ACC-MEDIA-69-RESTORE an audio tab and a video tab open again after a page reload pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-69-RESTORE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open an audio and a video tab, reload the page, assert both tabs and their paths
   - test-tags: E2E
   - log: 2026-10-28T13:59:56Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-MEDIA-69-RESTORE an audio tab and a video tab open again after a page reload pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-69-RESTORE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-70-LOCAL` **No third-party requests** - HIGH; opening and using the viewers sends requests only to the lab's own server; the Plyr icons and its blank video are bundled
-  - evidence: ACC-MEDIA-70-LOCAL opening and playing audio and video requests only the lab pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-70-LOCAL, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: record every page request while opening and playing audio and video, assert each URL is on the lab origin
   - test-tags: E2E
   - log: 2026-10-28T13:59:56Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-MEDIA-70-LOCAL opening and playing audio and video requests only the lab pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-70-LOCAL, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-71-STREAM` **No content download through the contents API** - HIGH; opening a media file never fetches its content through the contents API; the player reads the file from its file URL
-  - evidence: ACC-MEDIA-71-STREAM the file is never read through the contents API passes in the audio and the video viewer, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-71-STREAM, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open a video, assert no /api/contents request with content=1 for its path
   - test-tags: E2E
   - log: 2026-10-28T13:59:57Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-MEDIA-71-STREAM the file is never read through the contents API passes in the audio and the video viewer, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-71-STREAM, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-72-CLOSE` **Closing stops playback** - MEDIUM; closing a playing audio or video tab stops the sound and removes its media element
-  - evidence: ACC-MEDIA-72-CLOSE closing a playing tab stops it and removes its element passes in the audio and the video viewer, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-72-CLOSE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: play, close the tab, assert no media element is left playing
   - test-tags: E2E
   - log: 2026-10-28T13:59:57Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
+  - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-MEDIA-72-CLOSE closing a playing tab stops it and removes its element passes in the audio and the video viewer, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-72-CLOSE, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-73-MENU` **One item per label** - CRITICAL; the context menus of an audio tab, a video tab and their content show each label once
-  - evidence: ACC-MEDIA-73-MENU no context menu item appears twice on an audio tab, and the video variant, pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-73-MENU, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: extend 'no context menu item appears twice' to an audio and a video tab
   - test-tags: E2E
   - log: 2026-10-28T13:59:57Z @kj added
   - log: 2026-10-28T16:15:02Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-MEDIA-73-MENU no context menu item appears twice on an audio tab, and the video variant, pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-73-MENU, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
 - [x] `ACC-MEDIA-74-BUFFER` **Small files seek without byte ranges** - CRITICAL; audio and video files up to 100 MB are downloaded once from the file URL and played from the downloaded copy, so seeking works on a server without byte ranges; larger files play from the file URL
-  - evidence: ACC-MEDIA-74-BUFFER audio and video up to 100 MB are downloaded once and seek without byte ranges pass, Galata 76/76 local
+  - evidence: 2 tests titled ACC-MEDIA-74-BUFFER, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - related: DEF-MEDIA-7-SEEK - the seek failure this works around for files up to 100 MB
   - test: serve /files/ as status 200 without Accept-Ranges through page.route, open a WAV and the video fixture, seek to 50%, assert currentTime within 0.5 s
   - test-tags: E2E
   - log: 2026-10-28T14:26:15Z @kj added
   - log: 2026-10-28T16:15:02Z @kj closed
+  - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-MEDIA-74-BUFFER audio and video up to 100 MB are downloaded once and seek without byte ranges pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-74-BUFFER, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+
+## Mesh viewer `MESH`
+
+STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
+
+- log: 2026-10-31T19:54:51Z @kj category created
+
+- [x] `ACC-MESH-75-OPEN` **Opens by double-click** - CRITICAL; a double-click on a .stl, .ply, .obj, .3mf, .glb, .step or .stp file opens one tab in the mesh viewer with a mesh icon; Open With lists Mesh Viewer
+  - evidence: media_mesh.spec.ts ACC-MESH-75-OPEN: one tab, mesh icon in the title and tab, Open With lists Mesh Viewer, all seven extensions open with covered > 5000; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: generate one file of each format, double-click, assert one viewer tab and model pixels in the canvas
+  - test-tags: E2E
+  - log: 2026-10-31T19:54:51Z @kj added
+  - log: 2026-11-01T12:51:04Z @kj closed
+- [x] `ACC-MESH-76-STL` **STL renders** - CRITICAL; binary and ASCII STL both render; the read-out shows the file's triangle count
+  - evidence: media_mesh.spec.ts ACC-MESH-76-STL: binary and ASCII STL both render with covered > 5000 and the read-out shows exactly 256 triangles; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: generate a binary and an ASCII STL of known triangle count, assert model pixels and the count
+  - test-tags: E2E
+  - log: 2026-10-31T19:54:51Z @kj added
+  - log: 2026-11-01T12:51:04Z @kj closed
+- [x] `ACC-MESH-77-PLY` **PLY renders** - HIGH; PLY with faces renders as a surface with its vertex colours; PLY with vertices only renders as points and the read-out says points
+  - evidence: media_mesh.spec.ts ACC-MESH-77-PLY: the surface shows its vertex colours (warm > 200) with 12 triangles, the point cloud shows 1,024 points with material size 2 x device ratio and no attenuation; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: generate both, assert model pixels, a vertex colour in the pixels, and the read-out text
+  - test-tags: E2E
+  - log: 2026-10-31T19:54:51Z @kj added
+  - log: 2026-11-01T12:51:04Z @kj closed
+- [x] `ACC-MESH-78-OBJ` **OBJ renders** - HIGH; OBJ geometry renders in the default material; a mtllib line is ignored, with no request for the .mtl file and no error
+  - evidence: media_mesh.spec.ts ACC-MESH-78-OBJ: renders with covered > 5000 and warm < 10, sends no .mtl request; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: generate an OBJ with a mtllib line, assert model pixels, no request for the .mtl, no error message
+  - test-tags: E2E
+  - log: 2026-10-31T19:54:51Z @kj added
+  - log: 2026-11-01T12:51:04Z @kj closed
+- [x] `ACC-MESH-79-GLB` **GLB renders** - HIGH; GLB renders with its embedded materials and textures; a file using Draco, meshopt or KTX2 compression shows a sentence naming the unsupported compression
+  - evidence: media_mesh.spec.ts ACC-MESH-79-GLB: authored colour and embedded texture both warm > 200; Draco, meshopt and KTX2 each show the exact unsupported-compression sentence; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: generate a GLB with a base colour and an embedded PNG texture, assert the colours in the pixels; generate one declaring KHR_draco_mesh_compression, assert the sentence
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:13Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-80-STEP` **STEP renders** - CRITICAL; .step and .stp render with part colours; the read runs in a Web Worker, so the lab stays usable during it; the WASM file is served by the lab
+  - evidence: media_mesh.spec.ts ACC-MESH-80-STEP: .step and .stp both show STEP details, warm > 100, a page worker and the lab-hosted occt-import-js.wasm response; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: open tests/fixtures/cube.stp under both extensions, assert model pixels, a worker created by the page, and the WASM response from the lab host
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:13Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-81-QUALITY` **Rendering quality** - CRITICAL; a model renders with generated environment light and a camera light, antialiased edges and the device pixel ratio; both faces are drawn, so an open mesh shows no holes
+  - evidence: media_mesh.spec.ts ACC-MESH-81-QUALITY: colours > 500, mixed outline rows > 0.8, drawing ratio 2, environment on, one camera light, each light changes the picture, both faces > 50,000 covered; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: render a generated mesh, assert many distinct shades on the surface, intermediate colours along the outline, and pixels on the far side of an open surface
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:13Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-82-SMOOTH` **Flat and Smooth shading** - HIGH; Smooth is the default and rounds a coarse mesh while edges sharper than 40 degrees stay sharp; a toolbar button switches to Flat, which shows the facets, and shows its pressed state
+  - evidence: media_mesh.spec.ts ACC-MESH-82-SMOOTH: Flat lowers the shade count and raises the largest step, a cube edge stays sharp at 40 degrees, pressed state asserted, both stick after Reload and Page Down; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: render a coarse sphere and a cube; assert the sphere's shade count falls in Flat, and a cube edge stays sharp in Smooth
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:13Z @kj added
+  - log: 2026-10-31T23:56:15Z @kj amended text "Smooth is the default and rounds a coarse mesh while edges sharper than 30 degrees stay sharp; a toolbar button switches to Flat, which shows the facets, and shows its pressed state" -> "Smooth is the default and rounds a coarse mesh while edges sharper than 40 degrees stay sharp; a toolbar button switches to Flat, which shows the facets, and shows its pressed state"; reason: main session ruling on DEF-MESH-15-SEAMS: 40 degrees rounds the 22.5 degree globe and keeps an 8-sided column sharp
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-83-WIRE` **Wireframe** - MEDIUM; a toolbar button shows triangle edges in place of the surface, shows its pressed state, and restores the surface on a second press
+  - evidence: media_mesh.spec.ts ACC-MESH-83-WIRE: wireframe lowers covered below 0.6, a second press restores the exact count, pressed state asserted; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: toggle twice; assert covered pixels fall, then return to the first count
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-84-ORBIT` **Orbit, pan and zoom** - CRITICAL; left drag orbits around the model, right drag pans with no JupyterLab context menu, wheel zooms toward the pointer
+  - evidence: media_mesh.spec.ts ACC-MESH-84-ORBIT: left drag changes the view and keeps the model centred, right drag moves it with no context menu, the wheel grows it about the pointer; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: for each gesture, assert the pixels change as the gesture requires: bounding box moves on pan, grows on wheel up; assert no context menu after right drag
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-85-FIT` **Fit and zoom buttons** - HIGH; a model opens centred and filling the panel; the Fit button restores that view after any camera move; -, + and Fit read the same as in the image viewer; a panel resize keeps the model undistorted
+  - evidence: media_mesh.spec.ts ACC-MESH-85-FIT three tests: centred with at least half the shorter side, + and - grow and shrink, tooltips equal the image viewer's, resize keeps the ratio within 3 percent, a 0.001 cube framed; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: assert bounding box centred and at least 50 percent of the shorter side after open and after Fit; assert + grows and - shrinks it; assert tooltips equal the image viewer's
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-86-UP` **Up axis** - MEDIUM; STL, PLY, 3MF and STEP open with Z up; OBJ and GLB open with Y up
+  - evidence: src/__tests__/meshutil.spec.ts table gives stl/ply/3mf/step z and obj/glb y; media_mesh.spec.ts ACC-MESH-86-UP: Z-tall STL and pyramid stand, Y-tall GLB stands taller than wide; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: meshutil table in Jest; a Z-tall STL and a Y-tall GLB each render taller than wide in Galata
+  - test-tags: UNIT, E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-87-READOUT` **File read-out** - MEDIUM; the toolbar shows format, triangle count, three dimensions with no unit, and file size
+  - evidence: src/__tests__/meshutil.spec.ts formatDimensions cases; media_mesh.spec.ts ACC-MESH-87-READOUT exact text 'STL · 12 triangles · 12.4 × 8.0 × 3.1 · 684 B'; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: assert the exact text for a generated file of known size and extents
+  - test-tags: UNIT, E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-88-RELOAD` **Reload** - HIGH; the Reload button reads the file again and shows the new content, keeping the camera unless the kept camera cannot show the new model, and then it frames the model; a reload while one is running replaces it
+  - evidence: media_mesh.spec.ts ACC-MESH-88-RELOAD three tests: new 256 count with the camera kept, a superseded held download never shows, an out-of-view model is framed, a panned-to-limit camera stays; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: open a file, overwrite it with a different triangle count, press Reload, assert the new count; orbit first and assert the view angle stays
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-10-31T23:56:15Z @kj amended text "the Reload button reads the file again and shows the new content, keeping the camera; a reload while one is running replaces it" -> "the Reload button reads the file again and shows the new content, keeping the camera unless the kept camera cannot show the new model, and then it frames the model; a reload while one is running replaces it"; reason: main session ruling: keep the framing the third fix stage added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-89-HELP` **Help** - MEDIUM; the help link at the right end of the toolbar opens a dialog listing the mouse controls and keys
+  - evidence: media_mesh.spec.ts ACC-MESH-89-HELP: the dialog names orbit, pan, zoom, Page Up and Page Down, and the link sits at the right end of the toolbar; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: open the dialog, assert it names orbit, pan, zoom, Page Up and Page Down
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:06Z @kj closed
+- [x] `ACC-MESH-90-NAV` **Folder navigation** - HIGH; with the viewer focused, Page Up and Page Down open the previous or next mesh file in file browser order in the same tab, also after a drag on the model; the folder navigation setting turns this off
+  - evidence: media_mesh.spec.ts ACC-MESH-90-NAV two tests: order a/c/e skipping other types, one tab, works after a drag, the setting stops it, follows the file browser's descending order; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: folder of three STL files with other files between them; assert order, one tab, and no step with the setting off
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:06Z @kj closed
+- [x] `ACC-MESH-91-ERROR` **Failures show a sentence** - HIGH; a damaged file, an empty file, missing WebGL and a file over the 1 GiB limit each show one plain sentence, never a raw exception or a silent blank panel; a file over the limit is not downloaded
+  - evidence: src/__tests__/meshutil.spec.ts limit 1 GiB exact; media_mesh.spec.ts ACC-MESH-91-ERROR two tests: damaged, empty, 403, deleted, no WebGL, lost context, over-limit not downloaded, one plain sentence for every format; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: open a damaged and an empty file of each format family, assert the sentence has no exception text; meshutil limit in Jest
+  - test-tags: UNIT, E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:07Z @kj closed
+- [x] `ACC-MESH-92-LARGE` **Large file** - HIGH; a 100 MB binary STL of 2,000,000 triangles opens and renders
+  - evidence: media_mesh.spec.ts ACC-MESH-92-LARGE: a 95.4 MB binary STL of 2,000,000 triangles shows the count and model pixels; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: upload through the contents API, assert the triangle count and model pixels
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:07Z @kj closed
+- [x] `ACC-MESH-93-TABS` **Many tabs** - HIGH; a hidden tab holds no WebGL context and renders nothing; 20 open mesh tabs all show their model with the camera kept when selected again; closing a tab frees its GPU and CPU data
+  - evidence: media_mesh.spec.ts ACC-MESH-93-TABS: one live context and one canvas across 20 tabs, both ends show pixels with the camera kept, closing frees geometry and leaves live 0; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: open 20 tabs, select the first and the last, assert model pixels and no context lost; count live contexts through a page hook
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:07Z @kj closed
+- [x] `ACC-MESH-94-RESTORE` **Tab restore** - MEDIUM; an open mesh tab returns after a page reload
+  - evidence: media_mesh.spec.ts ACC-MESH-94-RESTORE: after a page reload the mesh tab returns with 12 triangles and model pixels; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: open a file, reload the page, assert the viewer shows model pixels
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:07Z @kj closed
+- [x] `ACC-MESH-95-THEME` **Theme** - MEDIUM; the background follows the JupyterLab theme with no reload, and the model stays readable in light and dark themes
+  - evidence: media_mesh.spec.ts ACC-MESH-95-THEME: the background pixel equals --jp-layout-color0 with no reload and the model stays visible in both themes; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: switch theme, assert the background pixel equals --jp-layout-color0 and model pixels stay
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:14Z @kj added
+  - log: 2026-11-01T12:51:07Z @kj closed
+- [x] `ACC-MESH-96-LAZY` **Loads on first use** - MEDIUM; three.js loads only when the first mesh file opens; the STEP WASM loads only when a STEP file opens
+  - evidence: media_mesh.spec.ts ACC-MESH-96-LAZY: no three chunk before the first open, three after, no WASM for an STL and a lab WASM response for STEP; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: record requests: no three chunk at lab start, no WASM when an STL opens
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:15Z @kj added
+  - log: 2026-11-01T12:51:07Z @kj closed
+- [x] `ACC-MESH-97-LOCAL` **No outside requests** - HIGH; opening any format sends no request to a host other than the lab
+  - evidence: media_mesh.spec.ts ACC-MESH-97-LOCAL: opening all six formats sends only lab-origin, blob: and data: requests, with /files/ used; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: record every request while opening each format, assert one host
+  - test-tags: E2E
+  - log: 2026-10-31T19:55:15Z @kj added
+  - log: 2026-11-01T12:51:07Z @kj closed
+- [x] `ACC-MESH-98-PACKAGE` **Wheel contents** - HIGH; the wheel holds the STEP WASM file as a separate file and the occt-import-js and OCCT LGPL-2.1 licence texts
+  - evidence: unzip -l dist/jupyterlab_advanced_image_viewer_extension-1.2.7-py3-none-any.whl: occt-import-js.wasm is a separate 7,604,031-byte file, license.occt-import-js.txt and license.occt.txt (LGPL-2.1) are in labextension/static and the share copy, third-party-licenses.json names occt-import-js; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: build the wheel and list it
+  - test-tags: MANUAL
+  - log: 2026-10-31T19:55:15Z @kj added
+  - log: 2026-11-01T12:51:07Z @kj closed
+- [x] `ACC-MESH-99-DOCS` **README** - MEDIUM; the README names the mesh viewer in the intro, lists formats, controls, keys, the 1 GiB limit and the LGPL-2.1 STEP reader, and shows whole-lab screenshots at 3840x2160 in the dark theme through repository-relative paths
+  - evidence: README.md '## Mesh viewer' lists formats (STL, PLY, OBJ, 3MF, GLB, STEP), controls, Page Up/Page Down keys, the 1 GiB limit and the LGPL-2.1 occt-import-js STEP reader; .resources/mesh-viewer.png measured 3840x2160, dark-theme whole window with globe.stl visible; all four README image paths repository-relative and 3840x2160
+  - test: read README.md; open each image path from the repository root
+  - test-tags: MANUAL
+  - log: 2026-10-31T19:55:15Z @kj added
+  - log: 2026-11-01T13:16:10Z @kj closed
+- [x] `ACC-MESH-100-THREEMF` **3MF renders** - HIGH; 3MF renders with the colours the file sets
+  - evidence: media_mesh.spec.ts ACC-MESH-100-THREEMF: the orange 3MF renders with warm > 200 and 12 triangles; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: generate a 3MF with one coloured object, assert model pixels and that colour in the pixels
+  - test-tags: E2E
+  - log: 2026-10-31T19:56:12Z @kj added
+  - log: 2026-11-01T12:51:05Z @kj closed
+- [x] `ACC-MESH-101-LIGHTS` **Lighting styles** - HIGH; three lighting styles - Studio (the environment light, the default), Neutral (a hemisphere fill plus a camera light) and Three-point (key, fill and rim) - switched from the toolbar; the model redraws at once and the style follows the tab and the next file in the folder like the shading
+  - evidence: media_mesh.spec.ts ACC-MESH-101-LIGHTS: every cube face and torus interior >= 3:1 both themes, three styles differ, Three-point rim brighter, Neutral lifts the darkest face 12.7 percent, carried on Page Down; meshutil.spec.ts rig membership; Galata 39 passed, logs/mesh-galata-verify-features-1.log
+  - test: open a curved mesh and a cube, screenshot each style in both themes; assert the three renders differ, Three-point shows a brighter rim than Studio and Neutral lifts the darkest face
+  - test-tags: E2E
+  - mechanism: 2026-11-01T14:15:51Z @kj the scene swaps between three light rigs and the material's unlit flag; the toolbar sets it and the shading call re-renders
+  - log: 2026-11-01T14:15:51Z @kj added
+  - log: 2026-11-01T14:49:11Z @kj amended text "three lighting styles - Studio (the environment light, the default), Headlight (light from the camera) and Unlit (a flat colour) - switched from the toolbar; the model redraws at once and the style follows the tab and the next file in the folder like the shading" -> "three lighting styles - Studio (the environment light, the default), Neutral (a hemisphere fill plus a camera light) and Three-point (key, fill and rim) - switched from the toolbar; the model redraws at once and the style follows the tab and the next file in the folder like the shading"; reason: aligned with the researched convention in tmp/workflows/mesh-viewer/20-feature-research.md: named light rigs cost no bytes and no dependency, and Unlit is a material mode rather than a lighting style
+  - log: 2026-11-01T14:49:14Z @kj edited test "open a mesh, screenshot under each style in both themes; assert the three renders differ and Unlit shows one shade across a curved face" -> "open a curved mesh and a cube, screenshot each style in both themes; assert the three renders differ, Three-point shows a brighter rim than Studio and Neutral lifts the darkest face"
+  - log: 2026-11-01T18:13:28Z @kj closed
+- [x] `ACC-MESH-102-GRID` **Background grid** - MEDIUM; a ground grid behind and below the model, off by default, toggled from the toolbar; it never hides the model, its lines meet 3:1 against the panel in both themes, and the toggle follows the tab and the next file in the folder
+  - evidence: media_mesh.spec.ts ACC-MESH-102-GRID: 45564 grid pixels at 7.46:1 light and 8.13:1 dark, model interior byte-identical, off restores every pixel, on after Page Down and Reload; Galata 39 passed, logs/mesh-galata-verify-features-1.log
+  - test: toggle the grid on and off; assert grid pixels appear outside the model silhouette, the model pixels are unchanged and the grid lines reach 3:1 in both themes
+  - test-tags: E2E
+  - mechanism: 2026-11-01T14:15:55Z @kj a grid helper sits in the scene under the model; the toolbar sets its visibility and the camera fit ignores it
+  - log: 2026-11-01T14:15:55Z @kj added
+  - log: 2026-11-01T18:13:30Z @kj closed
+- [x] `ACC-MESH-103-PROJ` **Orthographic and perspective** - HIGH; a toolbar toggle between perspective (the default) and orthographic projection; the switch keeps the model the same size and centred in the panel
+  - evidence: media_mesh.spec.ts ACC-MESH-103-PROJ: width -6.8 percent, height -2.5 percent, centre 8.1 percent, isOrthographicCamera true, pressed state, back within 1 px; Galata 39 passed, logs/mesh-galata-verify-features-1.log
+  - test: open a model, toggle projection; assert the model's bounding box stays within 10 percent of its size and centre
+  - test-tags: E2E
+  - mechanism: 2026-11-01T14:15:55Z @kj two camera projections share one position and target; the toggle swaps the projection and re-fits at the same distance
+  - log: 2026-11-01T14:15:55Z @kj added
+  - log: 2026-11-01T18:13:33Z @kj closed
+- [x] `ACC-MESH-104-VIEWS` **Standard views** - HIGH; a view control with top, bottom, front, back, left, right and the four isometric corners; each names a camera direction, puts the named side towards the camera without rolling the model, and fits it to the panel
+  - evidence: media_mesh.spec.ts ACC-MESH-104-VIEWS: ten views, named faces > 50000 px and absent < 5000, corner and pole quadrants, fit within 8 percent, camera.up unchanged; meshutil.spec.ts unit directions; Galata 39 passed, logs/mesh-galata-verify-features-1.log
+  - test: open an asymmetric cube, pick each of the ten views, screenshot; assert the expected face faces the camera and the model stays fitted
+  - test-tags: E2E, UNIT
+  - mechanism: 2026-11-01T14:15:59Z @kj a table of ten unit direction vectors and their up vectors sets the camera and re-fits; one view at a time, the previous view is not remembered across files
+  - log: 2026-11-01T14:15:59Z @kj added
+  - log: 2026-11-01T18:13:35Z @kj closed
+- [x] `ACC-MESH-105-REALFILE` **Supplied real model opens** - HIGH; the binary STL the Star Colonel supplied on 2026-11-01, 630884 bytes and 12616 triangles, opens from the file browser and renders lit with its silhouette visible; the read-out names 12616 triangles and its dimensions; Reload, a standard view, the grid and the projection toggle each keep it on screen
+  - evidence: media_mesh.spec.ts ACC-MESH-105-REALFILE: 630884-byte fixture reads 12,616 triangles and 144.4 x 93.3 x 12.8, on show after open, Reload, Front, Grid and Orthographic; Galata 39 passed, logs/mesh-galata-verify-features-1.log
+  - test: open ui-tests/tests/fixtures/all-clamp-and-toes.stl; assert model pixels, the read-out triangle count, and the model after Reload, a view, the grid and the projection toggle
+  - test-tags: E2E
+  - log: 2026-11-01T14:24:12Z @kj added
+  - log: 2026-11-01T18:13:37Z @kj closed
+- [x] `ACC-MESH-106-PERF-UI` **Opening a large mesh never blocks the UI** - HIGH; opening a 95 MB binary STL keeps the browser answering: no main-thread task over 200 ms from the first byte to the model, measured by a requestAnimationFrame gap probe during the open
+  - evidence: ui-tests/tests/media_mesh.spec.ts:3466 ACC-MESH-106 passed in logs/mesh-galata-verify-worker-1.log (42/42, exit 0): longest rAF gap 116.6 ms, no gap over 200 ms, model read-out in 4,289 ms; verifier probe 183.3 ms and 4,487 ms
+  - test: open a 95 MB STL while a rAF probe records gaps; assert the longest gap is at most 200 ms and the model appears within 20 s
+  - test-tags: E2E
+  - log: 2026-11-01T14:34:29Z @kj added
+  - log: 2026-11-01T21:36:23Z @kj closed
+- [x] `ACC-MESH-107-PERF-FPS` **Large model orbits at frame rate** - MEDIUM; a model of about one million triangles orbits and zooms at 25 frames per second or better and stops rendering when nothing moves: at most two frames in three idle seconds; the viewer picks its triangle level by measuring the drawn frame interval, so the rate holds on a software rasterizer as well as on a GPU
+  - evidence: ui-tests/tests/media_mesh.spec.ts:3817 ACC-MESH-107-PERF-FPS passed in logs/mesh-galata-verify-lod-2.log (44 of 44 tests, exit 0): 165 drawn frames in 5000.2 ms = 33.0 fps against the 25 fps bar, drawn-interval median 33.3 ms; the level was chosen by measurement and settled at level 3 with 15,624 triangles, levelFits true and floorMiss false; at rest level 0 with the 1,000,000-triangle mesh visible and the proxy hidden; idle 180 ticks / 0 frames / 0 draws in 3003.1 ms; the independent probe measured 32.89 fps with the same 0 idle frames
+  - test: orbit a 1M-triangle model for 5 s and count frames, then idle 3 s and count frames; assert 25 fps or better and at most two idle frames; assert the triangle level was chosen by measurement, not a constant
+  - test-tags: E2E
+  - log: 2026-11-01T14:34:30Z @kj added
+  - log: 2026-11-01T22:55:28Z @kj measured
+  - log: 2026-11-01T22:56:07Z @kj measured: 2.51 fps over 5.97 s (15 drawn frames), drawn-interval median 366.7 ms, idle 180 ticks / 0 frames / 0 draws in 3.00 s; renderer ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver), the only WebGL renderer here. An environment limit, not a pass: the 30 fps bar stays unverified. logs/mesh-verify-51-galata-perf.log:314; reason: the renderer string, the drawn intervals and the idle counts are the evidence that the fps bar is an environment limit, not a pass
+  - log: 2026-11-02T10:16:15Z @kj amended text "a model of about one million triangles orbits and zooms at 30 frames per second or better and stops rendering when nothing moves: at most two frames in three idle seconds" -> "a model of about one million triangles orbits and zooms at 25 frames per second or better and stops rendering when nothing moves: at most two frames in three idle seconds; the viewer picks its triangle level by measuring the drawn frame interval, so the rate holds on a software rasterizer as well as on a GPU"; reason: Star Colonel set the comfortable rate at 25 fps on 2026-11-02 and required adaptive runtime simplification
+  - log: 2026-11-02T10:25:13Z @kj edited test "orbit a 1M-triangle model for 5 s and count frames, then idle 3 s and count frames; assert 30 fps or better and at most two idle frames" -> "orbit a 1M-triangle model for 5 s and count frames, then idle 3 s and count frames; assert 25 fps or better and at most two idle frames; assert the triangle level was chosen by measurement, not a constant"; reason: the Star Colonel set 25 fps on 2026-11-02 and the test now asserts the measured level
+  - log: 2026-11-02T12:14:53Z @kj closed; reason: y
+  - log: 2026-11-02T12:14:58Z @kj reopened; evidence retired: x; reason: verifier argument check applied the close; reopened until the round-2 gates finish
+  - log: 2026-11-02T12:21:55Z @kj closed; reason: round-2 verifier gate run: install, jest, pytest, lint and the full 44-test Galata suite all passed
+- [x] `ACC-MESH-108-PERF-MEM` **Large mesh fits the memory budget** - HIGH; a 95 MB binary STL opens with a JS heap peak of 1.5 GB or less, and closing the tab returns the WebGL context and the heap
+  - evidence: ui-tests/tests/media_mesh.spec.ts:3501 ACC-MESH-108 passed in logs/mesh-galata-verify-worker-1.log (42/42, exit 0): page+worker heap peak 359,910,869 B (0.34 GiB), workerPeak 290,538,319 B, context lost and 8,098,824 B heap returned; verifier probe 310,618,392 B
+  - test: open a 95 MB STL, sample performance.memory during the open, close the tab; assert the heap peak and that the WebGL context is lost
+  - test-tags: E2E
+  - log: 2026-11-01T14:34:32Z @kj added
+  - log: 2026-11-01T21:36:25Z @kj closed
+- [x] `ACC-MESH-109-PERF-SERVE` **Server streams a large mesh** - MEDIUM; the server answers a mesh download with HTTP range support, a 206 for a Range request, streams the file without holding it in memory, and its resident size grows by 200 MB or less while a 1 GiB file is downloaded
+  - evidence: jupyterlab_advanced_image_viewer_extension/tests/test_server_range.py 2 passed in 8.86 s, exit 0 (logs/mesh-verify-51-pytest.log): Range bytes=1000-1999 returns 206 with Content-Range bytes 1000-1999/4096, Content-Length 1000 and the exact 1000 B body, 416 past EOF; the full 1,073,741,824 B download grows VmRSS 9,715,712 B of the 209,715,200 B budget
+  - test: pytest against the server with a 1 GiB sparse file: a Range request returns 206 with the right bytes and the process RSS growth stays under 200 MB
+  - test-tags: INTEGRATION
+  - log: 2026-11-01T14:34:33Z @kj added
+  - log: 2026-11-01T22:56:09Z @kj closed: verified: independent run, 206 with exact bytes and a 1 GiB stream with 9.3 MiB RSS growth
+- [x] `ACC-MESH-110-PERF-LARGE` **A 1 GiB mesh opens** - HIGH; a 1 GiB binary STL opens without killing the tab or blocking the UI over 200 ms, with a JS heap peak of 4 GB or less; the readers must leave the main thread and the normal pass must be memory-bounded
+  - evidence: ui-tests/tests/media_mesh.spec.ts:3574 ACC-MESH-110 passed in logs/mesh-galata-verify-worker-1.log (42/42, exit 0): 1 GiB STL shows 21,464,352 triangles in 343,615 ms, longest rAF gap 116.6 ms, page+worker heap peak 2,401,078,132 B (2.24 GiB); verifier probe 2,416,457,105 B
+  - test: open a 1 GiB binary STL; assert the tab answers, no gap over 200 ms, the model appears and the heap peak stays under 4 GB
+  - test-tags: E2E
+  - log: 2026-11-01T14:34:37Z @kj added
+  - log: 2026-11-01T21:36:27Z @kj closed
+- [x] `ACC-MESH-111-THREEMF-PERF` **3MF main-thread cost is measured** - MEDIUM; a 3MF of about 250,000 and about 1,000,000 triangles opens in Galata with the frame-gap probe recording the longest main-thread task and the file bytes, so the on-page unzip, parse and normal pass is a number in the log
+  - evidence: ui-tests/tests/media_mesh.spec.ts:4208 opened the generated 250k and 1M 3MF grids and logged PERF 3MF: 1,868,119 B with a 1,732 ms longest main-thread task, and 7,029,889 B with 10,449 ms, in logs/mesh-galata-fix-r2.log (47 of 47 passed, exit 0)
+  - test: open the generated 250k and 1M 3MF grids and record file bytes, the longest main-thread task and the rAF gap
+  - test-tags: E2E
+  - log: 2026-11-02T14:10:58Z @kj added
+  - log: 2026-11-02T14:11:01Z @kj closed
 

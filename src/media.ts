@@ -1,5 +1,8 @@
 // Shared parts of the audio and video viewers: the document widget that owns
-// the media element every control and key acts on, and its widget factory.
+// the media element every control and key acts on, and the widget factory, which
+// the mesh viewer uses as well.
+
+import { Notification } from '@jupyterlab/apputils';
 
 import { PathExt } from '@jupyterlab/coreutils';
 
@@ -14,9 +17,16 @@ import { Contents } from '@jupyterlab/services';
 
 import { TranslationBundle } from '@jupyterlab/translation';
 
-import { Widget } from '@lumino/widgets';
+import { PanelLayout, Widget } from '@lumino/widgets';
 
 import { formatSize, formatTime, WAVEFORM_LIMIT } from './mediautil';
+
+// A file request that fails before the metadata gets the code of a damaged file,
+// MEDIA_ERR_SRC_NOT_SUPPORTED. Only the text differs: a damaged file names the
+// demuxer. Measured on Chromium. A 404 or 502 on the file URL gets the same text,
+// so it reads as a lost connection.
+// shortcut: other browsers keep the damaged-file sentence, measure them to add theirs.
+const REQUEST_FAILED = 'MEDIA_ELEMENT_ERROR: Format error';
 
 export class MediaViewer extends Widget {
   constructor(options: MediaViewer.IOptions) {
@@ -39,16 +49,27 @@ export class MediaViewer extends Widget {
     this.node.append(this.media, this.message);
     // A file the browser cannot play fires `error` and nothing else, so this
     // is the one place an unreadable file becomes visible.
-    this.media.addEventListener('error', () =>
+    this.media.addEventListener('error', () => {
+      const error = this.media.error;
       this.showMessage(
-        this.trans.__(
-          'This file cannot be played: %1',
-          this.trans.__(
-            'the file is damaged or in a format this browser cannot play'
-          )
-        )
-      )
-    );
+        error?.code === MediaError.MEDIA_ERR_NETWORK ||
+          (error?.message === REQUEST_FAILED &&
+            !this.media.src.startsWith('blob:'))
+          ? this.trans.__(
+              'The connection to the server was lost; press Reload to try again.'
+            )
+          : this.trans.__(
+              'This file cannot be played: %1',
+              this.trans.__(
+                'the file is damaged or in a format this browser cannot play'
+              )
+            )
+      );
+    });
+    // File > Reload from Disk calls revert(), which re-reads only the empty
+    // document model and answers a deleted file with its own dialog. The
+    // viewer reads the file instead and says so in its sentence.
+    this.context.revert = () => this.load();
     void this.context.ready.then(() => this.load());
   }
 
@@ -82,8 +103,7 @@ export class MediaViewer extends Widget {
         return;
       }
       if (size > WAVEFORM_LIMIT) {
-        this.setFile(url);
-        this.showMessage('');
+        this.playUrl(url);
         return;
       }
       const response = await fetch(url);
@@ -99,11 +119,25 @@ export class MediaViewer extends Widget {
       this.showMessage('');
     } catch (reason) {
       if (!this.isDisposed && token === this.loads) {
-        this.showMessage(
-          this.trans.__('This file cannot be played: %1', String(reason))
-        );
+        this.fail(reason);
       }
     }
+  }
+
+  // The server did not give the file or the player: nothing of the old file
+  // stays, and one sentence says so. A page left open across an install asks
+  // for chunk names that no longer exist, and only a page reload helps.
+  protected fail(reason: unknown): void {
+    console.error('Media viewer: the file was not read', reason);
+    this.release();
+    this.media.removeAttribute('src');
+    this.media.load();
+    this.details.textContent = '';
+    this.showMessage(
+      (reason as Error).name === 'ChunkLoadError'
+        ? this.trans.__('This viewer was updated; reload the page to use it.')
+        : this.trans.__('This file cannot be read from the server.')
+    );
   }
 
   // The document context drops the size from the file model, so it is read
@@ -151,6 +185,23 @@ export class MediaViewer extends Widget {
     ].join(' · ');
   }
 
+  // Play from the file URL. Loading... stays until the element has the metadata
+  // and `loaded` replaces it then, so a request that stalls or fails never
+  // leaves an empty player with no message.
+  protected playUrl(url: string, loaded = ''): void {
+    const token = this.loads;
+    this.setFile(url);
+    this.media.addEventListener(
+      'loadedmetadata',
+      () => {
+        if (token === this.loads) {
+          this.showMessage(loaded);
+        }
+      },
+      { once: true }
+    );
+  }
+
   // Point the player at the file; a blob URL made here is revoked when the
   // next file replaces it and when the tab closes.
   private setFile(file: string | Blob): void {
@@ -196,24 +247,65 @@ export namespace MediaViewer {
   }
 }
 
-export class MediaFactory extends ABCWidgetFactory<
-  IDocumentWidget<MediaViewer>
+export class MediaFactory<T extends Widget> extends ABCWidgetFactory<
+  IDocumentWidget<T>
 > {
   constructor(
-    options: DocumentRegistry.IWidgetFactoryOptions<
-      IDocumentWidget<MediaViewer>
-    >,
-    create: (context: DocumentRegistry.Context) => MediaViewer
+    options: DocumentRegistry.IWidgetFactoryOptions<IDocumentWidget<T>>,
+    create: (context: DocumentRegistry.Context) => T
   ) {
     super(options);
     this.create = create;
+    this.trans = this.translator.load(
+      'jupyterlab_advanced_image_viewer_extension'
+    );
   }
 
   protected createNewWidget(
     context: DocumentRegistry.Context
-  ): IDocumentWidget<MediaViewer> {
-    return new DocumentWidget({ content: this.create(context), context });
+  ): IDocumentWidget<T> {
+    const widget = new DocumentWidget({
+      content: this.create(context),
+      context
+    });
+    // Save As writes the document model to the new path without asking the
+    // content provider, and Ctrl+S writes it through the default contents
+    // provider once the file has disappeared, because the context then saves
+    // the empty model itself. The viewers never load the file into that model,
+    // so both would write an empty file. Refuse them, as the provider refuses
+    // a save; ModalCancelError is what the save command treats as cancelled,
+    // so it adds no checkpoint after the refusal.
+    const refuseSave = (): void => {
+      // Notification defaults autoClose to 0, which shows no toast at all.
+      void Notification.warning(
+        this.trans.__(
+          'This viewer does not save files, so the file is unchanged.'
+        ),
+        { autoClose: 5000 }
+      );
+    };
+    context.save = async () => {
+      refuseSave();
+      const error = new Error('Save refused');
+      error.name = 'ModalCancelError';
+      throw error;
+    };
+    context.saveAs = async () => {
+      refuseSave();
+      return false;
+    };
+    // JupyterLab labels a file that is not writable on the toolbar. A viewer
+    // edits nothing, so the label tells nothing.
+    void context.ready.then(() => {
+      if (!widget.isDisposed) {
+        (widget.toolbar.layout as PanelLayout).widgets
+          .find(item => item.node.dataset.jpItemName === 'read-only-indicator')
+          ?.dispose();
+      }
+    });
+    return widget;
   }
 
-  private create: (context: DocumentRegistry.Context) => MediaViewer;
+  private create: (context: DocumentRegistry.Context) => T;
+  private readonly trans: TranslationBundle;
 }

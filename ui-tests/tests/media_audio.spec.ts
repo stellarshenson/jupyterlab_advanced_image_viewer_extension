@@ -30,6 +30,11 @@ const TONE = wav(60);
 const NAME = 'tone.wav';
 const FACTORY = 'AdvancedAudioViewer';
 const SHOWN = '.jp-MainAreaWidget:not(.lm-mod-hidden)';
+const LOST =
+  'The connection to the server was lost; press Reload to try again.';
+const STALE = 'This viewer was updated; reload the page to use it.';
+// The chunks of this extension that load when the first file opens.
+const CHUNKS = '**/jupyterlab-advanced-image-viewer-extension/static/*.js*';
 
 test.describe('Audio viewer', () => {
   test.beforeEach(async ({ page, tmpPath }) => {
@@ -44,6 +49,7 @@ test.describe('Audio viewer', () => {
     page.locator(`${SHOWN} .jp-AdvancedMediaViewer`);
   const media = (page: any) =>
     page.locator(`${SHOWN} .jp-AdvancedMediaViewer-media`);
+  const message = (page: any) => viewer(page).locator('[role="status"]');
   const toolbar = (page: any) => page.locator(`${SHOWN} .jp-Toolbar`);
   const button = (page: any, title: string) =>
     toolbar(page).locator(`[title="${title}"]`).first();
@@ -91,6 +97,17 @@ test.describe('Audio viewer', () => {
       )
       .toBe(true);
   };
+
+  // The contents API reports the file over the limit, so it plays from its URL.
+  const overLimit = (page: any) =>
+    page.route(`**/api/contents/**/${NAME}?*`, async (route: any) => {
+      const response = await route.fetch();
+      const model = await response.json();
+      await route.fulfill({
+        response,
+        json: { ...model, size: 200 * 1024 * 1024 }
+      });
+    });
 
   // Boxes of wavesurfer's parts, which live in its open shadow root. The
   // overview strip holds a second player in a nested shadow root, which
@@ -226,6 +243,10 @@ test.describe('Audio viewer', () => {
     await expect
       .poll(async () => resolved(page, await progressColour(page)))
       .toBe(darkBrand);
+    // The repaint keeps the waveform (DEF-MEDIA-28-THEME-ERASE).
+    await expect
+      .poll(async () => (await parts(page)).canvas?.width ?? 0)
+      .toBeGreaterThan(100);
   });
 
   // ACC-AUDIO-46-SEEK. The file is served as the owner's server serves
@@ -413,8 +434,9 @@ test.describe('Audio viewer', () => {
     const loop = labelled(page, 'Loop');
     await expect(loop).toHaveAttribute('aria-pressed', 'false');
 
-    // A press that moves just past the 3 px drag threshold creates no region
-    // and leaves Loop off (DEF-MEDIA-13).
+    // A press that moves under the 8 px drag threshold is a click: it seeks,
+    // creates no region and leaves Loop off (DEF-MEDIA-13,
+    // DEF-MEDIA-25-CLICK-SEEK).
     const before = await parts(page);
     const jitter = at(before.wrapper, 0.5);
     await page.mouse.move(jitter.x, jitter.y);
@@ -423,6 +445,8 @@ test.describe('Audio viewer', () => {
     await page.mouse.up();
     expect((await parts(page)).regions).toBe(0);
     await expect(loop).toHaveAttribute('aria-pressed', 'false');
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(29.5);
+    expect(await currentTime(page)).toBeLessThan(31);
 
     const p = await parts(page);
     const from = at(p.wrapper, 10 / 60);
@@ -454,6 +478,35 @@ test.describe('Audio viewer', () => {
     await loop.click();
     await expect(loop).toHaveAttribute('aria-pressed', 'false');
     expect((await parts(page)).regions).toBe(0);
+  });
+
+  // ACC-AUDIO-50-LOOP, after DEF-MEDIA-25-CLICK-SEEK. wavesurfer gives a drag
+  // its own start width, so this one needs a file short enough that the region
+  // stays under MIN_LOOP. Past the drag threshold wavesurfer drops the click,
+  // so the viewer does the seek.
+  test('ACC-AUDIO-50-LOOP a drag under the shortest loop seeks to its start and leaves Loop off', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/short.wav`;
+    await page.contents.uploadContent(
+      wav(20).toString('base64'),
+      'base64',
+      file
+    );
+    await open(page, file);
+    const from = at((await parts(page)).wrapper, 0.25);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 10, from.y);
+    await page.mouse.up();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(4.5);
+    expect(await currentTime(page)).toBeLessThan(5.5);
+    expect((await parts(page)).regions).toBe(0);
+    await expect(labelled(page, 'Loop')).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
   });
 
   // ACC-AUDIO-51-CONTROLS
@@ -601,6 +654,42 @@ test.describe('Audio viewer', () => {
     ).toBeCloseTo(60, 0);
   });
 
+  // DEF-MEDIA-22-LARGE-VIDEO
+  test('DEF-MEDIA-22-LARGE-VIDEO an audio file request that never answers keeps Loading...', async ({
+    page,
+    tmpPath
+  }) => {
+    await overLimit(page);
+    let asked = (): void => undefined;
+    const requested = new Promise<void>(resolve => (asked = resolve));
+    await page.route(`**/files/**/${NAME}*`, () => asked());
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await requested;
+    await page.waitForTimeout(1000);
+    await expect(message(page)).toHaveText('Loading...');
+  });
+
+  // DEF-MEDIA-22-LARGE-VIDEO
+  test('DEF-MEDIA-22-LARGE-VIDEO a failed audio file request says the connection was lost, and Reload plays the file', async ({
+    page,
+    tmpPath
+  }) => {
+    await overLimit(page);
+    const files = `**/files/**/${NAME}*`;
+    await page.route(files, (route: any) => route.abort('failed'));
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expect(message(page)).toHaveText(LOST);
+
+    await page.unroute(files);
+    await button(page, 'Reload audio from disk').click();
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
+      .toBeCloseTo(60, 0);
+    await expect(message(page)).toHaveText(
+      'The waveform is skipped for files over 100 MB.'
+    );
+  });
+
   // ACC-AUDIO-55-ERROR
   test('ACC-AUDIO-55-ERROR every audio type opens here and an unreadable file shows an error', async ({
     page,
@@ -647,6 +736,44 @@ test.describe('Audio viewer', () => {
     await expect(message).not.toHaveText(
       /MediaError|Failed to load|no supported source|DEMUXER|PIPELINE|codec/i
     );
+  });
+
+  // DEF-MEDIA-29-DECODE-FAIL
+  test('DEF-MEDIA-29-DECODE-FAIL a failed decode leaves a native player that seeks', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.evaluate(() => {
+      (window as any).BaseAudioContext.prototype.decodeAudioData = () =>
+        Promise.reject(new Error('decode refused'));
+    });
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expect(
+      viewer(page).locator('.jp-AdvancedMediaViewer-message')
+    ).toHaveText('The waveform could not be drawn.', { timeout: 15000 });
+    expect(
+      await media(page).evaluate((m: HTMLMediaElement) => m.controls)
+    ).toBe(true);
+    await expect(media(page)).toBeVisible();
+    await seek(page, 30);
+    expect(await currentTime(page)).toBeCloseTo(30, 0);
+  });
+
+  // DEF-MEDIA-23-STALE-CHUNK. A page left open across an install asks for
+  // chunk names that no longer exist; on a fresh page a blocked chunk fails the
+  // same way.
+  test('DEF-MEDIA-23-STALE-CHUNK a missing player chunk asks for a page reload and shows no player', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.route(CHUNKS, (route: any) => route.abort('failed'));
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expect(message(page)).toHaveText(STALE, { timeout: 15000 });
+    await expect(viewer(page)).not.toContainText('ChunkLoadError');
+    expect(
+      await media(page).evaluate((m: HTMLMediaElement) => m.controls)
+    ).toBe(false);
+    await expect(media(page)).toBeHidden();
   });
 
   // ACC-KEYS-61-ARROWS
@@ -943,6 +1070,143 @@ test.describe('Audio viewer', () => {
     await expect.poll(() => shownSpan(page)).toBeCloseTo(30, 0);
   });
 
+  // DEF-MEDIA-16-RELOAD-DELETED
+  test('DEF-MEDIA-16-RELOAD-DELETED Reload on a deleted file shows one sentence and no dialog, and Reload on the restored file plays it', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/${NAME}`;
+    const details = toolbar(page).locator('.jp-AdvancedMediaViewer-details');
+    await open(page, file);
+    await expect(details).toHaveText(/./);
+    expect(await page.contents.deleteFile(file)).toBe(true);
+    await button(page, 'Reload audio from disk').click();
+    const message = viewer(page).locator('[role="status"]');
+    await expect(message).toHaveText(
+      'This file cannot be read from the server.'
+    );
+    await expect(page.locator('.jp-Dialog')).toHaveCount(0);
+    await expect(details).toHaveText('');
+    // Nothing of the old file stays: no source and no waveform.
+    expect(
+      await media(page).evaluate((m: HTMLMediaElement) => m.getAttribute('src'))
+    ).toBeNull();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            (
+              window as any
+            ).jupyterapp.shell.currentWidget.content.wavesurfer.getDecodedData()
+              ?.duration ?? 0
+        )
+      )
+      .toBeLessThan(1);
+    await expect(message).toHaveText(
+      'This file cannot be read from the server.'
+    );
+
+    await page.contents.uploadContent(
+      wav(30).toString('base64'),
+      'base64',
+      file
+    );
+    await button(page, 'Reload audio from disk').click();
+    await expect.poll(() => timeText(page)).toBe('00:00.0 / 00:30.0');
+    await expect(message).toHaveText('');
+    await expect(details).toHaveText('WAV · mono · 468.8 KB · 00:30');
+  });
+
+  // DEF-MEDIA-31-FILE-RELOAD
+  test('DEF-MEDIA-31-FILE-RELOAD File > Reload from Disk reads the changed file, and on a deleted file shows one sentence and no dialog', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/${NAME}`;
+    // The command of File > Reload Audio from Disk. Not awaited, so a dialog it
+    // raises is seen by the assertions below, not as a rejected evaluate.
+    const reloadFromDisk = () =>
+      page.evaluate(() => {
+        void (window as any).jupyterapp.commands
+          .execute('docmanager:reload')
+          .catch(() => undefined);
+      });
+    await open(page, file);
+    await expect.poll(() => timeText(page)).toBe('00:00.0 / 01:00.0');
+    await page.contents.uploadContent(
+      wav(30).toString('base64'),
+      'base64',
+      file
+    );
+    await reloadFromDisk();
+    await expect.poll(() => timeText(page)).toBe('00:00.0 / 00:30.0');
+    await expect(
+      toolbar(page).locator('.jp-AdvancedMediaViewer-details')
+    ).toHaveText('WAV · mono · 468.8 KB · 00:30');
+
+    expect(await page.contents.deleteFile(file)).toBe(true);
+    await reloadFromDisk();
+    await expect(message(page)).toHaveText(
+      'This file cannot be read from the server.'
+    );
+    await expect(page.locator('.jp-Dialog')).toHaveCount(0);
+    expect(
+      await media(page).evaluate((m: HTMLMediaElement) => m.getAttribute('src'))
+    ).toBeNull();
+  });
+
+  // DEF-MEDIA-32-SPEED-RELOAD
+  test('DEF-MEDIA-32-SPEED-RELOAD the chosen speed still holds after Reload', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/${NAME}`;
+    const rate = (): Promise<number> =>
+      media(page).evaluate((m: HTMLMediaElement) => m.playbackRate);
+    await open(page, file);
+    const speed = toolbar(page).locator('select.jp-AdvancedMediaViewer-speed');
+    await speed.selectOption('2');
+    expect(await rate()).toBe(2);
+    // A shorter file, so the read-out shows when Reload has set the new source.
+    await page.contents.uploadContent(
+      wav(30).toString('base64'),
+      'base64',
+      file
+    );
+    await button(page, 'Reload audio from disk').click();
+    await expect.poll(() => timeText(page)).toBe('00:00.0 / 00:30.0');
+    await expect(speed).toHaveValue('2');
+    expect(await rate()).toBe(2);
+  });
+
+  // DEF-MEDIA-17-CHECKPOINT
+  test('DEF-MEDIA-17-CHECKPOINT opening an audio file writes no checkpoint, and the viewer still works', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/${NAME}`;
+    await open(page, file);
+    // JupyterLab writes the checkpoint as the document opens.
+    await page.waitForTimeout(1000);
+    const checkpoints = () =>
+      page.evaluate(
+        (path: string) =>
+          (window as any).jupyterapp.serviceManager.contents.listCheckpoints(
+            path
+          ),
+        file
+      );
+    expect(await checkpoints()).toEqual([]);
+    await expect.poll(() => timeText(page)).toBe('00:00.0 / 01:00.0');
+    await button(page, 'Play').click();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(0.2);
+    await button(page, 'Pause').click();
+
+    await button(page, 'Reload audio from disk').click();
+    await expect.poll(() => timeText(page)).toBe('00:00.0 / 01:00.0');
+    expect(await checkpoints()).toEqual([]);
+  });
+
   // ACC-MEDIA-69-RESTORE
   test('ACC-MEDIA-69-RESTORE an audio tab opens again after a page reload', async ({
     page,
@@ -1013,6 +1277,7 @@ test.describe('Audio viewer', () => {
     expect(contents.length).toBeGreaterThan(0);
     for (const url of contents) {
       expect(new URL(url).searchParams.get('content')).toBe('0');
+      expect(new URL(url).searchParams.get('hash')).toBe('0');
     }
   });
 
@@ -1101,5 +1366,71 @@ test.describe('Audio viewer', () => {
       expect(onContent.length).toBeGreaterThan(0);
       expect(repeated(onContent)).toEqual([]);
     }
+  });
+
+  // DEF-MEDIA-18-SAVE-EMPTIES
+  test('DEF-MEDIA-18-SAVE-EMPTIES Ctrl+S after a rename keeps the audio file and its waveform', async ({
+    page,
+    request,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/${NAME}`;
+    await open(page, file);
+    const decoded = () =>
+      page.evaluate(
+        () =>
+          !!(
+            window as any
+          ).jupyterapp.shell.currentWidget?.content?.wavesurfer?.getDecodedData()
+      );
+    expect(await decoded()).toBe(true);
+
+    // A rename makes the document model writable again.
+    const renamed = `${tmpPath}/renamed.wav`;
+    expect(await page.contents.renameFile(file, renamed)).toBe(true);
+    await expect(currentTab(page)).toHaveText('renamed.wav');
+
+    // Ctrl+S is refused through the notification system, shows no error dialog
+    // and writes nothing. The notification stays in the bell's list, so its
+    // count is the evidence of the refusal.
+    const bell = () =>
+      page.locator('.jp-Notification-Status').innerText().then(Number);
+    const before = await bell();
+    await viewer(page).focus();
+    await page.keyboard.press('Control+s');
+    await expect.poll(bell, { timeout: 5000 }).toBe(before + 1);
+    // DEF-MEDIA-33-SAVE-TOAST: the refusal also shows as a toast; the newest
+    // toast is the first in the DOM.
+    await expect(
+      page
+        .locator('.Toastify__toast-container .jp-Notification-Toast-warning')
+        .filter({
+          hasText: 'This viewer does not save files, so the file is unchanged.'
+        })
+        .first()
+    ).toBeVisible();
+    await expect(page.locator('.jp-Dialog')).toHaveCount(0);
+    const saved = await page.evaluate(async (path: string) => {
+      const model = await (
+        window as any
+      ).jupyterapp.serviceManager.contents.get(path, { content: true });
+      return model.content as string;
+    }, renamed);
+    // The server wraps its base64 at 76 characters; the bytes are the same.
+    expect(saved.replace(/\s+/g, '')).toBe(TONE.toString('base64'));
+    expect(await decoded()).toBe(true);
+
+    // Delete the file behind the context's back, so the context still holds
+    // the writable model from the rename. Its save path then finds a 404 and
+    // writes the empty document model through the default contents provider;
+    // Ctrl+S must leave the file absent.
+    expect((await request.delete(`/api/contents/${renamed}`)).status()).toBe(
+      204
+    );
+    const beforeDeleted = await bell();
+    await page.keyboard.press('Control+s');
+    await expect.poll(bell, { timeout: 5000 }).toBe(beforeDeleted + 1);
+    await expect(page.locator('.jp-Dialog')).toHaveCount(0);
+    expect((await request.get(`/api/contents/${renamed}`)).status()).toBe(404);
   });
 });

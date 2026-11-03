@@ -36,6 +36,10 @@ const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 // moves a few pixels must not arm Loop on a sub-second region.
 const MIN_LOOP = 1;
 
+// How far, in pixels, a press must move to count as a drag: wavesurfer drops
+// the click of a drag, so an unsteady click would not seek.
+const DRAG_THRESHOLD = 8;
+
 // wavesurfer.js and the plugins the viewer uses.
 const loadPlayer = () =>
   Promise.all([
@@ -65,7 +69,11 @@ export class AudioViewer extends MediaViewer {
     this.media.addEventListener('durationchange', () => this.showDetails());
     // The waveform colours are painted on a canvas, which cannot read CSS
     // variables, so they are resolved here and again on every theme change.
-    this.themeObserver = new MutationObserver(() => this.paint());
+    // The theme manager hides the page while it changes theme and shows it in
+    // the next frame; a repaint before that draws the waveform at no width.
+    this.themeObserver = new MutationObserver(() =>
+      requestAnimationFrame(() => this.paint())
+    );
     this.themeObserver.observe(document.body, {
       attributes: true,
       attributeFilter: ['data-jp-theme-name']
@@ -80,6 +88,9 @@ export class AudioViewer extends MediaViewer {
     const token = ++this.loads;
     this.setLoop(false);
     this.showMessage(this.trans.__('Loading...'));
+    // Until the file and the player are here a failure is the server's, then
+    // the file's.
+    let downloaded = false;
     try {
       const size = await this.readSize();
       const url = await this.contents.getDownloadUrl(this.context.path);
@@ -95,8 +106,8 @@ export class AudioViewer extends MediaViewer {
         // There is no waveform to zoom, so the buttons would do nothing.
         this.setZoomEnabled(false);
         this.media.controls = true;
-        this.media.src = url;
-        this.showMessage(
+        this.playUrl(
+          url,
           this.trans.__(
             'The waveform is skipped for files over %1 MB.',
             WAVEFORM_LIMIT / 1024 / 1024
@@ -114,6 +125,7 @@ export class AudioViewer extends MediaViewer {
       }
       const blob = await response.blob();
       const modules = await loadPlayer();
+      downloaded = true;
       // A reload or a close while this one was fetching supersedes it.
       if (this.isDisposed || token !== this.loads) {
         return;
@@ -130,11 +142,27 @@ export class AudioViewer extends MediaViewer {
         token === this.loads &&
         (reason as Error).name !== 'AbortError'
       ) {
-        this.showMessage(
-          this.trans.__('This file cannot be played: %1', String(reason))
-        );
+        if (downloaded) {
+          // The element reads a file before wavesurfer decodes it, and reports
+          // an unreadable one itself, so this file plays without a waveform.
+          console.error('Audio viewer: the waveform was not drawn', reason);
+          this.media.controls = true;
+          this.setZoomEnabled(false);
+          this.showMessage(this.trans.__('The waveform could not be drawn.'));
+        } else {
+          this.fail(reason);
+        }
       }
     }
+  }
+
+  protected fail(reason: unknown): void {
+    // Emptied and kept, because a new player would load the element's previous
+    // source on its own.
+    this.wavesurfer?.empty();
+    this.setZoomEnabled(false);
+    this.view.textContent = '';
+    super.fail(reason);
   }
 
   // The playback controls, zoom, loop and speed, between Reload and the
@@ -197,6 +225,9 @@ export class AudioViewer extends MediaViewer {
     }
     speed.addEventListener('change', () => {
       this.media.playbackRate = Number(speed.value);
+      // A new source resets playbackRate to this default, so Reload keeps the
+      // chosen speed.
+      this.media.defaultPlaybackRate = this.media.playbackRate;
     });
     toolbar.addItem('advanced-speed', new Widget({ node: speed }));
   }
@@ -297,15 +328,19 @@ export class AudioViewer extends MediaViewer {
         Zoom.create()
       ]
     });
-    regions.enableDragSelection({
-      color: 'color-mix(in srgb, var(--jp-brand-color1) 20%, transparent)',
-      minLength: MIN_LOOP
-    });
+    regions.enableDragSelection(
+      {
+        color: 'color-mix(in srgb, var(--jp-brand-color1) 20%, transparent)',
+        minLength: MIN_LOOP
+      },
+      DRAG_THRESHOLD
+    );
     // One loop region at a time: a new drag replaces the old one.
     regions.on('region-created', region => {
       // wavesurfer stretches a shorter drag to exactly minLength instead of
       // dropping it; the small margin covers the float error of that sum.
       if (region.end - region.start < MIN_LOOP + 0.01) {
+        ws.setTime(region.start);
         region.remove();
         return;
       }
@@ -339,7 +374,12 @@ export class AudioViewer extends MediaViewer {
     for (const event of ['zoom', 'scroll', 'redrawcomplete'] as const) {
       ws.on(event, () => this.showView());
     }
-    ws.on('decode', () => this.showDetails());
+    // Emptying the player also decodes, with no file to tell about.
+    ws.on('decode', () => {
+      if (this.media.hasAttribute('src')) {
+        this.showDetails();
+      }
+    });
     return ws;
   }
 

@@ -25,11 +25,13 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
 
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 
-import { imageIcon } from '@jupyterlab/ui-components';
+import { imageIcon, LabIcon } from '@jupyterlab/ui-components';
 
 import { IDisposable } from '@lumino/disposable';
 
 import { Widget } from '@lumino/widgets';
+
+import meshSvg from '../style/mesh.svg';
 
 // eslint-disable-next-line jupyter/prefer-lazy-imports -- the layout restorer opens saved audio tabs at activation; wavesurfer.js itself loads on first use
 import { AudioViewer } from './audio';
@@ -41,6 +43,11 @@ import { ViewerController } from './controller';
 import { MediaFactory, MediaViewer } from './media';
 
 import { SEEK_STEP } from './mediautil';
+
+// eslint-disable-next-line jupyter/prefer-lazy-imports -- the layout restorer opens saved mesh tabs at activation; three.js itself loads on first use
+import { LIGHTING_COMMAND, MeshViewer, VIEW_COMMAND } from './mesh';
+
+import { MESH_FORMATS, MESH_LIGHTING, MeshLighting } from './meshutil';
 
 import { navigate } from './navigate';
 
@@ -63,11 +70,14 @@ const CommandIDs = {
   seekForward: 'advanced-media-viewer:seek-forward',
   togglePlay: 'advanced-media-viewer:toggle-play',
   previousFile: 'advanced-media-viewer:previous-file',
-  nextFile: 'advanced-media-viewer:next-file'
+  nextFile: 'advanced-media-viewer:next-file',
+  previousMesh: 'advanced-mesh-viewer:previous-file',
+  nextMesh: 'advanced-mesh-viewer:next-file'
 };
 
 const AUDIO_FACTORY = 'AdvancedAudioViewer';
 const VIDEO_FACTORY = 'AdvancedVideoViewer';
+const MESH_FACTORY = 'AdvancedMeshViewer';
 
 // Opens a media file without its content, so no media file is ever read
 // through the contents API; the player reads it from its file URL.
@@ -109,7 +119,7 @@ const defaults: ISettingsState = {
 const plugin: JupyterFrontEndPlugin<void> = {
   id: PLUGIN_ID,
   description:
-    'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation; audio viewer with a waveform, and media keys.',
+    'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation; audio viewer with a waveform, and media keys; mesh viewer for 3D files.',
   autoStart: true,
   requires: [IImageTracker, IDefaultDrive],
   optional: [
@@ -345,14 +355,25 @@ const plugin: JupyterFrontEndPlugin<void> = {
     // ---------------------------------------------------------------------
 
     drive.contentProviderRegistry?.register(MEDIA_PROVIDER, {
-      get: (path: string, options?: Contents.IFetchOptions) =>
-        drive.get(path, {
+      // Not writable, so the document context writes no checkpoint, which would
+      // copy the whole file.
+      get: async (path: string, options?: Contents.IFetchOptions) => ({
+        ...(await drive.get(path, {
           ...options,
           contentProviderId: undefined,
-          content: false
-        }),
-      save: (path: string, options: Partial<Contents.IModel> = {}) =>
-        drive.save(path, { ...options, contentProviderId: undefined })
+          content: false,
+          hash: false
+        })),
+        writable: false
+      }),
+      // The viewers read the file with fetch and never load it into the
+      // document model, so a save would write an empty model over the file.
+      // A rename makes the context writable again; this still refuses.
+      save: async () => {
+        throw new Error(
+          trans.__('This viewer does not save files, so the file is unchanged.')
+        );
+      }
     });
 
     // Audio and video widgets share one tracker, so the media keys and tab
@@ -379,10 +400,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
         type.mimeTypes.some(mime => mime.startsWith(`${kind}/`))
       );
 
-    const showMediaHelp = (kind: 'audio' | 'video'): void => {
-      const body = new Widget();
-      body.addClass('jp-AdvancedImageViewer-help');
-      const section = (title: string, items: string[][]): void => {
+    const helpSection =
+      (body: Widget) =>
+      (title: string, items: string[][]): void => {
         const heading = document.createElement('p');
         heading.className = 'jp-AdvancedImageViewer-help-section';
         heading.textContent = title;
@@ -396,6 +416,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
         }
         body.node.append(heading, list);
       };
+
+    const showMediaHelp = (kind: 'audio' | 'video'): void => {
+      const body = new Widget();
+      body.addClass('jp-AdvancedImageViewer-help');
+      const section = helpSection(body);
       section(trans.__('Keys'), [
         [trans.__('Space'), trans.__('play / pause')],
         [
@@ -489,13 +514,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     audioFactory.widgetCreated.connect((_, widget) => {
       const viewer = widget.content as AudioViewer;
       trackMedia(widget);
-      addReloadButton(
-        widget.toolbar,
-        trans.__('Reload audio from disk'),
-        async () => {
-          await widget.context.revert();
-          await viewer.load();
-        }
+      addReloadButton(widget.toolbar, trans.__('Reload audio from disk'), () =>
+        viewer.load()
       );
       viewer.addControls(widget.toolbar);
       widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
@@ -534,13 +554,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
     videoFactory.widgetCreated.connect((_, widget) => {
       const viewer = widget.content as VideoViewer;
       trackMedia(widget);
-      addReloadButton(
-        widget.toolbar,
-        trans.__('Reload video from disk'),
-        async () => {
-          await widget.context.revert();
-          await viewer.load();
-        }
+      addReloadButton(widget.toolbar, trans.__('Reload video from disk'), () =>
+        viewer.load()
       );
       widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
       widget.toolbar.addItem(
@@ -548,6 +563,194 @@ const plugin: JupyterFrontEndPlugin<void> = {
         new Widget({ node: viewer.details })
       );
       addHelpLink(widget.toolbar, trans, () => showMediaHelp('video'));
+    });
+
+    // ---------------------------------------------------------------------
+    // Mesh viewer. JupyterLab registers none of these file types.
+    // ---------------------------------------------------------------------
+
+    const meshIcon = new LabIcon({
+      name: 'advanced-image-viewer:mesh',
+      svgstr: meshSvg
+    });
+    for (const format of MESH_FORMATS) {
+      app.docRegistry.addFileType({
+        name: format.name,
+        displayName: trans.__('Mesh'),
+        mimeTypes: [format.mimeType],
+        extensions: format.extensions,
+        icon: meshIcon,
+        fileFormat: 'base64'
+      });
+    }
+    const meshTracker = new WidgetTracker<IDocumentWidget<MeshViewer>>({
+      namespace: 'advanced-mesh-viewer'
+    });
+    restorer?.restore(meshTracker, {
+      command: 'docmanager:open',
+      args: widget => ({ path: widget.context.path, factory: MESH_FACTORY }),
+      name: widget => widget.context.path
+    });
+    const meshExts = new Set(
+      ([] as string[]).concat(...MESH_FORMATS.map(t => t.extensions))
+    );
+
+    const showMeshHelp = (): void => {
+      const body = new Widget();
+      body.addClass('jp-AdvancedImageViewer-help');
+      const section = helpSection(body);
+      section(trans.__('Mouse'), [
+        [trans.__('Left drag'), trans.__('orbit around the model')],
+        [trans.__('Right drag'), trans.__('pan the model')],
+        [trans.__('Wheel'), trans.__('zoom toward the pointer')]
+      ]);
+      section(trans.__('Toolbar'), [
+        [trans.__('- / + / Fit'), trans.__('zoom out / in, frame the model')],
+        [trans.__('Flat'), trans.__('show the flat facets')],
+        [trans.__('Wireframe'), trans.__('show the triangle edges')],
+        [trans.__('Grid'), trans.__('show the ground grid')],
+        [
+          trans.__('Orthographic'),
+          trans.__('switch between perspective and orthographic')
+        ],
+        [
+          trans.__('Views'),
+          trans.__(
+            'Front, Back, Right, Left, Top, Bottom and the four front and back isometric corners'
+          )
+        ],
+        [trans.__('Lighting'), trans.__('Studio, Neutral or Three-point')]
+      ]);
+      section(trans.__('Keys'), [
+        [
+          trans.__('Page Up / Page Down'),
+          trans.__('previous / next mesh file in the folder')
+        ],
+        [
+          trans.__('In a menu'),
+          trans.__('Up and Down move, Enter chooses, Escape closes')
+        ]
+      ]);
+      void showDialog({
+        title: trans.__('Mesh Viewer'),
+        body,
+        buttons: [Dialog.okButton({ label: trans.__('Close') })]
+      });
+    };
+
+    const meshFactory = new MediaFactory(
+      {
+        name: MESH_FACTORY,
+        label: trans.__('Mesh Viewer'),
+        fileTypes: MESH_FORMATS.map(type => type.name),
+        defaultFor: MESH_FORMATS.map(type => type.name),
+        readOnly: true,
+        modelName: 'base64',
+        contentProviderId: MEDIA_PROVIDER,
+        translator: translator ?? nullTranslator
+      },
+      context =>
+        new MeshViewer({
+          context,
+          contents: app.serviceManager.contents,
+          commands: app.commands,
+          trans
+        })
+    );
+    app.docRegistry.addWidgetFactory(meshFactory);
+    meshFactory.widgetCreated.connect((_, widget) => {
+      const viewer = widget.content;
+      void meshTracker.add(widget);
+      widget.context.pathChanged.connect(() => void meshTracker.save(widget));
+      widget.title.icon = meshIcon;
+      addReloadButton(
+        widget.toolbar,
+        trans.__('Reload mesh from disk'),
+        async () => {
+          // revert() answers a deleted file with its own dialog, so the viewer
+          // reads first and says so in its sentence.
+          await viewer.load();
+          if (viewer.scene?.model) {
+            await widget.context.revert();
+          }
+        }
+      );
+      // The same step as the image viewer's zoom buttons.
+      addZoomButtons(
+        widget.toolbar,
+        trans,
+        () => viewer.zoom(1 / (1 + state.zoomStep)),
+        () => viewer.zoom(1 + state.zoomStep),
+        () => viewer.fitModel()
+      );
+      viewer.addControls(widget.toolbar);
+      widget.toolbar.addItem('advanced-spacer', Toolbar.createSpacerItem());
+      widget.toolbar.addItem(
+        'advanced-details',
+        new Widget({ node: viewer.details })
+      );
+      addHelpLink(widget.toolbar, trans, showMeshHelp);
+    });
+
+    const navigateMesh = async (delta: number): Promise<void> => {
+      const previous = meshTracker.currentWidget?.content;
+      await navigate(
+        app,
+        fileBrowser,
+        meshTracker,
+        meshExts,
+        MESH_FACTORY,
+        delta
+      );
+      if (previous) {
+        meshTracker.currentWidget?.content.takeDisplay(previous);
+      }
+    };
+
+    app.commands.addCommand(VIEW_COMMAND, {
+      label: args => trans.__(String(args.name ?? '')),
+      describedBy: {
+        args: {
+          type: 'object',
+          properties: { name: { type: 'string' } }
+        }
+      },
+      isEnabled: () => meshTracker.currentWidget !== null,
+      execute: args =>
+        meshTracker.currentWidget?.content.setView(String(args.name ?? ''))
+    });
+    app.commands.addCommand(LIGHTING_COMMAND, {
+      label: args =>
+        trans.__(
+          MESH_LIGHTING.find(style => style.name === args.style)?.label ??
+            String(args.style ?? '')
+        ),
+      describedBy: {
+        args: {
+          type: 'object',
+          properties: { style: { type: 'string' } }
+        }
+      },
+      isEnabled: () => meshTracker.currentWidget !== null,
+      isToggled: args =>
+        meshTracker.currentWidget?.content.lighting === args.style,
+      execute: args =>
+        meshTracker.currentWidget?.content.setLighting(
+          args.style as MeshLighting
+        )
+    });
+
+    app.commands.addCommand(CommandIDs.previousMesh, {
+      label: trans.__('Previous Mesh File In Folder'),
+      describedBy: { args: { type: 'object', properties: {} } },
+      isEnabled: () => state.navEnabled && meshTracker.currentWidget !== null,
+      execute: () => navigateMesh(-1)
+    });
+    app.commands.addCommand(CommandIDs.nextMesh, {
+      label: trans.__('Next Mesh File In Folder'),
+      describedBy: { args: { type: 'object', properties: {} } },
+      isEnabled: () => state.navEnabled && meshTracker.currentWidget !== null,
+      execute: () => navigateMesh(1)
     });
 
     const currentMedia = (): MediaViewer | null =>
@@ -642,6 +845,20 @@ const plugin: JupyterFrontEndPlugin<void> = {
           command: CommandIDs.nextFile,
           keys: ['PageDown'],
           selector: '.jp-AdvancedMediaViewer'
+        })
+      );
+      keyBindings.push(
+        app.commands.addKeyBinding({
+          command: CommandIDs.previousMesh,
+          keys: ['PageUp'],
+          selector: '.jp-AdvancedMeshViewer'
+        })
+      );
+      keyBindings.push(
+        app.commands.addKeyBinding({
+          command: CommandIDs.nextMesh,
+          keys: ['PageDown'],
+          selector: '.jp-AdvancedMeshViewer'
         })
       );
     };

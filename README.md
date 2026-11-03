@@ -8,7 +8,7 @@
 [![Brought To You By KOLOMOLO](https://img.shields.io/badge/Brought%20To%20You%20By-KOLOMOLO-00ffff?style=flat)](https://kolomolo.com)
 [![Donate PayPal](https://img.shields.io/badge/Donate-PayPal-blue?style=flat)](https://www.paypal.com/donate/?hosted_button_id=B4KPBJDLLXTSA)
 
-A JupyterLab 4 extension that makes the built-in image viewer interactive and adds audio and video viewers. Images open fitted to the panel just like the stock viewer, then you can zoom with the wheel, pan by dragging, and step through a folder of images with the arrow keys - all in a single viewer tab.
+A JupyterLab 4 extension that makes the built-in image viewer interactive and adds audio, video and mesh viewers. Images open fitted to the panel just like the stock viewer, then you can zoom with the wheel, pan by dragging, and step through a folder of images with the arrow keys - all in a single viewer tab.
 
 ![Advanced image viewer](.resources/screenshot.png)
 
@@ -38,6 +38,24 @@ Audio files open in a waveform player built on wavesurfer.js and video files in 
 - **Help dialog** - a `help` link in each media toolbar lists the keys and the waveform gestures
 - **File details** - the toolbar shows the format, the size and the duration, plus the channel count for audio and the frame size for video
 - **100 MB limit** - a file up to 100 MB is downloaded once from its file URL and played from that copy, so seeking works on a server without byte ranges; above 100 MB the audio waveform is skipped and either file plays from its URL, so seeking there needs a server that serves byte ranges
+
+## Mesh viewer
+
+Mesh files open in a 3D viewer built on three.js, with STEP read by occt-import-js. The extension registers the mesh file types, so a double click on a mesh file opens this viewer.
+
+![Mesh viewer](.resources/mesh-viewer.png)
+
+- **Formats** - STL, PLY, OBJ, 3MF, GLB and STEP
+- **Controls** - hold the left button to orbit, the right button to pan, and the wheel to zoom at the cursor; Reload reads the file again and keeps the camera, - / + / Fit zoom and frame the model, Flat and Wireframe switch the shading, Grid shows the ground grid, Orthographic switches the projection, Views picks a standard view and Lighting picks a lighting style
+- **Standard views** - Front, Back, Right, Left, Top, Bottom and the four isometric corners, one at a time; a view is not carried to the next file
+- **Lighting styles** - Studio (the default), Neutral and Three-point
+- **Grid** - off by default; its lines are drawn in theme colours that reach 3:1 against the panel
+- **Projection** - perspective by default; the Orthographic toggle keeps the model the same size and centred
+- **Read-out** - the toolbar shows the format, the triangle count, the dimensions and the size
+- **Keys in a focused mesh tab** - Page Up / Page Down open the previous and next mesh file in the folder, in the order the file browser lists them (the folder navigation setting turns this off)
+- **Help dialog** - a `help` link in the mesh toolbar lists the controls
+- **1 GiB limit** - a file up to 1 GiB is downloaded and shown; above 1 GiB the file is not downloaded and the viewer says so
+- **STEP files** - occt-import-js reads them under LGPL-2.1 in a Web Worker; the WASM file ships in the wheel, and no request leaves the lab host
 
 ## Requirements
 

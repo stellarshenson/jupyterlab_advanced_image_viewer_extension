@@ -104,12 +104,26 @@
 }
 
 /* The accent of the played part of the seek bar and of the highlighted
-   buttons. */
+   buttons. The width is for a file with sound only, which fitVideo never
+   sizes. */
 .jp-AdvancedMediaViewer-video .plyr {
   --plyr-color-main: var(--jp-brand-color1);
 
+  width: 100%;
   min-width: 0;
 }
+
+/* Plyr's control row needs about 402 px and never wraps, so a narrower player
+   would squeeze the seek bar and push Play out of the box. */
+/* stylelint-disable selector-class-pattern -- Plyr's own class names */
+.jp-AdvancedMediaViewer-video .plyr__controls {
+  flex-wrap: wrap;
+}
+
+.jp-AdvancedMediaViewer-video .plyr__controls .plyr__progress__container {
+  flex-basis: 200px;
+}
+/* stylelint-enable selector-class-pattern */
 
 /* fitVideo writes inline pixel sizes on the player, which beat Plyr's own
    fullscreen rule and keep the panel size on a black screen. Plyr uses the
@@ -145,4 +159,38 @@
   border: var(--jp-border-width) solid var(--jp-border-color1);
   border-radius: 2px;
   font-size: var(--jp-ui-font-size1);
+}
+
+/* Mesh viewer. The canvas clears to transparent, so this background shows
+   through it and follows the theme with no theme code; the canvas is replaced
+   each time the tab is shown. */
+.jp-AdvancedMeshViewer {
+  outline: none;
+  background: var(--jp-layout-color0);
+}
+
+.jp-AdvancedMeshViewer > canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+}
+
+.jp-AdvancedMeshViewer > .jp-AdvancedMediaViewer-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* A shading toggle that is on: the fill also sets the pressed state apart from
+   the toolbar surface, which the browser draws for the button. The toolbar
+   button is a jp-button custom element, so the host carries the class. */
+jp-button.jp-AdvancedMeshViewer-toggle[aria-pressed='true'] {
+  background: var(--jp-brand-color1);
+  color: var(--jp-ui-inverse-font-color1);
 }
