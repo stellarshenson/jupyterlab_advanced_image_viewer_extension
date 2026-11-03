@@ -2,6 +2,12 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.9] - 2026-11-03
+
+### Changed
+
+- No source changes since 1.2.8; this release follows 1.2.8
+
 ## [1.2.8] - 2026-11-03
 
 ### Added
