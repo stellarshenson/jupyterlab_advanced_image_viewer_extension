@@ -1,6 +1,6 @@
 {
     "name": "@stellarshenson/jupyterlab-advanced-image-viewer-extension",
-    "version": "1.2.7",
+    "version": "1.2.8",
     "description": "JupyterLab extension for advanced image viewing: fit-to-screen, cursor-anchored wheel zoom, drag-to-pan, and Left/Right arrow keys to move to the previous and next image in a folder",
     "keywords": [
         "jupyter",
@@ -18,7 +18,7 @@
     },
     "files": [
         "lib/**/*.{d.ts,eot,gif,html,jpg,js,js.map,json,png,svg,woff2,ttf}",
-        "style/**/*.{css,js,eot,gif,html,jpg,json,png,svg,woff2,ttf}",
+        "style/**/*.{css,js,eot,gif,html,jpg,json,png,svg,woff2,ttf,bin}",
         "src/**/*.{ts,tsx}",
         "schema/*.json"
     ],
@@ -69,7 +69,10 @@
         "@jupyterlab/ui-components": "^4.6.0",
         "@lumino/disposable": "^2.1.0",
         "@lumino/widgets": "^2.10.0",
+        "meshoptimizer": "~1.1.1",
+        "occt-import-js": "^0.0.23",
         "plyr": "^3.8.0",
+        "three": "^0.187.0",
         "wavesurfer.js": "^8.0.0"
     },
     "devDependencies": {
@@ -81,6 +84,7 @@
         "@types/json-schema": "^7.0.11",
         "@types/react": "^18.3.0",
         "@types/react-addons-linked-state-mixin": "^0.14.22",
+        "@types/three": "^0.187.0",
         "eslint": "^9.39.0",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-prettier": "^5.5.0",
@@ -124,7 +128,11 @@
             "@jupyterlab/video-extension:plugin"
         ],
         "outputDir": "jupyterlab_advanced_image_viewer_extension/labextension",
-        "schemaDir": "schema"
+        "rspackConfig": "rspack.config.js",
+        "schemaDir": "schema",
+        "sharedPackages": {
+            "three": false
+        }
     },
     "prettier": {
         "singleQuote": true,
