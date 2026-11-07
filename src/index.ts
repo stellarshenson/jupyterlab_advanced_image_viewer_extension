@@ -439,13 +439,19 @@ const plugin: JupyterFrontEndPlugin<void> = {
             trans.__('Overview strip'),
             trans.__('click or drag to move playback anywhere in the file')
           ],
+          [
+            trans.__('Seek bar'),
+            trans.__('click or drag to move playback to that point')
+          ],
           [trans.__('Drag'), trans.__('mark a region and loop it')],
           [
             trans.__('Wheel, - / + / Fit'),
             trans.__('zoom out / in, show the whole file')
           ],
           [trans.__('Loop'), trans.__('loop the region; off removes it')],
-          [trans.__('Speed'), trans.__('play at 0.5x to 2x the normal speed')]
+          [trans.__('Speed'), trans.__('play at 0.5x to 2x the normal speed')],
+          [trans.__('Mute'), trans.__('turn the sound off and on')],
+          [trans.__('Volume'), trans.__('set the sound level')]
         ]);
       } else {
         section(trans.__('Player'), [

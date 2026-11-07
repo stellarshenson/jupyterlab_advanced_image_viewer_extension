@@ -2,6 +2,33 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.10] - 2026-11-07
+
+### Added
+
+- Waveform for audio files over 100 MB: the extension's new server part computes it with PyAV for AAC, FLAC, M4A, MP3, OGG, OPUS and WAV files, one file at a time, and keeps it in the user cache folder (at most 1 GiB), so the next open draws at once, also after a server restart; the request needs the lab's authentication and reads only files inside the server root
+- Playback controls under the waveform: a time row with the played time, a seek slider over the whole file and the length, and a control row with back 5 s, play/pause, forward 5 s, mute, a volume slider and the speed choice
+- Volume, mute and speed carry to the next audio file and across a page reload, as in the video viewer
+- A loading spinner in the audio and video viewers, and a spinner in the waveform area while the waveform is drawn; the file already plays
+
+### Changed
+
+- The audio toolbar holds Reload, -, +, Fit, Loop, the file details and help; the playback controls moved under the waveform
+- Requires Python 3.12 or later, because PyAV 19 does; adds the dependencies av, numpy and jupyter-server
+- An audio file without a waveform shows the viewer's seek slider and a sentence instead of the browser's audio control
+- The played part of the waveform is drawn in the full accent colour
+
+### Fixed
+
+- The small ticks and secondary labels of the time ruler were almost invisible; the labels now reach 4.5:1 contrast
+- Play stays reachable while the browser decodes a file under 100 MB, and the zoom buttons wait for the waveform
+- The overview frame no longer collapses to a 2 px line after a theme change
+- The mute button restores the sound at volume 0 and is named Unmute there
+- Play stays centred in panels 371 to 583 px wide
+- Screen readers announce the seek and volume values and the loading lines
+- Above 100 MB, a page left open across an install says to reload the page
+- A file over 100 MB with more than two channels no longer reads stereo
+
 ## [1.2.9] - 2026-11-03
 
 ### Changed

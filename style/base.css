@@ -57,7 +57,8 @@
 
 /* Audio and video viewers. The content is a focusable column: the waveform
    (with its overview strip and time ruler inside wavesurfer's shadow root),
-   the time read-out, and a message line for a skipped waveform or an error. */
+   the time row and the control row, and a message line for a skipped
+   waveform or an error. */
 .jp-AdvancedMediaViewer {
   display: flex;
   flex-direction: column;
@@ -69,13 +70,19 @@
   background: var(--jp-layout-color0);
 }
 
-/* The waveform drives the audio element; it shows only as the native player
-   of a file too large for a waveform. */
+/* The waveform and the control row drive the audio element; it shows only as
+   the native player of a file whose waveform could not be drawn. */
 .jp-AdvancedMediaViewer-audio .jp-AdvancedMediaViewer-media {
   width: 100%;
 }
 
 .jp-AdvancedMediaViewer-audio .jp-AdvancedMediaViewer-media:not([controls]) {
+  display: none;
+}
+
+/* An empty waveform takes no place, so the spinner of the peaks stands where
+   the waveform will be. */
+.jp-AdvancedMediaViewer-wave:empty {
   display: none;
 }
 
@@ -85,11 +92,157 @@
   border-radius: 2px;
 }
 
-.jp-AdvancedMediaViewer-status {
+/* The rows under the waveform: the time row with the seek slider, then the
+   control row with the shown range in its left cell. Below 520 px the control
+   row wraps, centred, so no control leaves a narrow panel. */
+.jp-AdvancedMediaViewer-bar {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  container-type: inline-size;
+}
+
+.jp-AdvancedMediaViewer-times {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
-  font-size: var(--jp-ui-font-size2);
+  gap: 0 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.jp-AdvancedMediaViewer-time,
+.jp-AdvancedMediaViewer-length {
+  font-size: var(--jp-ui-font-size2);
+}
+
+.jp-AdvancedMediaViewer-length {
+  color: var(--jp-ui-font-color2);
+}
+
+.jp-AdvancedMediaViewer-seek {
+  flex: 1;
+  min-width: 80px;
+  align-self: center;
+}
+
+.jp-AdvancedMediaViewer-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.jp-AdvancedMediaViewer-centre,
+.jp-AdvancedMediaViewer-sound {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jp-AdvancedMediaViewer-centre {
+  grid-column: 2;
+  gap: 12px;
+}
+
+.jp-AdvancedMediaViewer-sound {
+  justify-self: end;
+}
+
+@container (width < 520px) {
+  .jp-AdvancedMediaViewer-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* The shown range and the sound each on their own centred line, so Play
+     stays in the centre also where the centre and the sound would share one. */
+  .jp-AdvancedMediaViewer-controls .jp-AdvancedMediaViewer-range,
+  .jp-AdvancedMediaViewer-controls .jp-AdvancedMediaViewer-sound {
+    flex-basis: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+.jp-AdvancedMediaViewer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: none;
+  cursor: pointer;
+}
+
+.jp-AdvancedMediaViewer-button:hover {
+  background: var(--jp-layout-color2);
+}
+
+.jp-AdvancedMediaViewer-button svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--jp-inverse-layout-color3);
+}
+
+.jp-AdvancedMediaViewer-button.jp-AdvancedMediaViewer-play {
+  width: 40px;
+  height: 40px;
+  background: var(--jp-brand-color1);
+}
+
+.jp-AdvancedMediaViewer-button.jp-AdvancedMediaViewer-play:hover {
+  background: var(--jp-brand-color0);
+}
+
+.jp-AdvancedMediaViewer-play svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* White on the brand colour, as JupyterLab's accept buttons. */
+.jp-AdvancedMediaViewer-play .jp-icon3[fill] {
+  fill: #fff;
+}
+
+.jp-AdvancedMediaViewer-seek,
+.jp-AdvancedMediaViewer-volume {
+  accent-color: var(--jp-brand-color1);
+}
+
+.jp-AdvancedMediaViewer-volume {
+  width: 80px;
+}
+
+/* The loading spinner covers the viewer, with Loading... under its circle;
+   the spinner of the peaks has the height of the overview strip, the ruler
+   and the waveform it stands for. */
+.jp-AdvancedMediaViewer > .jp-Spinner,
+.jp-AdvancedMediaViewer-peaks {
+  flex-direction: column;
+  gap: 12px;
+  color: var(--jp-ui-font-color2);
+  font-size: var(--jp-ui-font-size1);
+}
+
+.jp-AdvancedMediaViewer-peaks {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  height: 262px;
+}
+
+.jp-AdvancedMediaViewer-peaks[hidden] {
+  display: none;
+}
+
+.jp-AdvancedMediaViewer .jp-SpinnerContent {
+  margin: 0;
 }
 
 /* Video viewer: the frame fills the space under the toolbar and centres the
@@ -137,7 +290,7 @@
 }
 /* stylelint-enable selector-class-pattern */
 
-.jp-AdvancedMediaViewer-status > :last-child,
+.jp-AdvancedMediaViewer-range,
 .jp-AdvancedMediaViewer-message,
 .jp-Toolbar .jp-AdvancedMediaViewer-details {
   color: var(--jp-ui-font-color2);
@@ -150,10 +303,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.jp-Toolbar .jp-AdvancedMediaViewer-speed {
-  align-self: center;
+.jp-AdvancedMediaViewer-speed {
   height: 22px;
-  margin-left: 6px;
   color: var(--jp-ui-font-color1);
   background: var(--jp-layout-color1);
   border: var(--jp-border-width) solid var(--jp-border-color1);

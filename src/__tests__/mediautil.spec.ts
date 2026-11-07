@@ -2,6 +2,7 @@ import {
   drawsWaveform,
   formatSize,
   formatTime,
+  readPeaks,
   WAVEFORM_LIMIT
 } from '../mediautil';
 import { stepPath } from '../navigate';
@@ -55,16 +56,40 @@ describe('formatSize', () => {
   });
 });
 
-// ACC-AUDIO-54: a file over 100 MB is not decoded for a waveform.
+// ACC-AUDIO-54: a file over 100 MB is not decoded in the browser.
 describe('the waveform limit', () => {
   it('is 100 MB', () => {
     expect(WAVEFORM_LIMIT).toBe(104857600);
   });
 
-  it('draws a waveform up to the limit and skips it above', () => {
+  it('decodes in the browser up to the limit and not above', () => {
     expect(drawsWaveform(0)).toBe(true);
     expect(drawsWaveform(WAVEFORM_LIMIT)).toBe(true);
     expect(drawsWaveform(WAVEFORM_LIMIT + 1)).toBe(false);
+  });
+});
+
+// ACC-AUDIO-54 and ACC-WAVE-121: the peaks of the server part, or an error.
+describe('readPeaks', () => {
+  it('splits the channels and scales 0..255 to 0..1', () => {
+    const [left, right] = readPeaks(
+      Uint8Array.from([0, 255, 51, 102, 204, 0]),
+      0.003,
+      2
+    );
+    expect(Array.from(left)).toEqual([0, 1, 0.2].map(Math.fround));
+    expect(Array.from(right)).toEqual([0.4, 0.8, 0].map(Math.fround));
+    expect(readPeaks(Uint8Array.from([255]), 0.001, 1)).toHaveLength(1);
+  });
+
+  it('throws on an answer that is not peaks', () => {
+    const bytes = Uint8Array.from([1, 2, 3]);
+    expect(() => readPeaks(bytes, 0.003, 2)).toThrow();
+    expect(() => readPeaks(bytes, 0.003, 0)).toThrow();
+    expect(() => readPeaks(bytes, 0.003, 3)).toThrow();
+    expect(() => readPeaks(bytes, NaN, 1)).toThrow();
+    expect(() => readPeaks(bytes, 0, 1)).toThrow();
+    expect(() => readPeaks(new Uint8Array(0), 0.003, 1)).toThrow();
   });
 });
 

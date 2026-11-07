@@ -1,8 +1,9 @@
 // Pure helpers of the media viewers. This module imports nothing, so the unit
 // tests load it without the JupyterLab packages.
 
-// Above this size an audio file plays from its URL and is never decoded:
-// decoding holds the whole file and its samples in browser memory.
+// Above this size an audio file plays from its URL and is never decoded in
+// the browser, which would hold the whole file and its samples in memory; the
+// server part computes its peaks instead.
 export const WAVEFORM_LIMIT = 100 * 1024 * 1024;
 
 // Seconds moved by one press of Left or Right and by the back and forward
@@ -11,6 +12,32 @@ export const SEEK_STEP = 5;
 
 export function drawsWaveform(size: number): boolean {
   return size <= WAVEFORM_LIMIT;
+}
+
+// The peaks answer of the server part: per channel, one byte per millisecond,
+// channel 0 first, 0 for silence to 255 for full scale. Anything else throws.
+export function readPeaks(
+  bytes: Uint8Array,
+  duration: number,
+  channels: number
+): Float32Array[] {
+  const points = bytes.length / channels;
+  if (
+    !(Number.isFinite(duration) && duration > 0) ||
+    (channels !== 1 && channels !== 2) ||
+    !Number.isInteger(points) ||
+    !points
+  ) {
+    throw new Error(
+      `Not peaks: ${bytes.length} bytes, ${channels} channels, ${duration} s`
+    );
+  }
+  return Array.from({ length: channels }, (_, c) =>
+    Float32Array.from(
+      bytes.subarray(c * points, (c + 1) * points),
+      v => v / 255
+    )
+  );
 }
 
 // [h:]mm:ss with `digits` decimals of a second; '--:--' while the time is

@@ -7,6 +7,7 @@ except ImportError:
     import warnings
     warnings.warn("Importing 'jupyterlab_advanced_image_viewer_extension' outside a proper installation.")
     __version__ = "dev"
+from .routes import setup_route_handlers
 
 
 def _jupyter_labextension_paths():
@@ -14,3 +15,13 @@ def _jupyter_labextension_paths():
         "src": "labextension",
         "dest": "@stellarshenson/jupyterlab-advanced-image-viewer-extension"
     }]
+
+
+def _jupyter_server_extension_points():
+    return [{"module": "jupyterlab_advanced_image_viewer_extension"}]
+
+
+def _load_jupyter_server_extension(server_app):
+    """Registers the waveform endpoint of the audio viewer."""
+    setup_route_handlers(server_app.web_app)
+    server_app.log.info("Registered jupyterlab_advanced_image_viewer_extension server extension")

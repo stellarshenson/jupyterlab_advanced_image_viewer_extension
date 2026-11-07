@@ -32,12 +32,12 @@ Audio files open in a waveform player built on wavesurfer.js and video files in 
 ![Audio viewer](.resources/audio-viewer.png)
 ![Video viewer](.resources/video-viewer.png)
 
-- **Audio controls** - play/pause, back and forward 5 s, Loop, a speed choice of 0.5x to 2x, waveform zoom with - / + / Fit, an overview strip that seeks anywhere in the file, the time under the mouse, and a drag-marked loop region of at least 1 s
+- **Audio controls** - under the waveform, a time row shows the played time, a seek slider over the whole file and the file length; a control row below it shows the range the waveform shows at the left, holds back 5 s, play/pause and forward 5 s in the centre, and mute, a volume slider and a speed choice of 0.5x to 2x at the right. The toolbar holds waveform zoom with - / + / Fit and Loop. The waveform adds an overview strip that seeks anywhere in the file, the time under the mouse, and a drag-marked loop region of at least 1 s. Volume, mute and speed carry to the next audio file and across a page reload, as in the video viewer
 - **Video controls** - play/pause, a seek bar, the current time, mute and volume, a speed menu, picture in picture and full screen, in a player fitted to the panel with the aspect ratio kept
 - **Keys in a focused media tab** - Space plays and pauses, Left and Right seek 5 s, and Page Up / Page Down open the previous and next file of the same kind in the folder, in the order the file browser lists them (the folder navigation setting turns this off)
 - **Help dialog** - a `help` link in each media toolbar lists the keys and the waveform gestures
 - **File details** - the toolbar shows the format, the size and the duration, plus the channel count for audio and the frame size for video
-- **100 MB limit** - a file up to 100 MB is downloaded once from its file URL and played from that copy, so seeking works on a server without byte ranges; above 100 MB the audio waveform is skipped and either file plays from its URL, so seeking there needs a server that serves byte ranges
+- **100 MB limit** - a file up to 100 MB is downloaded once from its file URL and played from that copy, so seeking works on a server without byte ranges; above 100 MB either file plays from its URL, so seeking there needs a server that serves byte ranges. Above 100 MB the extension's server part computes the audio waveform with PyAV for AAC, FLAC, M4A, MP3, OGG, OPUS and WAV files, so the server part must be enabled; the install enables it, and `jupyter server extension list` shows it. The server keeps each waveform in the user cache folder (`~/.cache/jupyterlab_advanced_image_viewer_extension`, at most 1 GiB), so the next open of an unchanged file draws at once, also after a server restart. While the server computes, a spinner stands in the waveform's place and the file already plays. Without a waveform the time row with its seek slider and the control row stay
 
 ## Mesh viewer
 
@@ -60,6 +60,7 @@ Mesh files open in a 3D viewer built on three.js, with STEP read by occt-import-
 ## Requirements
 
 - JupyterLab >= 4.6
+- Python >= 3.12
 
 ## Install
 

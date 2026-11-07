@@ -447,20 +447,27 @@ Audio files open in a waveform player built on wavesurfer.js
   - log: 2026-10-28T13:59:52Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
   - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-50-LOOP a drag marks a loop region and Loop off removes it passes, Galata 76/76 local" -> "2 tests titled ACC-AUDIO-50-LOOP in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
-- [x] `ACC-AUDIO-51-CONTROLS` **Playback controls** - HIGH; the toolbar has Play/Pause, back 5 s, forward 5 s, Loop and a speed choice of 0.5x, 0.75x, 1x, 1.25x, 1.5x and 2x, each acting on the open file
-  - evidence: 1 test titled ACC-AUDIO-51-CONTROLS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
-  - test: from 10 s click forward twice, assert 20 s; pick 2x, assert playbackRate 2
+- [x] `ACC-AUDIO-51-CONTROLS` **Playback controls** - HIGH; a control row under the waveform holds Back 5 s, a 40 px Play/Pause in --jp-brand-color1 and Forward 5 s in the centre, and mute, volume and the speed choice 0.5x, 0.75x, 1x, 1.25x, 1.5x, 2x at the right, each acting on the open file; the toolbar holds none of them; after a click on any control under the waveform, Space, Left and Right still act on the viewer; in a 360 px wide panel the rows wrap and no control leaves the panel
+  - evidence: Galata media_audio.spec.ts:635 'ACC-AUDIO-51-CONTROLS the control row under the waveform plays, seeks and sets the speed, and the toolbar holds none of them', :734 'ACC-AUDIO-51-CONTROLS Space, Left and Right still act on the viewer after a click on a control under the waveform', :776 'ACC-AUDIO-51-CONTROLS in a 360 px wide panel the rows wrap and every control stays inside the panel' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: from 10 s click Forward 5 seconds twice, assert 20 s; pick 2x, assert playbackRate 2; assert no Play, Back, Forward or speed in the toolbar; click Play then press Right, assert currentTime 5 s further; at 360 px wide assert every control inside the panel
   - test-tags: E2E
   - log: 2026-10-28T13:59:52Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
   - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-AUDIO-51-CONTROLS play, back, forward, loop and speed act on the file passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-51-CONTROLS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+  - log: 2026-11-06T16:03:04Z @kj amended text "the toolbar has Play/Pause, back 5 s, forward 5 s, Loop and a speed choice of 0.5x, 0.75x, 1x, 1.25x, 1.5x and 2x, each acting on the open file" -> "a control row under the waveform holds Back 5 s, a 40 px Play/Pause in --jp-brand-color1 and Forward 5 s in the centre, and mute, volume and the speed choice 0.5x, 0.75x, 1x, 1.25x, 1.5x, 2x at the right, each acting on the open file; the toolbar holds none of them; after a click on any control under the waveform, Space, Left and Right still act on the viewer; in a 360 px wide panel the rows wrap and no control leaves the panel"; reason: Star Colonel decision of 2026-11-06: audio layout B moves the playback controls under the waveform; the row, the keys after a click and the 360 px panel are one layout
+  - log: 2026-11-06T16:03:04Z @kj edited test "from 10 s click forward twice, assert 20 s; pick 2x, assert playbackRate 2" -> "from 10 s click Forward 5 seconds twice, assert 20 s; pick 2x, assert playbackRate 2; assert no Play, Back, Forward or speed in the toolbar; click Play then press Right, assert currentTime 5 s further; at 360 px wide assert every control inside the panel"; reason: Star Colonel decision of 2026-11-06: audio layout B
+  - log: 2026-11-06T16:03:04Z @kj reopened: Star Colonel decision of 2026-11-06: audio layout B moves Play, Back 5 s, Forward 5 s and the speed menu under the waveform and adds mute and volume; evidence retired: 1 test titled ACC-AUDIO-51-CONTROLS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
 - [x] `ACC-AUDIO-52-TIME` **Current time and duration** - MEDIUM; the viewer shows the current time and the duration, updated during playback and after every seek
-  - evidence: 1 test titled ACC-AUDIO-52-TIME in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
-  - test: seek to 15 s in a 60 s WAV, read 00:15.0 / 01:00.0
+  - evidence: Galata media_audio.spec.ts:834 'ACC-AUDIO-52-TIME the time row shows the played time at the left and the length at the right, updated on a seek and during playback' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: seek to 15 s in a 60 s WAV, read 00:15.0 at the left and 01:00.0 at the right of the time row
   - test-tags: E2E
   - log: 2026-10-28T13:59:52Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
   - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-52-TIME the current time and the duration update on a seek passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-52-TIME in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+  - log: 2026-11-06T16:03:04Z @kj edited test "seek to 15 s in a 60 s WAV, read 00:15.0 / 01:00.0" -> "seek to 15 s in a 60 s WAV, read 00:15.0 at the left and 01:00.0 at the right of the time row"; reason: Star Colonel decision of 2026-11-06: audio layout B splits the status line into a time row
+  - log: 2026-11-06T16:03:04Z @kj reopened: Star Colonel decision of 2026-11-06: audio layout B puts the played time and the file length at the two ends of a time row; the old test read them joined in the status line; evidence retired: 1 test titled ACC-AUDIO-52-TIME in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
 - [x] `ACC-AUDIO-53-DETAILS` **Audio file details** - LOW; the toolbar shows the format taken from the file extension, the channel count, the file size and the duration
   - evidence: 1 test titled ACC-AUDIO-53-DETAILS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open the 60 s mono WAV, read WAV, mono, its size and 01:00
@@ -468,13 +475,23 @@ Audio files open in a waveform player built on wavesurfer.js
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
   - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-53-DETAILS the toolbar shows format, channels, size and duration passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-53-DETAILS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
-- [x] `ACC-AUDIO-54-LARGE` **Large audio file** - HIGH; a file over 100 MB is not decoded in the browser; it opens and plays with a working seek bar and a line saying that the waveform is skipped above 100 MB
-  - evidence: Jest the waveform limit suite in mediautil.spec.ts passed, logs/media-close5-test.log 48/48; 1 test titled ACC-AUDIO-54-LARGE in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
-  - test: unit test the size limit; open a file reported over the limit, assert the seek bar works and the line shows
+- [x] `ACC-AUDIO-54-LARGE` **Large audio file** - HIGH; a file over 100 MB shows the waveform, overview strip, time ruler, time under the mouse, zoom and loop region as a file under 100 MB does, from peaks the server computes; the browser never downloads or decodes the whole file and plays it from the file URL; with no peaks, the control row and the seek slider stay, as ACC-WAVE-121-FALLBACK states
+  - evidence: Galata media_audio.spec.ts:1161 'ACC-AUDIO-54-LARGE a file over 100 MB shows the waveform from the peaks of the server and is never downloaded' passed; Jest 'the waveform limit' in src/__tests__/mediautil.spec.ts passed (Jest 50/50 in logs/audio-w-final-test.log); whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - related: ACC-WAVE-121-FALLBACK - the control row and the seek slider when no peaks come
+  - related: DEF-MEDIA-37-DECODE-QUEUE - files over 100 MB no longer decode in the browser; files under 100 MB still do
+  - mechanism: 2026-11-06T16:11:09Z @kj the package's new server extension decodes the file with PyAV and answers its peaks; wavesurfer draws them over the file URL without decoding
+  - test: unit test the size limit; open the 60 s WAV reported over 100 MB, assert the waveform, overview strip and ruler draw, hover reads 00:30 at 50%, + narrows the shown range, a drag makes a loop region; record requests, assert no fetch or XHR of the file URL
   - test-tags: UNIT, E2E
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
   - log: 2026-11-03T10:12:28Z @kj edited evidence "Jest the waveform limit suite and ACC-AUDIO-54-LARGE a file over 100 MB plays without a waveform and seeks pass, Galata 76/76 local" -> "Jest the waveform limit suite in mediautil.spec.ts passed, logs/media-close5-test.log 48/48; 1 test titled ACC-AUDIO-54-LARGE in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+  - log: 2026-11-06T16:03:04Z @kj amended text "a file over 100 MB is not decoded in the browser; it opens and plays with a working seek bar and a line saying that the waveform is skipped above 100 MB" -> "a file over 100 MB is not decoded in the browser; it opens and plays with no browser audio control, with a line saying that the waveform is skipped above 100 MB, and with a seek slider over the whole file in the middle of the time row; the slider follows playback, and a click or a drag on it moves playback there"; reason: Star Colonel decision of 2026-11-06: audio layout B replaces the browser audio control with the viewer's own seek slider
+  - log: 2026-11-06T16:03:04Z @kj edited test "unit test the size limit; open a file reported over the limit, assert the seek bar works and the line shows" -> "unit test the size limit; open a file reported over the limit, assert no controls attribute, click the seek slider at 50%, assert currentTime 30 s within 0.5 s, assert the line shows"; reason: Star Colonel decision of 2026-11-06: audio layout B
+  - log: 2026-11-06T16:03:05Z @kj reopened: Star Colonel decision of 2026-11-06: audio layout B hides the browser audio control and adds the viewer's own seek slider above 100 MB; evidence retired: Jest the waveform limit suite in mediautil.spec.ts passed, logs/media-close5-test.log 48/48; 1 test titled ACC-AUDIO-54-LARGE in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
+  - log: 2026-11-06T16:11:09Z @kj amended text "a file over 100 MB is not decoded in the browser; it opens and plays with no browser audio control, with a line saying that the waveform is skipped above 100 MB, and with a seek slider over the whole file in the middle of the time row; the slider follows playback, and a click or a drag on it moves playback there" -> "a file over 100 MB shows the waveform, overview strip, time ruler, time under the mouse, zoom and loop region as a file under 100 MB does, from peaks the server computes; the browser never downloads or decodes the whole file and plays it from the file URL; with no peaks, the control row and the seek slider stay, as ACC-WAVE-121-FALLBACK states"; reason: Star Colonel decision of 2026-11-06: the server waveform above 100 MB, decided after a 115 MB WAV opened in the browser's own audio control; the seek slider moved to ACC-AUDIO-113-SEEKBAR
+  - log: 2026-11-06T16:11:09Z @kj edited test "unit test the size limit; open a file reported over the limit, assert no controls attribute, click the seek slider at 50%, assert currentTime 30 s within 0.5 s, assert the line shows" -> "unit test the size limit; open the 60 s WAV reported over 100 MB, assert the waveform, overview strip and ruler draw, hover reads 00:30 at 50%, + narrows the shown range, a drag makes a loop region; record requests, assert no fetch or XHR of the file URL"; reason: Star Colonel decision of 2026-11-06: the server waveform above 100 MB
+  - log: 2026-11-06T16:11:09Z @kj mechanism recorded; reason: Star Colonel decision of 2026-11-06: PyAV decoder in a new server extension
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
 - [x] `ACC-AUDIO-55-ERROR` **Unreadable audio** - MEDIUM; every audio file type JupyterLab registers opens in this viewer; a file the browser cannot decode shows an error line in the viewer, never an empty or stuck panel
   - evidence: 1 test titled ACC-AUDIO-55-ERROR in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open a WAV and a corrupt .mp3, assert the waveform and the error line
@@ -482,6 +499,42 @@ Audio files open in a waveform player built on wavesurfer.js
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
   - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-55-ERROR every audio type opens here and an unreadable file shows an error passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-55-ERROR in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+- [x] `ACC-AUDIO-112-VOLUME` **Mute and volume** - MEDIUM; a mute button toggles media.muted, shows the plyr-volume icon, or plyr-muted while muted or at volume 0, and is named Mute, or Unmute while muted or at volume 0; a Volume slider from 0 to 1 sets media.volume, follows volumechange, shows 0 while muted and unmutes when moved above 0; both act as in the video viewer and hold after Reload, as the speed does
+  - evidence: Galata ACC-AUDIO-112-VOLUME 'mute and the volume slider act as in the video viewer and hold after Reload' passes in logs/audio-r4-named.log (media_audio 55/55), the button named Unmute at volume 0; failed before in logs/audio-r4-red.log
+  - test: click Mute, assert media.muted, the name Unmute and the slider at 0; set the slider to 0.3, assert media.volume 0.3 and not muted; set media.volume 0.6, assert the slider 0.6; mute, click Reload, assert media.muted and media.volume 0.6
+  - test-tags: E2E
+  - log: 2026-11-06T16:03:05Z @kj added; reason: Star Colonel decision of 2026-11-06: audio layout B adds mute and volume; the Plyr behaviour is spelt out so it can be tested
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+  - log: 2026-11-07T00:01:00Z @kj amended text "a mute button toggles media.muted, shows the plyr-volume icon, or plyr-muted while muted or at volume 0, and is named Mute, or Unmute while muted; a Volume slider from 0 to 1 sets media.volume, follows volumechange, shows 0 while muted and unmutes when moved above 0; both act as in the video viewer and hold after Reload, as the speed does" -> "a mute button toggles media.muted, shows the plyr-volume icon, or plyr-muted while muted or at volume 0, and is named Mute, or Unmute while muted or at volume 0; a Volume slider from 0 to 1 sets media.volume, follows volumechange, shows 0 while muted and unmutes when moved above 0; both act as in the video viewer and hold after Reload, as the speed does"; reason: DEF-MEDIA-64-MUTE-NAME: only the Unmute clause gains 'or at volume 0'; the rest of the criterion is kept word for word
+  - log: 2026-11-07T00:25:06Z @kj reopened: reopened: text amended for DEF-MEDIA-64-MUTE-NAME, closed again on the round 4 runs; evidence retired: Galata media_audio.spec.ts:893 'ACC-AUDIO-112-VOLUME mute and the volume slider act as in the video viewer and hold after Reload' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - log: 2026-11-07T00:25:06Z @kj closed
+- [x] `ACC-AUDIO-113-SEEKBAR` **Seek slider without a waveform** - HIGH; an audio file with no waveform, of any size, has no browser audio control; the seek slider of the time row covers the whole file, follows playback, and a click or a drag on it moves playback there
+  - evidence: Galata media_audio.spec.ts:964 'ACC-AUDIO-113-SEEKBAR a file over 100 MB plays without a waveform or the browser control and seeks with the slider of the time row' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - related: DEF-MEDIA-34-NATIVE-KEYS - the browser audio control it names is no longer shown
+  - related: DEF-MEDIA-9-MEDIA - -, + and Fit stay disabled while no waveform shows
+  - test: open the 60 s WAV reported over 100 MB, its peaks request, if any, answered 404; assert no controls attribute; click the slider at 50%, assert currentTime 30 s within 0.5 s; drag it to 75%, assert 45 s; play 1 s, assert the slider moved
+  - test-tags: E2E
+  - log: 2026-11-06T16:10:46Z @kj added; reason: Star Colonel decision of 2026-11-06: audio layout B replaces the browser audio control with the viewer's own seek slider; moved here from ACC-AUDIO-54-LARGE, which now states the server waveform
+  - log: 2026-11-06T18:45:46Z @kj amended text "an audio file over 100 MB with no waveform has no browser audio control; the middle of the time row shows a seek slider over the whole file in place of the shown range; the slider follows playback, and a click or a drag on it moves playback there" -> "an audio file with no waveform, of any size, has no browser audio control; the seek slider of the time row covers the whole file, follows playback, and a click or a drag on it moves playback there"
+  - log: 2026-11-06T18:45:46Z @kj covers every file with no waveform, of any size: a failed decode under 100 MB showed two seek bars, the browser control and the slider
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+- [x] `ACC-AUDIO-123-SEEKBAR-ALWAYS` **Seek bar for every audio file** - HIGH; every audio file, with or without a waveform, has a seek slider over the whole file in the time row between the played time and the length; it follows playback; a click or a drag moves playback there; the shown range moves to the left cell of the control row
+  - evidence: Galata ACC-AUDIO-123-SEEKBAR-ALWAYS and the updated ACC-AUDIO-51-CONTROLS, ACC-AUDIO-52-TIME, ACC-AUDIO-54-LARGE, ACC-AUDIO-113-SEEKBAR pass, media_audio.spec.ts 44/44 in logs/audio-c-named.log; red before the change in logs/audio-c-red.log (slider hidden); verifier rerun 10/10 in logs/audio-c-verify.log
+  - related: ACC-AUDIO-113-SEEKBAR - the same slider, now shown for every file
+  - test: open a 60 s WAV under 100 MB; assert the slider between the two times; click it at 50%, assert currentTime 30 s within 0.5 s; drag to 75%, assert 45 s; play 1 s, assert it moved; assert the shown range in the control row
+  - test-tags: E2E
+  - log: 2026-11-06T17:42:13Z @kj added
+  - log: 2026-11-06T18:41:53Z @kj closed
+- [x] `ACC-AUDIO-124-SETTINGS-CARRY` **Volume, mute and speed carry over** - MEDIUM; volume, mute and speed carry to the next audio file and across a page reload, as in the video viewer
+  - evidence: Galata DEF-MEDIA-61-AUDIO-SETTINGS ACC-AUDIO-124-SETTINGS-CARRY passes in logs/audio-r3-named.log (84/84); failed before with volume 1, unmuted, 1x in logs/audio-r3-red-client.log
+  - related: DEF-MEDIA-61-AUDIO-SETTINGS - the defect this criterion states the fix of
+  - test: set the volume to 0.4, mute, pick 1.5x, press Page Down: assert volume 0.4, muted, 1.5x; reload the page: assert the same
+  - test-tags: E2E
+  - mechanism: 2026-11-06T22:37:43Z @kj one localStorage key holds volume, muted and speed, written on each change and applied when an audio viewer opens, inside try/catch
+  - log: 2026-11-06T22:37:43Z @kj added
+  - log: 2026-11-06T23:04:48Z @kj met in the tree: Galata DEF-MEDIA-61-AUDIO-SETTINGS ACC-AUDIO-124-SETTINGS-CARRY failed before (logs/audio-r3-red-client.log), passed after, media_audio and media_video 84/84 (logs/audio-r3-named.log)
+  - log: 2026-11-06T23:13:03Z @kj closed
+  - log: 2026-11-07T07:31:34Z @kj accepted by the owner on 2026-11-07
 
 ## Video viewer `VIDEO`
 
@@ -573,20 +626,26 @@ How the audio and video viewers fit into JupyterLab
   - log: 2026-10-28T13:59:55Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
   - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-MEDIA-65-STOCK the stock audio and video viewers are disabled and the stock video viewer is disabled pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-65-STOCK, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
-- [x] `ACC-MEDIA-66-TOOLBAR` **Toolbar matches the image viewer** - MEDIUM; the media toolbar starts with the same Reload button as the image viewer, waveform zoom uses the same -, + and Fit buttons with the same tooltips, and the help link sits at the right end
-  - evidence: 2 tests titled ACC-MEDIA-66-TOOLBAR, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
-  - test: compare the toolbar items of an audio, a video and an image tab
+- [x] `ACC-MEDIA-66-TOOLBAR` **Toolbar matches the image viewer** - MEDIUM; the media toolbar starts with the image viewer's Reload button and ends with the help link at the right end; the audio toolbar holds Reload, -, +, Fit, Loop, a spacer, the file details and help, in that order, with the image viewer's -, + and Fit tooltips
+  - evidence: Galata media_audio.spec.ts:1775 'ACC-MEDIA-66-TOOLBAR the audio toolbar matches the image viewer toolbar and holds Reload, -, +, Fit, Loop, the details and help in that order', media_video.spec.ts:721 'ACC-MEDIA-66-TOOLBAR the video toolbar starts with Reload and ends with help' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: compare the toolbar items of an audio, a video and an image tab; assert the audio items in their order
   - test-tags: E2E
   - log: 2026-10-28T13:59:56Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
   - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-MEDIA-66-TOOLBAR the audio toolbar matches the image viewer toolbar and the video toolbar starts with Reload and ends with help pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-66-TOOLBAR, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+  - log: 2026-11-06T16:03:05Z @kj amended text "the media toolbar starts with the same Reload button as the image viewer, waveform zoom uses the same -, + and Fit buttons with the same tooltips, and the help link sits at the right end" -> "the media toolbar starts with the image viewer's Reload button and ends with the help link at the right end; the audio toolbar holds Reload, -, +, Fit, Loop, a spacer, the file details and help, in that order, with the image viewer's -, + and Fit tooltips"; reason: Star Colonel decision of 2026-11-06: audio layout B moves Play, Back 5 s, Forward 5 s and the speed menu out of the audio toolbar
+  - log: 2026-11-06T16:03:05Z @kj edited test "compare the toolbar items of an audio, a video and an image tab" -> "compare the toolbar items of an audio, a video and an image tab; assert the audio items in their order"; reason: Star Colonel decision of 2026-11-06: audio layout B
+  - log: 2026-11-06T16:03:05Z @kj reopened: Star Colonel decision of 2026-11-06: audio layout B changes the audio toolbar items; evidence retired: 2 tests titled ACC-MEDIA-66-TOOLBAR, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
 - [x] `ACC-MEDIA-67-HELP` **Help link as in the image viewer** - LOW; the toolbar shows an underlined help text link in the accent colour at the right end, never a ? icon; it opens a dialog listing the media controls and keys, each once, with a Close button
-  - evidence: 2 tests titled ACC-MEDIA-67-HELP, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
+  - evidence: 2 tests titled ACC-MEDIA-67-HELP, in media_audio.spec.ts (Seek bar row asserted once) and media_video.spec.ts, passed; audio test failed before the change in logs/audio-d-red.log, passed in logs/audio-d-named.log 44/44; both rerun in logs/audio-d-verify.log 3/3, exit 0
   - test: read the link text, colour and position; open the dialog and count each control once
   - test-tags: E2E
   - log: 2026-10-28T13:59:56Z @kj added
   - log: 2026-10-28T16:15:01Z @kj closed
   - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-MEDIA-67-HELP the help link lists each media control once and each video control and key once pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-67-HELP, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+  - log: 2026-11-06T18:45:42Z @kj reopened: the seek slider of ACC-AUDIO-123 has no help row; evidence retired: 2 tests titled ACC-MEDIA-67-HELP, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
+  - log: 2026-11-06T19:00:29Z @kj closed
 - [x] `ACC-MEDIA-68-RELOAD` **Reload from disk** - LOW; Reload reads the file again, so a changed file shows its new waveform or picture and its new duration
   - evidence: 2 tests titled ACC-MEDIA-68-RELOAD, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: overwrite the 60 s WAV with a 30 s one, click Reload, assert 00:30.0
@@ -637,6 +696,13 @@ How the audio and video viewers fit into JupyterLab
   - log: 2026-10-28T14:26:15Z @kj added
   - log: 2026-10-28T16:15:02Z @kj closed
   - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-MEDIA-74-BUFFER audio and video up to 100 MB are downloaded once and seek without byte ranges pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-74-BUFFER, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+- [x] `ACC-MEDIA-114-SPINNER` **Loading spinner** - MEDIUM; from the start of a load until the file can play, the centre of an audio or video tab shows a spinner with Loading... under it, in place of the Loading... line at the panel foot; the spinner goes when the file can play or when an error sentence shows
+  - evidence: Galata media_audio.spec.ts:1415 'ACC-MEDIA-114-SPINNER a spinner with Loading... under it shows in the centre of the audio viewer until the file can play, and goes on an error', media_video.spec.ts:1215 'ACC-MEDIA-114-SPINNER a spinner with Loading... under it shows in the centre of the video viewer until the file can play' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - related: DEF-MEDIA-43-MESSAGE-POSITION - Loading... leaves the panel foot for the centre; the error sentence keeps its place
+  - test: hold the file URL answer with page.route, open a WAV, assert the spinner and Loading... centred in the viewer and no Loading... at the foot; release it, assert no spinner once the file can play; repeat with the video fixture; open a corrupt .mp3, assert the error sentence and no spinner
+  - test-tags: E2E
+  - log: 2026-11-06T16:10:46Z @kj added; reason: Star Colonel decision of 2026-11-06: a spinner in the centre of the audio and video viewers replaces the Loading... line at the panel foot
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
 
 ## Mesh viewer `MESH`
 
@@ -856,6 +922,7 @@ STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
   - log: 2026-11-02T12:14:53Z @kj closed; reason: y
   - log: 2026-11-02T12:14:58Z @kj reopened; evidence retired: x; reason: verifier argument check applied the close; reopened until the round-2 gates finish
   - log: 2026-11-02T12:21:55Z @kj closed; reason: round-2 verifier gate run: install, jest, pytest, lint and the full 44-test Galata suite all passed
+  - log: 2026-11-06T19:28:43Z @kj failed once in logs/audio-w-suite.log while another project's Galata suite loaded the machine, passed 3 of 3 alone in logs/audio-w-mesh107.log
 - [x] `ACC-MESH-108-PERF-MEM` **Large mesh fits the memory budget** - HIGH; a 95 MB binary STL opens with a JS heap peak of 1.5 GB or less, and closing the tab returns the WebGL context and the heap
   - evidence: ui-tests/tests/media_mesh.spec.ts:3501 ACC-MESH-108 passed in logs/mesh-galata-verify-worker-1.log (42/42, exit 0): page+worker heap peak 359,910,869 B (0.34 GiB), workerPeak 290,538,319 B, context lost and 8,098,824 B heap returned; verifier probe 310,618,392 B
   - test: open a 95 MB STL, sample performance.memory during the open, close the tab; assert the heap peak and that the WebGL context is lost
@@ -880,4 +947,66 @@ STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
   - test-tags: E2E
   - log: 2026-11-02T14:10:58Z @kj added
   - log: 2026-11-02T14:11:01Z @kj closed
+
+## Server waveform `WAVE`
+
+Waveform peaks of audio files over 100 MB, computed by the extension's server part with PyAV
+
+- log: 2026-11-06T16:10:56Z @kj category created
+
+- [x] `ACC-WAVE-115-FORMATS` **Peaks for every audio type** - HIGH; the server computes peaks for AAC, MP3, WAV, OGG, M4A, FLAC and OPUS files with PyAV and its bundled FFmpeg libraries, with no ffmpeg binary or system package installed
+  - evidence: pytest in logs/audio-w-final-test.log (17/17): test_wave_115_peaks_for_every_audio_type[aac], [flac], [m4a], [mp3], [ogg], [opus], [wav] passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: pytest with no ffmpeg on PATH: encode 1 s of tone then 1 s of silence in each of the seven formats with PyAV, request each file's peaks, assert duration 2 s within 0.1 s and the tone's largest peak over ten times the largest in the last 0.5 s
+  - test-tags: INTEGRATION
+  - log: 2026-11-06T16:10:56Z @kj added; reason: Star Colonel decision of 2026-11-06: the server waveform covers every audio type JupyterLab registers that a browser plays
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+- [x] `ACC-WAVE-116-MEMORY` **Peaks decoded as a stream** - HIGH; the server decodes the file frame by frame and never holds the whole decoded file in memory
+  - evidence: pytest in logs/audio-w-final-test.log (17/17): test_wave_116_a_long_file_decodes_as_a_stream passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: pytest against a started server: after a warm-up request on a small WAV, request the peaks of a sparse 20 min 48 kHz stereo 16-bit WAV of silence, 230 MB decoded; assert the server RSS grows less than 64 MB
+  - test-tags: INTEGRATION
+  - log: 2026-11-06T16:10:56Z @kj added; reason: Star Colonel decision of 2026-11-06: the server decodes as a stream
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+- [x] `ACC-WAVE-117-CACHE` **Peaks cached per file** - MEDIUM; the server keeps the peaks on disk per file path, size and modification time: a second open of the same file draws at once without a new decode, also after a server restart, and a changed file is decoded anew; the cache folder is capped at 1 GiB, the least recently used peaks removed first
+  - evidence: pytest test_wave_117_peaks_are_cached_per_path_size_and_time and test_wave_117_the_cache_removes_the_least_recently_used_peaks_first pass in logs/audio-r3-verify-test.log (23/23), failed before in logs/audio-r3-red-server.log; live server: same peaks after a restart with no decode, folder under a lowered cap, logs/audio-r3-verify-server.log
+  - test: pytest counting decodes: request a WAV's peaks twice, assert one decode; new modification time, assert two; overwrite with a 1 s WAV, assert three; zero the file keeping size and time, assert a second server process answers the same peaks; with the cap at two files, assert the least recently used goes
+  - test-tags: INTEGRATION
+  - log: 2026-11-06T16:10:56Z @kj added; reason: Star Colonel decision of 2026-11-06: the peaks are cached per file path, size and modification time
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+  - log: 2026-11-06T22:24:00Z @kj amended text "the server caches the peaks per file path, size and modification time: a second open of the same file draws at once without a new decode, and a changed file is decoded anew" -> "MEDIUM; the server keeps the peaks on disk per file path, size and modification time: a second open of the same file draws at once without a new decode, also after a server restart, and a changed file is decoded anew; the cache folder is capped at 1 GiB, the least recently used peaks removed first"; reason: DEF-WAVE-56-DISK-CACHE: the 8-entry in-memory cache decoded an unchanged file again after 8 other files or a restart
+  - log: 2026-11-06T22:24:00Z @kj edited test "pytest counting decodes: request a WAV's peaks twice, assert one decode; set a new modification time, request again, assert two; overwrite it with a 1 s WAV, request again, assert three and a 1 s duration" -> "pytest counting decodes: request a WAV's peaks twice, assert one decode; new modification time, assert two; overwrite with a 1 s WAV, assert three; zero the file keeping size and time, assert a second server process answers the same peaks; with the cap at two files, assert the least recently used goes"; reason: the test now covers the restart and the 1 GiB cap of DEF-WAVE-56-DISK-CACHE
+  - log: 2026-11-06T22:31:23Z @kj edited evidence "pytest in logs/audio-w-final-test.log (17/17): test_wave_117_peaks_are_cached_per_path_size_and_time passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log" -> "pytest in logs/audio-r3-test-1.log (23/23): test_wave_117_peaks_are_cached_per_path_size_and_time, with a second server process answering from the disk cache, and test_wave_117_the_cache_removes_the_least_recently_used_peaks_first passed; both failed before the fix in logs/audio-r3-red-server.log"; reason: the amended text needs the restart and cap runs as proof
+  - log: 2026-11-06T23:13:03Z @kj reopened: reopened: amended while closed in round 3; the verifier closes it on its own runs; evidence retired: pytest in logs/audio-r3-test-1.log (23/23): test_wave_117_peaks_are_cached_per_path_size_and_time, with a second server process answering from the disk cache, and test_wave_117_the_cache_removes_the_least_recently_used_peaks_first passed; both failed before the fix in logs/audio-r3-red-server.log
+  - log: 2026-11-06T23:13:03Z @kj closed
+- [x] `ACC-WAVE-118-AUTH` **Peaks need the lab's authentication** - CRITICAL; the peaks endpoint answers only a request that carries the lab's authentication; any other request is refused before a file is opened
+  - evidence: pytest in logs/audio-w-final-test.log (17/17): test_wave_118_peaks_need_the_labs_authentication passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: pytest against a started server: request a WAV's peaks with no token and with a wrong token, assert 403 and no decode each time; with the server's token, assert 200
+  - test-tags: INTEGRATION
+  - log: 2026-11-06T16:10:56Z @kj added; reason: Star Colonel decision of 2026-11-06: the peaks endpoint requires the lab's authentication
+  - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+- [x] `ACC-WAVE-119-ROOT` **Peaks only inside the root directory** - CRITICAL; the peaks endpoint opens only files inside the server's root directory: a path leading outside it is refused, and a missing file gets 404
+  - evidence: pytest in logs/audio-w-final-test.log (17/17): test_wave_119_peaks_only_inside_the_root passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: pytest with a WAV outside the root: request it through a .. path and through its absolute path, assert a 4xx status and no decode for each; request a missing file, assert 404
+  - test-tags: INTEGRATION
+  - log: 2026-11-06T16:10:56Z @kj added; reason: Star Colonel decision of 2026-11-06: the peaks endpoint accepts only paths inside the server's root directory
+  - log: 2026-11-06T19:28:47Z @kj closed; reason: names each passing test and the suite runs
+- [x] `ACC-WAVE-120-PROGRESS` **Spinner while the peaks compute** - MEDIUM; while the server computes the peaks, the waveform area shows a spinner with a line saying that the waveform is being drawn, and the playback controls already work
+  - evidence: Galata media_audio.spec.ts:1265 'ACC-WAVE-120-PROGRESS while the peaks compute, the waveform area shows a spinner with a line and the file already plays' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: hold the peaks answer with page.route, open the 60 s WAV reported over 100 MB, assert the spinner and the line in the waveform area; click Play, assert currentTime advances; release the answer, assert no spinner and the waveform drawn
+  - test-tags: E2E
+  - log: 2026-11-06T16:11:03Z @kj added; reason: Star Colonel decision of 2026-11-06: playback starts from the file URL before the peaks arrive
+  - log: 2026-11-06T19:28:47Z @kj closed; reason: names each passing test and the suite runs
+- [x] `ACC-WAVE-121-FALLBACK` **No peaks: seek slider and a sentence** - HIGH; when the peaks request fails, because the server part is missing or the file is unsupported or damaged, the spinner goes, the tab stays as ACC-AUDIO-113-SEEKBAR states, and a sentence says that the waveform could not be drawn
+  - evidence: Galata media_audio.spec.ts:1326 'ACC-WAVE-121-FALLBACK a failed peaks request leaves the seek slider and says that the waveform could not be drawn' passed; pytest in logs/audio-w-final-test.log (17/17): test_wave_121_a_damaged_wav_gets_an_error_status_not_peaks passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - related: ACC-AUDIO-113-SEEKBAR - the state a failed peaks request leaves
+  - test: for the 60 s WAV reported over 100 MB, answer the peaks request 404, then 500; each time assert the sentence, no spinner, no controls attribute, and that the slider at 50% moves playback to 30 s; pytest: a damaged WAV gets an error status, not peaks
+  - test-tags: E2E, INTEGRATION
+  - log: 2026-11-06T16:11:03Z @kj added; reason: Star Colonel decision of 2026-11-06: the bar and its seek slider are the fallback of the server waveform
+  - log: 2026-11-06T19:28:47Z @kj closed; reason: names each passing test and the suite runs
+- [x] `ACC-WAVE-122-INSTALL` **Server part installed and enabled** - HIGH; installing the package installs PyAV and enables the extension's server part with no further step
+  - evidence: pytest in logs/audio-w-final-test.log (17/17): test_wave_122_the_installed_package_enables_the_server_part passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - test: build the wheel, assert it holds the jupyter_server_config.d JSON enabling the server part and lists av in Requires-Dist; after make -o increment_version install, assert `jupyter server extension list` shows it enabled OK
+  - test-tags: INTEGRATION
+  - log: 2026-11-06T16:11:03Z @kj added; reason: Star Colonel decision of 2026-11-06: the package gains a server extension; today it has only _jupyter_labextension_paths
+  - log: 2026-11-06T19:28:47Z @kj closed; reason: names each passing test and the suite runs
+  - log: 2026-11-07T07:31:33Z @kj accepted by the owner on 2026-11-07: PyAV (av 19) raises the package's Python floor to 3.12
 

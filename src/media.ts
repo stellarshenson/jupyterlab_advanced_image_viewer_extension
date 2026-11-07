@@ -2,7 +2,7 @@
 // the media element every control and key acts on, and the widget factory, which
 // the mesh viewer uses as well.
 
-import { Notification } from '@jupyterlab/apputils';
+import { Notification, Spinner } from '@jupyterlab/apputils';
 
 import { PathExt } from '@jupyterlab/coreutils';
 
@@ -28,6 +28,16 @@ import { formatSize, formatTime, WAVEFORM_LIMIT } from './mediautil';
 // shortcut: other browsers keep the damaged-file sentence, measure them to add theirs.
 const REQUEST_FAILED = 'MEDIA_ELEMENT_ERROR: Format error';
 
+// A screen reader reads a change of the text of a live region it already
+// has, not a region that appears with its text in it. So the line is emptied
+// as its region shows, and `text` is written once a frame has been drawn.
+export const announce = (line: HTMLElement, text: string): void => {
+  line.textContent = '';
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => (line.textContent = text))
+  );
+};
+
 export class MediaViewer extends Widget {
   constructor(options: MediaViewer.IOptions) {
     super();
@@ -46,7 +56,15 @@ export class MediaViewer extends Widget {
     this.message.setAttribute('role', 'status');
     this.details = document.createElement('span');
     this.details.className = 'jp-AdvancedMediaViewer-details';
-    this.node.append(this.media, this.message);
+    // Covers the viewer from the start of a load until the file can play. Its
+    // line is a status, so a screen reader reads it while the message line is
+    // empty.
+    this.spinner = new Spinner();
+    this.loading = document.createElement('div');
+    this.loading.setAttribute('role', 'status');
+    this.spinner.node.append(this.loading);
+    this.spinner.hide();
+    this.node.append(this.media, this.message, this.spinner.node);
     // A file the browser cannot play fires `error` and nothing else, so this
     // is the one place an unreadable file becomes visible.
     this.media.addEventListener('error', () => {
@@ -81,6 +99,8 @@ export class MediaViewer extends Widget {
   protected readonly contents: Contents.IManager;
   protected readonly trans: TranslationBundle;
   protected readonly message: HTMLElement;
+  private readonly spinner: Spinner;
+  private readonly loading: HTMLElement;
   // The file size in bytes, unknown until readSize() returns.
   protected size: number | undefined;
   // Counts load() calls, so a superseded load stops before it sets the source.
@@ -95,7 +115,7 @@ export class MediaViewer extends Widget {
   // server (DEF-MEDIA-7-SEEK).
   async load(): Promise<void> {
     const token = ++this.loads;
-    this.showMessage(this.trans.__('Loading...'));
+    this.showLoading();
     try {
       const size = await this.readSize();
       const url = await this.contents.getDownloadUrl(this.context.path);
@@ -125,8 +145,7 @@ export class MediaViewer extends Widget {
   }
 
   // The server did not give the file or the player: nothing of the old file
-  // stays, and one sentence says so. A page left open across an install asks
-  // for chunk names that no longer exist, and only a page reload helps.
+  // stays, and one sentence says so.
   protected fail(reason: unknown): void {
     console.error('Media viewer: the file was not read', reason);
     this.release();
@@ -134,10 +153,17 @@ export class MediaViewer extends Widget {
     this.media.load();
     this.details.textContent = '';
     this.showMessage(
-      (reason as Error).name === 'ChunkLoadError'
-        ? this.trans.__('This viewer was updated; reload the page to use it.')
-        : this.trans.__('This file cannot be read from the server.')
+      this.reloadSentence(reason) ??
+        this.trans.__('This file cannot be read from the server.')
     );
+  }
+
+  // A page left open across an install asks for chunk names that no longer
+  // exist, and only a page reload helps; null for any other failure.
+  protected reloadSentence(reason: unknown): string | null {
+    return (reason as Error)?.name === 'ChunkLoadError'
+      ? this.trans.__('This viewer was updated; reload the page to use it.')
+      : null;
   }
 
   // The document context drops the size from the file model, so it is read
@@ -170,8 +196,16 @@ export class MediaViewer extends Widget {
     );
   }
 
+  // A sentence, or none, at the panel foot; it ends the loading state.
   protected showMessage(text: string): void {
     this.message.textContent = text;
+    this.spinner.hide();
+  }
+
+  protected showLoading(): void {
+    this.message.textContent = '';
+    this.spinner.show();
+    announce(this.loading, this.trans.__('Loading...'));
   }
 
   // The format from the extension, then whatever the viewer measured.
@@ -185,17 +219,17 @@ export class MediaViewer extends Widget {
     ].join(' · ');
   }
 
-  // Play from the file URL. Loading... stays until the element has the metadata
-  // and `loaded` replaces it then, so a request that stalls or fails never
-  // leaves an empty player with no message.
-  protected playUrl(url: string, loaded = ''): void {
+  // Play from the file URL. The spinner stays until the element has the
+  // metadata, so a request that stalls or fails never leaves an empty player
+  // with no message.
+  protected playUrl(url: string): void {
     const token = this.loads;
     this.setFile(url);
     this.media.addEventListener(
       'loadedmetadata',
       () => {
         if (token === this.loads) {
-          this.showMessage(loaded);
+          this.showMessage('');
         }
       },
       { once: true }

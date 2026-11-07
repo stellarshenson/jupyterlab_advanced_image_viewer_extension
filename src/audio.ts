@@ -4,14 +4,17 @@
 
 import { Toolbar, ToolbarButton } from '@jupyterlab/apputils';
 
+import { URLExt } from '@jupyterlab/coreutils';
+
+import { ServerConnection } from '@jupyterlab/services';
+
 import {
   jumpBackIcon,
   jumpForwardIcon,
+  LabIcon,
   pauseIcon,
   runIcon
 } from '@jupyterlab/ui-components';
-
-import { Widget } from '@lumino/widgets';
 
 import type WaveSurfer from 'wavesurfer.js';
 
@@ -19,18 +22,65 @@ import type { GenericPlugin } from 'wavesurfer.js/dist/base-plugin.js';
 
 import type { Region } from 'wavesurfer.js/dist/plugins/regions.js';
 
-import { MediaViewer } from './media';
+// The sprite the video viewer bundles for Plyr.
+import sprite from '../style/plyr.svg';
 
-import {
-  drawsWaveform,
-  formatTime,
-  SEEK_STEP,
-  WAVEFORM_LIMIT
-} from './mediautil';
+import { announce, MediaViewer } from './media';
+
+import { drawsWaveform, formatTime, readPeaks, SEEK_STEP } from './mediautil';
 
 import { addZoomButtons } from './toolbar';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+// The localStorage key of the volume, mute and speed that every audio viewer
+// opens with, as Plyr keeps them for the video viewer.
+const SETTINGS = 'jupyterlab-advanced-image-viewer-extension:audio';
+
+// The volume and muted icons of the Plyr sprite: JupyterLab's icon set has
+// no volume icon, and these match the video viewer's.
+const plyrIcon = (id: string): LabIcon => {
+  const symbol = new DOMParser()
+    .parseFromString(sprite, 'image/svg+xml')
+    .getElementById(id)!;
+  return new LabIcon({
+    name: `advanced-media-viewer:${id}`,
+    svgstr: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${symbol.getAttribute('viewBox')}">${symbol.innerHTML}</svg>`
+  });
+};
+const volumeIcon = plyrIcon('plyr-volume');
+const mutedIcon = plyrIcon('plyr-muted');
+
+// An element of the bar under the waveform, with its class and children.
+const part = <K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  name: string,
+  ...children: Node[]
+): HTMLElementTagNameMap[K] => {
+  const element = document.createElement(tag);
+  element.className = `jp-AdvancedMediaViewer-${name}`;
+  element.append(...children);
+  return element;
+};
+
+// Show `icon` on `button`, named `label` for the tooltip and screen readers.
+const setIcon = (button: HTMLElement, icon: LabIcon, label: string): void => {
+  icon.element({ container: button });
+  button.title = label;
+  button.setAttribute('aria-label', label);
+};
+
+// A range input from 0 to `max`, named `label`.
+const slider = (name: string, label: string, max: string): HTMLInputElement => {
+  const input = part('input', name);
+  input.type = 'range';
+  input.min = '0';
+  input.max = max;
+  input.step = 'any';
+  input.title = label;
+  input.setAttribute('aria-label', label);
+  return input;
+};
 
 // The shortest drag, in seconds, that makes a loop region: a click that
 // moves a few pixels must not arm Loop on a sub-second region.
@@ -55,17 +105,171 @@ export class AudioViewer extends MediaViewer {
   constructor(options: Omit<MediaViewer.IOptions, 'kind'>) {
     super({ ...options, kind: 'audio' });
     this.addClass('jp-AdvancedMediaViewer-audio');
-    this.wave = document.createElement('div');
-    this.wave.className = 'jp-AdvancedMediaViewer-wave';
-    const status = document.createElement('div');
-    status.className = 'jp-AdvancedMediaViewer-status';
-    this.time = document.createElement('span');
-    this.view = document.createElement('span');
-    status.append(this.time, this.view);
-    this.node.prepend(this.wave, status);
+    const trans = this.trans;
+    // Storage can be blocked or hold a damaged value; the defaults then stay.
+    try {
+      const { volume, muted, speed } = JSON.parse(
+        localStorage.getItem(SETTINGS) ?? '{}'
+      );
+      if (typeof volume === 'number' && volume >= 0 && volume <= 1) {
+        this.media.volume = volume;
+      }
+      if (typeof muted === 'boolean') {
+        this.media.muted = muted;
+      }
+      if (SPEEDS.includes(speed)) {
+        this.media.playbackRate = this.media.defaultPlaybackRate = speed;
+      }
+    } catch (reason) {
+      console.warn(
+        'Audio viewer: the saved volume and speed were not read',
+        reason
+      );
+    }
+    // As Plyr's storage: only the changed keys are written into the stored
+    // record, so another audio tab keeps the keys it set.
+    const save = (changes: object): void => {
+      try {
+        let stored = {};
+        try {
+          stored = JSON.parse(localStorage.getItem(SETTINGS) ?? '{}');
+        } catch {
+          // A damaged record counts as empty.
+        }
+        localStorage.setItem(
+          SETTINGS,
+          JSON.stringify({ ...stored, ...changes })
+        );
+      } catch {
+        // Blocked or full: the settings hold in this tab only.
+      }
+    };
+    this.wave = part('div', 'wave');
+    // In the waveform's place while the server part computes the peaks of a
+    // file over the waveform limit, or the browser decodes a smaller file: the
+    // circle of the loading spinner and a line a screen reader reads as a
+    // status.
+    const circle = document.createElement('div');
+    circle.className = 'jp-SpinnerContent';
+    this.drawing = document.createElement('div');
+    this.drawing.setAttribute('role', 'status');
+    this.peaks = part('div', 'peaks', circle, this.drawing);
+    this.peaks.hidden = true;
+    this.time = part('span', 'time');
+    this.view = part('span', 'range');
+    this.length = part('span', 'length');
+    // Seeks the whole file, with or without a waveform.
+    this.seek = slider('seek', trans.__('Seek'), '0');
+    this.seek.addEventListener(
+      'input',
+      () => (this.media.currentTime = Number(this.seek.value))
+    );
+    const play = this.button(runIcon, trans.__('Play'), () =>
+      this.togglePlay()
+    );
+    play.classList.add('jp-AdvancedMediaViewer-play');
+    // The volume the slider last settled on above 0.
+    let lastVolume = this.media.volume;
+    // As Plyr's toggle in the video viewer: volume 0 counts as muted, so the
+    // press unmutes and brings back an audible volume.
+    const mute = this.button(volumeIcon, trans.__('Mute'), () => {
+      const muted = !(this.media.muted || !this.media.volume);
+      if (!muted && !this.media.volume) {
+        this.media.volume = lastVolume > 0 ? lastVolume : 1;
+      }
+      this.media.muted = muted;
+    });
+    const volume = slider('volume', trans.__('Volume'), '1');
+    volume.addEventListener('input', () => {
+      this.media.volume = Number(volume.value);
+      // As in the video viewer, moving the slider above 0 unmutes.
+      if (this.media.volume) {
+        this.media.muted = false;
+      }
+    });
+    volume.addEventListener('change', () => {
+      if (Number(volume.value) > 0) {
+        lastVolume = Number(volume.value);
+      }
+    });
+    const speed = part('select', 'speed');
+    speed.title = trans.__('Playback speed');
+    for (const rate of SPEEDS) {
+      const chosen = rate === this.media.defaultPlaybackRate;
+      speed.add(new Option(`${rate}×`, String(rate), chosen, chosen));
+    }
+    speed.addEventListener('change', () => {
+      this.media.playbackRate = Number(speed.value);
+      // A new source resets playbackRate to this default, so Reload keeps the
+      // chosen speed.
+      this.media.defaultPlaybackRate = this.media.playbackRate;
+      save({ speed: this.media.defaultPlaybackRate });
+    });
+    // Under the waveform: the time row with the seek slider, then the control
+    // row with the shown range at the left, Back, Play and Forward in the
+    // centre and the sound at the right.
+    this.node.prepend(
+      this.wave,
+      this.peaks,
+      part(
+        'div',
+        'bar',
+        part('div', 'times', this.time, this.seek, this.length),
+        part(
+          'div',
+          'controls',
+          this.view,
+          part(
+            'span',
+            'centre',
+            this.button(
+              jumpBackIcon,
+              trans.__('Back %1 seconds', SEEK_STEP),
+              () => this.seekBy(-SEEK_STEP)
+            ),
+            play,
+            this.button(
+              jumpForwardIcon,
+              trans.__('Forward %1 seconds', SEEK_STEP),
+              () => this.seekBy(SEEK_STEP)
+            )
+          ),
+          part('span', 'sound', mute, volume, speed)
+        )
+      )
+    );
     for (const type of ['timeupdate', 'durationchange', 'seeking', 'emptied']) {
       this.media.addEventListener(type, () => this.showTime());
     }
+    this.showTime();
+    for (const type of ['play', 'pause', 'emptied']) {
+      this.media.addEventListener(type, () =>
+        this.media.paused
+          ? setIcon(play, runIcon, trans.__('Play'))
+          : setIcon(play, pauseIcon, trans.__('Pause'))
+      );
+    }
+    // As the video viewer shows them: the slider at 0 while muted, and the
+    // muted icon and the name Unmute also at volume 0. The element keeps both
+    // across a Reload.
+    const showVolume = (): void => {
+      const muted = this.media.muted;
+      setIcon(
+        mute,
+        muted || !this.media.volume ? mutedIcon : volumeIcon,
+        muted || !this.media.volume ? trans.__('Unmute') : trans.__('Mute')
+      );
+      volume.value = String(muted ? 0 : this.media.volume);
+      volume.setAttribute(
+        'aria-valuetext',
+        trans.__('%1%', Math.round((muted ? 0 : this.media.volume) * 100))
+      );
+    };
+    this.media.addEventListener('volumechange', showVolume);
+    this.media.addEventListener('volumechange', () =>
+      save({ volume: this.media.volume, muted: this.media.muted })
+    );
+    showVolume();
     this.media.addEventListener('durationchange', () => this.showDetails());
     // The waveform colours are painted on a canvas, which cannot read CSS
     // variables, so they are resolved here and again on every theme change.
@@ -80,14 +284,17 @@ export class AudioViewer extends MediaViewer {
     });
   }
 
-  // The player of the waveform; null before the first one and above the
-  // limit.
+  // The player of the waveform; null before the first one, and above the
+  // limit until the peaks arrive or when they do not.
   wavesurfer: WaveSurfer | null = null;
 
   async load(): Promise<void> {
     const token = ++this.loads;
+    this.sourceChannels = undefined;
     this.setLoop(false);
-    this.showMessage(this.trans.__('Loading...'));
+    this.showLoading();
+    this.peaks.hidden = true;
+    this.wave.hidden = false;
     // Until the file and the player are here a failure is the server's, then
     // the file's.
     let downloaded = false;
@@ -98,25 +305,23 @@ export class AudioViewer extends MediaViewer {
         return;
       }
       this.showDetails();
-      if (!drawsWaveform(size)) {
+      // The bar under the waveform plays the file, not the browser's control.
+      this.media.controls = false;
+      const large = !drawsWaveform(size);
+      this.view.hidden = large;
+      // There is no waveform to zoom yet, so the buttons would do nothing.
+      this.setZoomEnabled(false);
+      if (large) {
         // Played from the file URL: seeking needs a server that answers byte
-        // ranges, as the stock file handler does.
+        // ranges, as the stock file handler does. The waveform is drawn from
+        // the peaks of the server part, so the browser never downloads the
+        // file.
         this.wavesurfer?.destroy();
         this.wavesurfer = null;
-        // There is no waveform to zoom, so the buttons would do nothing.
-        this.setZoomEnabled(false);
-        this.media.controls = true;
-        this.playUrl(
-          url,
-          this.trans.__(
-            'The waveform is skipped for files over %1 MB.',
-            WAVEFORM_LIMIT / 1024 / 1024
-          )
-        );
+        this.playUrl(url);
+        await this.drawPeaks(token);
         return;
       }
-      this.media.controls = false;
-      this.setZoomEnabled(true);
       // Fetched once and handed over as a blob: the player then seeks in
       // memory, also on a server that ignores byte ranges.
       const response = await fetch(url);
@@ -133,6 +338,29 @@ export class AudioViewer extends MediaViewer {
       // One player per tab: a new player would load the element's previous
       // source on its own, so a reload hands the existing one the new blob.
       this.wavesurfer ??= this.createPlayer(modules);
+      // The file plays before the decode ends: the cover goes when it can, and
+      // the spinner of the waveform stands in the waveform's place meanwhile.
+      // A file the browser cannot play keeps the cover until its error.
+      this.media.addEventListener(
+        'loadedmetadata',
+        () => {
+          if (token === this.loads) {
+            this.showMessage('');
+            this.wave.hidden = true;
+            this.showPeaks();
+          }
+        },
+        { once: true }
+      );
+      // The player measures the waveform's width when it draws, right after
+      // the decode, so the waveform shows again first.
+      this.wavesurfer.once('decode', () => {
+        if (token === this.loads) {
+          this.peaks.hidden = true;
+          this.wave.hidden = false;
+          this.setZoomEnabled(true);
+        }
+      });
       await this.wavesurfer.loadBlob(blob);
       this.showMessage('');
     } catch (reason) {
@@ -144,9 +372,11 @@ export class AudioViewer extends MediaViewer {
       ) {
         if (downloaded) {
           // The element reads a file before wavesurfer decodes it, and reports
-          // an unreadable one itself, so this file plays without a waveform.
+          // an unreadable one itself, so this file plays without a waveform,
+          // from the bar under it.
           console.error('Audio viewer: the waveform was not drawn', reason);
-          this.media.controls = true;
+          // The waveform box stays hidden, as above the limit.
+          this.peaks.hidden = true;
           this.setZoomEnabled(false);
           this.showMessage(this.trans.__('The waveform could not be drawn.'));
         } else {
@@ -165,43 +395,9 @@ export class AudioViewer extends MediaViewer {
     super.fail(reason);
   }
 
-  // The playback controls, zoom, loop and speed, between Reload and the
-  // details on the toolbar.
+  // Zoom and Loop, between Reload and the details on the toolbar.
   addControls(toolbar: Toolbar): void {
     const trans = this.trans;
-    const play = new ToolbarButton({
-      icon: runIcon,
-      pressedIcon: pauseIcon,
-      tooltip: trans.__('Play'),
-      pressedTooltip: trans.__('Pause'),
-      noFocusOnClick: true,
-      onClick: () => this.togglePlay()
-    });
-    for (const type of ['play', 'pause', 'emptied']) {
-      this.media.addEventListener(
-        type,
-        () => (play.pressed = !this.media.paused)
-      );
-    }
-    toolbar.addItem('advanced-play', play);
-    toolbar.addItem(
-      'advanced-back',
-      new ToolbarButton({
-        icon: jumpBackIcon,
-        tooltip: trans.__('Back %1 seconds', SEEK_STEP),
-        noFocusOnClick: true,
-        onClick: () => this.seekBy(-SEEK_STEP)
-      })
-    );
-    toolbar.addItem(
-      'advanced-forward',
-      new ToolbarButton({
-        icon: jumpForwardIcon,
-        tooltip: trans.__('Forward %1 seconds', SEEK_STEP),
-        noFocusOnClick: true,
-        onClick: () => this.seekBy(SEEK_STEP)
-      })
-    );
     this.zoomButtons = addZoomButtons(
       toolbar,
       trans,
@@ -217,19 +413,6 @@ export class AudioViewer extends MediaViewer {
       onClick: () => this.setLoop(!this.looping)
     });
     toolbar.addItem('advanced-loop', this.loopButton);
-    const speed = document.createElement('select');
-    speed.className = 'jp-AdvancedMediaViewer-speed';
-    speed.title = trans.__('Playback speed');
-    for (const rate of SPEEDS) {
-      speed.add(new Option(`${rate}×`, String(rate), rate === 1, rate === 1));
-    }
-    speed.addEventListener('change', () => {
-      this.media.playbackRate = Number(speed.value);
-      // A new source resets playbackRate to this default, so Reload keeps the
-      // chosen speed.
-      this.media.defaultPlaybackRate = this.media.playbackRate;
-    });
-    toolbar.addItem('advanced-speed', new Widget({ node: speed }));
   }
 
   // Multiply the shown time scale by `factor`; 0 fits the whole file. The
@@ -271,7 +454,97 @@ export class AudioViewer extends MediaViewer {
     // Revokes the blob URL it made for the media element.
     this.wavesurfer?.destroy();
     this.wavesurfer = null;
+    this.peaksRequest.abort();
     super.dispose();
+  }
+
+  // The file plays with the seek slider while the peaks are on their way, and
+  // the waveform takes over when they arrive. Without them the tab stays so,
+  // with a sentence.
+  private async drawPeaks(token: number): Promise<void> {
+    this.showPeaks();
+    let failure: unknown;
+    const answer = await Promise.all([loadPlayer(), this.fetchPeaks()]).catch(
+      (reason: unknown) => {
+        // A request aborted by dispose() is no failure.
+        if (!this.isDisposed) {
+          console.error('Audio viewer: the waveform was not drawn', reason);
+        }
+        failure = reason;
+        return null;
+      }
+    );
+    // A reload or a close while the peaks were on their way supersedes them.
+    if (this.isDisposed || token !== this.loads) {
+      return;
+    }
+    this.peaks.hidden = true;
+    if (answer) {
+      const [modules, { sourceChannels, ...peaks }] = answer;
+      this.sourceChannels = sourceChannels;
+      this.wavesurfer = this.createPlayer(modules, peaks);
+      this.view.hidden = false;
+      this.setZoomEnabled(true);
+      return;
+    }
+    // The metadata clears the message line, so the sentence waits for it. A
+    // file that does not play keeps its own sentence.
+    if (!this.media.readyState) {
+      await new Promise(resolve =>
+        this.media.addEventListener('loadedmetadata', resolve, { once: true })
+      );
+      if (this.isDisposed || token !== this.loads) {
+        return;
+      }
+    }
+    if (!this.media.error) {
+      this.showMessage(
+        this.reloadSentence(failure) ??
+          this.trans.__('The waveform could not be drawn.')
+      );
+    }
+  }
+
+  // The peaks of the open file from the server part, asked with the lab's
+  // authentication. The path has no drive prefix, as the server reads it.
+  private async fetchPeaks(): Promise<{
+    peaks: Float32Array[];
+    duration: number;
+    sourceChannels: number | undefined;
+  }> {
+    const settings = this.contents.serverSettings;
+    const response = await ServerConnection.makeRequest(
+      URLExt.join(
+        settings.baseUrl,
+        'jupyterlab-advanced-image-viewer-extension',
+        'waveform'
+      ) +
+        URLExt.objectToQueryString({
+          path: this.contents.localPath(this.context.path)
+        }),
+      { signal: this.peaksRequest.signal },
+      settings
+    );
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}`);
+    }
+    const duration = Number(response.headers.get('X-Waveform-Duration'));
+    const channels = Number(response.headers.get('X-Waveform-Channels'));
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return {
+      peaks: readPeaks(bytes, duration, channels),
+      duration,
+      // The file's own channel count, before the server mixes more than two
+      // down to two.
+      sourceChannels:
+        Number(response.headers.get('X-Waveform-Source-Channels')) || undefined
+    };
+  }
+
+  // The spinner in the waveform's place, with its line.
+  private showPeaks(): void {
+    this.peaks.hidden = false;
+    announce(this.drawing, this.trans.__('Drawing the waveform...'));
   }
 
   private setZoomEnabled(on: boolean): void {
@@ -283,14 +556,19 @@ export class AudioViewer extends MediaViewer {
     }
   }
 
-  private createPlayer([
-    { default: Player },
-    { default: Minimap },
-    { default: Timeline },
-    { default: Hover },
-    { default: Regions },
-    { default: Zoom }
-  ]: Awaited<ReturnType<typeof loadPlayer>>): WaveSurfer {
+  private createPlayer(
+    [
+      { default: Player },
+      { default: Minimap },
+      { default: Timeline },
+      { default: Hover },
+      { default: Regions },
+      { default: Zoom }
+    ]: Awaited<ReturnType<typeof loadPlayer>>,
+    // The server's peaks of a file over the limit. A player made for an element
+    // with a source downloads that source to decode it, unless it has them.
+    peaks?: { peaks: Float32Array[]; duration: number }
+  ): WaveSurfer {
     this.createMinimap = () =>
       Minimap.create({
         ...this.colours(),
@@ -308,6 +586,7 @@ export class AudioViewer extends MediaViewer {
       media: this.media,
       height: 200,
       ...this.colours(),
+      ...peaks,
       cursorColor: 'var(--jp-ui-font-color0)',
       cursorWidth: 2,
       plugins: [
@@ -316,7 +595,11 @@ export class AudioViewer extends MediaViewer {
           height: 18,
           insertPosition: 'beforebegin',
           formatTimeCallback: (seconds: number) => formatTime(seconds, 0),
-          style: { color: 'var(--jp-ui-font-color2)' }
+          style: { color: 'var(--jp-ui-font-color1)' },
+          // The ticks and secondary labels are drawn at this opacity over the
+          // colour above. The labels are text, so WCAG 1.4.3 asks 4.5:1: 0.65
+          // gives about 5.1:1 on the light panel and 6.5:1 on the dark one.
+          secondaryLabelOpacity: 0.65
         }),
         Hover.create({
           lineColor: 'var(--jp-ui-font-color2)',
@@ -386,9 +669,10 @@ export class AudioViewer extends MediaViewer {
   private colours(): { waveColor: string; progressColor: string } {
     const style = getComputedStyle(document.body);
     return {
-      // color3 is 2.68:1 on white; the waveform is graphical content and
-      // WCAG 1.4.11 asks 3:1, which color2 clears.
-      waveColor: style.getPropertyValue('--jp-ui-font-color2').trim(),
+      // The waveform is graphical content and WCAG 1.4.11 asks 3:1, which
+      // this grey clears on both themes. It is opaque: the played part is
+      // drawn inside the unplayed shape and takes its alpha.
+      waveColor: style.getPropertyValue('--jp-layout-color4').trim(),
       progressColor: style.getPropertyValue('--jp-brand-color1').trim()
     };
   }
@@ -398,10 +682,11 @@ export class AudioViewer extends MediaViewer {
     if (!ws || !this.minimap || !this.createMinimap) {
       return;
     }
-    ws.setOptions(this.colours());
-    // The overview copies its colours when it is made, so it is made anew.
+    // The overview copies its colours when it is made, so it is made anew,
+    // before the redraw of setOptions, which sizes its frame.
     ws.unregisterPlugin(this.minimap);
     this.minimap = ws.registerPlugin(this.createMinimap());
+    ws.setOptions(this.colours());
   }
 
   private labelRegion(): void {
@@ -412,7 +697,39 @@ export class AudioViewer extends MediaViewer {
   }
 
   private showTime(): void {
-    this.time.textContent = `${formatTime(this.media.currentTime)} / ${formatTime(this.media.duration)}`;
+    const { currentTime, duration } = this.media;
+    this.time.textContent = formatTime(currentTime);
+    this.length.textContent = formatTime(duration);
+    // The maximum first, so the value is not clamped to the old one.
+    this.seek.max = String(Number.isFinite(duration) ? duration : 0);
+    this.seek.value = String(currentTime);
+    this.seek.setAttribute(
+      'aria-valuetext',
+      this.trans.__(
+        '%1 of %2',
+        formatTime(currentTime, 0),
+        formatTime(duration, 0)
+      )
+    );
+  }
+
+  // A button under the waveform. The press leaves the focus on the viewer, as
+  // noFocusOnClick does on the toolbar, so Space, Left and Right still act on
+  // the viewer after a click.
+  private button(
+    icon: LabIcon,
+    label: string,
+    onClick: () => void
+  ): HTMLButtonElement {
+    const button = part('button', 'button');
+    button.type = 'button';
+    setIcon(button, icon, label);
+    button.addEventListener('mousedown', event => {
+      event.preventDefault();
+      this.node.focus({ preventScroll: true });
+    });
+    button.addEventListener('click', onClick);
+    return button;
   }
 
   private showView(): void {
@@ -435,7 +752,9 @@ export class AudioViewer extends MediaViewer {
   }
 
   private showDetails(): void {
-    const channels = this.wavesurfer?.getDecodedData()?.numberOfChannels;
+    const channels =
+      this.sourceChannels ??
+      this.wavesurfer?.getDecodedData()?.numberOfChannels;
     this.setDetails(
       channels === undefined
         ? []
@@ -450,9 +769,19 @@ export class AudioViewer extends MediaViewer {
   }
 
   private wave: HTMLElement;
+  private peaks: HTMLElement;
+  private drawing: HTMLElement;
+  // The channels of a file over the limit, from the server.
+  private sourceChannels: number | undefined;
   private time: HTMLElement;
   private view: HTMLElement;
+  private seek: HTMLInputElement;
+  private length: HTMLElement;
   private themeObserver: MutationObserver;
+  // Aborted only when the viewer closes, as on Page Up, Page Down or a tab
+  // close: the closed request tells the server nobody waits for the peaks. A
+  // Reload keeps it, so its new request joins the decode under way.
+  private peaksRequest = new AbortController();
   private minimap: GenericPlugin | null = null;
   private createMinimap: (() => GenericPlugin) | null = null;
   private region: Region | null = null;

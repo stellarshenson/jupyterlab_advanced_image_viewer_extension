@@ -41,7 +41,10 @@ test.describe('Video viewer', () => {
     page.locator(`${SHOWN} .jp-AdvancedMediaViewer`);
   const media = (page: any) =>
     page.locator(`${SHOWN} .jp-AdvancedMediaViewer-media`);
-  const message = (page: any) => viewer(page).locator('[role="status"]');
+  // The message line; the line of the spinner is a status too.
+  const message = (page: any) =>
+    viewer(page).locator('.jp-AdvancedMediaViewer-message[role="status"]');
+  const spinner = (page: any) => viewer(page).locator('.jp-Spinner');
   const toolbar = (page: any) => page.locator(`${SHOWN} .jp-Toolbar`);
   const details = (page: any) =>
     toolbar(page).locator('.jp-AdvancedMediaViewer-details');
@@ -856,7 +859,9 @@ test.describe('Video viewer', () => {
     await expect(details(page)).toHaveText(/./);
     expect(await page.contents.deleteFile(file)).toBe(true);
     await button(page, 'Reload video from disk').click();
-    const message = viewer(page).locator('[role="status"]');
+    const message = viewer(page).locator(
+      '.jp-AdvancedMediaViewer-message[role="status"]'
+    );
     await expect(message).toHaveText(
       'This file cannot be read from the server.'
     );
@@ -1149,14 +1154,19 @@ test.describe('Video viewer', () => {
     writeFileSync(file, Buffer.concat([CLIP, box]));
     truncateSync(file, CLIP.length + box.length + padding);
 
-    // In the capture phase, so it runs before the viewer's own listener.
+    // In the capture phase, so it runs before the viewer's own listener. The
+    // text under the spinner while it shows (ACC-MEDIA-114-SPINNER).
     await page.evaluate((shown: string) => {
       document.addEventListener(
         'loadedmetadata',
         () => {
-          (window as any).atMetadata = document.querySelector(
-            `${shown} [role="status"]`
-          )?.textContent;
+          const spin = document.querySelector(
+            `${shown} .jp-AdvancedMediaViewer .jp-Spinner`
+          ) as HTMLElement | null;
+          (window as any).atMetadata =
+            spin && getComputedStyle(spin).display !== 'none'
+              ? spin.textContent
+              : null;
         },
         { capture: true, once: true }
       );
@@ -1166,6 +1176,7 @@ test.describe('Video viewer', () => {
       'Loading...'
     );
     await expect(message(page)).toHaveText('');
+    await expect(spinner(page)).toBeHidden();
 
     expect(
       await page.evaluate(
@@ -1193,7 +1204,71 @@ test.describe('Video viewer', () => {
     await page.filebrowser.open(`${tmpPath}/${NAME}`);
     await requested;
     await page.waitForTimeout(1000);
-    await expect(message(page)).toHaveText('Loading...');
+    // ACC-MEDIA-114-SPINNER: Loading... shows under the spinner.
+    await expect(spinner(page)).toBeVisible();
+    await expect(spinner(page)).toContainText('Loading...');
+    await expect(message(page)).toHaveText('');
+  });
+
+  // ACC-MEDIA-114-SPINNER. The file URL answer is held until the spinner is
+  // checked.
+  test('ACC-MEDIA-114-SPINNER a spinner with Loading... under it shows in the centre of the video viewer until the file can play', async ({
+    page,
+    tmpPath
+  }) => {
+    let release = (): void => undefined;
+    const released = new Promise<void>(resolve => (release = resolve));
+    let asked = (): void => undefined;
+    const requested = new Promise<void>(resolve => (asked = resolve));
+    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
+      asked();
+      await released;
+      await route.continue();
+    });
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await requested;
+    const spin = spinner(page);
+    await expect(spin).toBeVisible();
+    await expect(spin).toContainText('Loading...');
+    // The line is a status, so a screen reader reads it.
+    await expect(spin.getByRole('status')).toHaveText('Loading...');
+    const panel = (await viewer(page).boundingBox())!;
+    // The circle turns, and the box of a turned square is up to 1.41 times
+    // its side; the box it is laid out in has the same centre and its side.
+    const turning = spin.locator('.jp-SpinnerContent');
+    const turned = (await turning.boundingBox())!;
+    const side = await turning.evaluate((el: HTMLElement) => el.offsetWidth);
+    const circle = {
+      x: turned.x + (turned.width - side) / 2,
+      y: turned.y + (turned.height - side) / 2,
+      width: side,
+      height: side
+    };
+    const line = (await spin.getByText('Loading...').boundingBox())!;
+    expect(line.y).toBeGreaterThanOrEqual(circle.y + circle.height);
+    expect(
+      Math.abs(circle.x + circle.width / 2 - (panel.x + panel.width / 2))
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(
+        (circle.y + line.y + line.height) / 2 - (panel.y + panel.height / 2)
+      )
+    ).toBeLessThan(2);
+    await expect(message(page)).toHaveText('');
+
+    release();
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const content = (window as any).jupyterapp.shell.currentWidget
+              ?.content;
+            return content?.player ? content.media.duration : 0;
+          }),
+        { timeout: 20000 }
+      )
+      .toBeGreaterThan(0);
+    await expect(spin).toBeHidden();
   });
 
   // DEF-MEDIA-22-LARGE-VIDEO. Before the metadata Chromium reports a failed
