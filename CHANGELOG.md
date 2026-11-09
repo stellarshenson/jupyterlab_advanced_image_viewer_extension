@@ -2,6 +2,25 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.11] - 2026-11-09
+
+### Added
+
+- Streaming for every audio and video file at any size: files play from their file URL, so playback starts before the whole file has arrived and the seek bars show the buffered part; seeking needs the lab's byte-range file handler
+- A Buffering... line while audio playback waits for data; it clears when the data arrives and never replaces another sentence or the loading cover
+- Image fit from jupyterlab_fit_image_size_extension 1.0.9: images and SVGs in notebook output, Markdown and HTML output, and the image viewer are scaled to fit their panel, so the separate extension is no longer needed
+
+### Changed
+
+- Every audio waveform now comes from the server's PyAV peaks; the in-browser waveform decode and the 100 MB limit are gone
+- The copy of a media file into the browser, with its one retry, and the blob URL handling are removed
+- The video seek bar keeps a grey track under Plyr's loading state, so the buffered part stays visible while the file waits for data
+
+### Fixed
+
+- A playing audio file that waits for data no longer shows a frozen time under a Pause icon with no cue
+- The video seek bar no longer turns entirely white while the file waits for data, hiding the buffered part
+
 ## [1.2.10] - 2026-11-07
 
 ### Added

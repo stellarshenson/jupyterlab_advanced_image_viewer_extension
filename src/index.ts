@@ -366,8 +366,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
         })),
         writable: false
       }),
-      // The viewers read the file with fetch and never load it into the
-      // document model, so a save would write an empty model over the file.
+      // The viewers never load the file into the document model, so a save
+      // would write an empty model over the file.
       // A rename makes the context writable again; this still refuses.
       save: async () => {
         throw new Error(

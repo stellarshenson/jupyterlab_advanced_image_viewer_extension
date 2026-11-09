@@ -1,0 +1,48 @@
+/*
+    Image fit, taken over from jupyterlab_fit_image_size_extension 1.0.9
+    (BSD-3-Clause, same author), which this file makes unnecessary.
+
+    An image larger than its container shrinks to fit with its aspect kept;
+    a smaller one keeps its natural size. Applies to raster and SVG images.
+
+    The selectors and declarations are that extension's stylesheet unchanged,
+    rule for rule. The image viewer's fit, pan clamp and zoom were measured
+    against exactly these rules, so they stay as they are; while both
+    extensions are installed, the duplicate identical rules change nothing.
+*/
+
+/* Target images in notebook output areas */
+.jp-OutputArea-output img,
+.jp-RenderedImage img,
+.jp-OutputArea-output svg,
+.jp-RenderedSVG svg {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Ensure SVG elements also respect container bounds */
+.jp-OutputArea-output svg,
+.jp-RenderedSVG svg {
+  max-height: 100% !important;
+}
+
+/* Handle images in markdown cells */
+.jp-RenderedMarkdown img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Handle HTML output with embedded images */
+.jp-RenderedHTMLCommon img {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Handle standalone image viewer (when opening image files directly) */
+.jp-ImageViewer img {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  height: auto !important;
+  width: auto !important;
+  object-fit: contain !important;
+}

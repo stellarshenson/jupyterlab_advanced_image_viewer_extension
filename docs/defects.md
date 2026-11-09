@@ -109,6 +109,7 @@ Audio and video playback in JupyterLab
   - log: 2026-11-02T17:27:09Z @kj platform fix proved: /galaxalab/etc/jupyter/files_handler.py now subclasses AuthenticatedFileHandler; on an isolated server on port 8899, with Range: bytes=1000-1999, all 7 files answered 206 with the right Content-Range and a Content-Security-Policy ending allow-downloads
   - log: 2026-11-02T17:27:25Z @kj refreshed attachment defects/DEF-MEDIA-7-SEEK-files-range.md sha256:dd52194dfb6de9a6 -> sha256:12c126e6926c7b7c
   - log: 2026-11-03T10:12:42Z @kj edited evidence "platform fix owned by galaxalab (DownloadableFilesHandler sends 200 without byte ranges); this extension plays every file up to 100 MB from a downloaded blob, which seeks on that server, and files over 100 MB play from the URL and need the platform fix" -> "platform fix: /galaxalab/etc/jupyter/files_handler.py DownloadableFilesHandler now subclasses AuthenticatedFileHandler; measured 2026-11-03 on an isolated server, port 8899: Range: bytes=1000-1999 on /files/ answered 206 Partial Content with Content-Range for 7 of 7 media files; files up to 100 MB also play from a downloaded blob"
+  - log: 2026-11-07T14:22:16Z @kj owner decision of 2026-11-07: every file plays from its file URL and the blob copy is removed, so seeking at every size rests on the byte ranges of /files/ (ACC-MEDIA-131-STREAM-ALL)
 - [x] `DEF-MEDIA-8-MEDIA` **Fullscreen keeps the panel-sized player** - MAJOR; Clicking Fullscreen on a video keeps the player at the panel-fit size on a black screen instead of filling the screen; the help dialog and the README promise a full screen
   - evidence: ACC-VIDEO-56-PLAYER asserts the .plyr container covers the viewport after the Fullscreen click and the fitted size returns on Escape, native fullscreen path, Galata 75/75
   - repro: open a video in a panel smaller than the screen and click the Plyr Fullscreen control; the player box keeps its pixel size instead of matching the viewport
@@ -205,6 +206,7 @@ Audio and video playback in JupyterLab
   - log: 2026-11-02T21:17:25Z @kj limits of that measurement: localhost HTTP/1.1, Chromium only; every variant sent at most 4 KiB and made no retry, so a break after more of the file, before the metadata, is not measured. The proxy failure (net::ERR_HTTP2_PING_FAILED) stays the likely cause, not reproduced here
   - log: 2026-11-03T09:33:57Z @kj closed: closed: installed fix accepted by the owner without a retest of the video
   - log: 2026-11-03T10:19:33Z @kj verified: the owner's video played in Google Chrome 156 headless through the file URL branch on an isolated server over HTTP/1.1; loadedmetadata 172 ms after open, duration 194.833 s, seek bar to 120 s landed at 119.808 s and kept playing; the proxy path is not covered
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: every audio and video file plays from its file URL, so the file URL branch fixed here serves every size; its tests drop the faked size, and the failed-request tests also prove ACC-MEDIA-134-LOST-CONNECTION
 - [x] `DEF-MEDIA-23-STALE-CHUNK` **Viewer code missing after an install shows a raw ChunkLoadError** - MAJOR; a page left open across an extension install asks for chunk names that no longer exist; the audio viewer prints the raw ChunkLoadError inside 'This file cannot be played', which blames a good file; a page reload clears it
   - evidence: tests DEF-MEDIA-23-STALE-CHUNK in media_audio.spec.ts and media_video.spec.ts, blocked chunks on a fresh page, failed in logs/media-r5-1b-red.log and passed in logs/media-r5-1b-named.log, 18 of 18
   - repro: open the lab, install a new build, open an audio file without reloading the page
@@ -236,6 +238,7 @@ Audio and video playback in JupyterLab
   - log: 2026-11-02T20:00:47Z @kj added
   - log: 2026-11-02T21:09:53Z @kj closed: fixed: control row wraps, seek bar basis 200 px, details no longer need a frame size
 - [x] `DEF-MEDIA-27-WEBM-DURATION` **A WebM without a duration in its header has a dead seek bar and no length** - MAJOR; browser recorder output reports duration Infinity, the read-out ends in --:--, and a click on the seek bar stays at 0; fix seek to 1e101, then back to 0 on durationchange; `src/video.ts`
+  - overridden-by: DEF-MEDIA-30-LARGE-RECORDING
   - evidence: test DEF-MEDIA-27-WEBM-DURATION 'a browser recording shows its length and seeks' failed in logs/media-r5-1-red2.log with --:-- and passed in logs/media-r5-1-named.log, 9 of 9; refresh() in src/video.ts unchanged after that run
   - repro: open a WebM recorded by MediaRecorder with a timeslice, such as start(200), and click the middle of the seek bar: currentTime stays 0
   - test-tags: E2E
@@ -245,6 +248,7 @@ Audio and video playback in JupyterLab
   - log: 2026-11-02T20:12:16Z @kj measured: start() without a timeslice writes a finite duration into the file at 2.5, 12 and 22 s; start(200) stays Infinity at 2.5 and 12 s, and the scan resolves it in 2 to 21 ms
   - log: 2026-11-02T21:09:53Z @kj closed: fixed: seek to 1e101, then back to 0 on durationchange
   - log: 2026-11-02T21:43:55Z @kj limit: the duration scan in refresh() runs only on a blob: source, so only up to 100 MB; a recording over 100 MB keeps --:-- and a dead seek bar, filed as DEF-MEDIA-30-LARGE-RECORDING
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07, an accepted limit: every file plays from its file URL, so the duration scan of refresh(), which ran only on a blob: source, is removed; a recording with no length in its header shows --:-- and cannot seek at every size, see DEF-MEDIA-30-LARGE-RECORDING; its test is deleted; stays closed; reason: names what the owner decision changes and what stays
 - [x] `DEF-MEDIA-28-THEME-ERASE` **A theme change erases the main waveform** - MAJOR; a live theme change blanks the waveform and the ruler of the visible audio tab until Reload or a panel resize; fix repaint in the next frame; `src/audio.ts`
   - evidence: test ACC-AUDIO-45-WAVE asserts the main canvas over 100 px wide after a theme change; failed in logs/media-r5-1-red.log with 0, passed in logs/media-r5-1-named.log, 9 of 9; the observer in src/audio.ts unchanged after that run
   - repro: open an audio file and change the theme: the waveform disappears
@@ -261,15 +265,22 @@ Audio and video playback in JupyterLab
   - log: 2026-11-02T21:09:53Z @kj closed: fixed: failed decode leaves the native player and one sentence
   - log: 2026-11-06T18:45:50Z @kj fallback now uses the viewer's bar and its seek slider instead of the browser control, per ACC-AUDIO-113-SEEKBAR; stays closed
   - log: 2026-11-07T07:31:33Z @kj accepted by the owner on 2026-11-07: a failed decode under 100 MB shows the viewer's bar and seek slider, no browser control
-- [-] `DEF-MEDIA-30-LARGE-RECORDING` **a WebM recording over 100 MB with no duration in its header shows --:-- and a dead seek bar** - MEDIUM; details end in --:--, the player reads 00:00 and a click on the seek bar stays at 0; cause the duration scan runs only on a blob: source; `src/video.ts`
-  - repro: open a WebM browser recording over 100 MB with no duration in its header: details end in --:--, a click on the seek bar stays at 0
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: no file decodes in the browser; a failed waveform is now a failed peaks request (ACC-WAVE-121-FALLBACK) with the same bar, slider and sentence; its test answers the peaks request 422 in place of a rejected decodeAudioData; stays closed
+- [-] `DEF-MEDIA-30-LARGE-RECORDING` **a WebM recording with no duration in its header shows --:-- and a dead seek bar** - MEDIUM; details end in --:--, the player reads 00:00 and a click on the seek bar stays at 0, at every size; cause every file plays from its /files/ URL and refresh() has no duration scan, which would read the whole file from the server; `src/video.ts`
+  - overrides: DEF-MEDIA-27-WEBM-DURATION
+  - repro: open a WebM browser recording with no duration in its header: details end in --:--, a click on the seek bar stays at 0
   - test-tags: E2E
+  - root-cause: 2026-11-07T15:10:20Z @kj since the owner decision of 2026-11-07 every file plays from its /files/ URL and refresh() has no duration scan, which would read the whole file from the server; duration stays Infinity
   - root-cause: 2026-11-02T21:43:43Z @kj Over 100 MB the file plays from its /files/ URL and refresh() skips the duration scan, which would read the whole file from the server: 13.5 s at 12.5 MB/s for a 157 MB WebM with no cues. duration stays Infinity; keys still seek, seekBy clamps to Infinity
   - log: 2026-11-02T21:43:43Z @kj added
   - log: 2026-11-02T22:11:58Z @kj Left and Right now seek with focus anywhere in the tab: Plyr keyboard handling is off, so the viewer's bindings take the keys
   - log: 2026-11-02T22:11:59Z @kj a click on the seek bar moves the thumb, not the playback, while the read-out shows a total of 00:00
   - log: 2026-11-03T09:03:18Z @kj Plyr's keys are restored by the owner's decision of 2026-11-03, so with focus on a Plyr control Left and Right do nothing on that file type
   - log: 2026-11-03T09:03:18Z @kj rejected: Known limit, accepted by the owner on 2026-11-03
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: the limit holds at every size once every file streams, accepted by the owner; the build stage amends the title, text, repro and root cause when the streaming change lands; stays rejected
+  - log: 2026-11-07T15:10:20Z @kj amended title "a WebM recording over 100 MB with no duration in its header shows --:-- and a dead seek bar" -> "a WebM recording with no duration in its header shows --:-- and a dead seek bar"; text "details end in --:--, the player reads 00:00 and a click on the seek bar stays at 0; cause the duration scan runs only on a blob: source; `src/video.ts`" -> "details end in --:--, the player reads 00:00 and a click on the seek bar stays at 0, at every size; cause every file plays from its /files/ URL and refresh() has no duration scan, which would read the whole file from the server; `src/video.ts`"; reason: owner decision of 2026-11-07: every file streams, so the limit holds at every size
+  - log: 2026-11-07T15:10:20Z @kj edited repro "open a WebM browser recording over 100 MB with no duration in its header: details end in --:--, a click on the seek bar stays at 0" -> "open a WebM browser recording with no duration in its header: details end in --:--, a click on the seek bar stays at 0"
+  - log: 2026-11-07T15:10:20Z @kj root-cause overridden; reason: owner decision of 2026-11-07: the duration scan of refresh() is removed
 - [x] `DEF-MEDIA-31-FILE-RELOAD` **File > Reload from Disk does not reload an audio or video tab** - MEDIUM; File > Reload Audio from Disk leaves the old file playing, and on a deleted file raises the File Load Error dialog in place of the viewer's sentence; cause the command calls context.revert(), which re-reads only the empty document model; fix context.revert = () => content.load(); `src/media.ts`
   - evidence: E2E media_audio.spec.ts DEF-MEDIA-31-FILE-RELOAD failed on the round 3 build (logs/media-r5-5-red.log, read-out stayed 01:00.0) and passes on the installed 1.2.7 build (logs/media-r5-5-named.log, 17 of 17)
   - repro: open an audio file, replace it on disk, run File > Reload Audio from Disk: the old file still plays
@@ -308,11 +319,13 @@ Audio and video playback in JupyterLab
   - test-tags: E2E
   - log: 2026-11-03T09:03:05Z @kj added
   - log: 2026-11-03T09:03:05Z @kj rejected: Known limit, accepted by the owner on 2026-11-03
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: no file decodes in the browser any more; the server decodes one file at a time (DEF-WAVE-49-DECODE-THREADS), so this limit no longer occurs
 - [-] `DEF-MEDIA-38-SYMLINK-SIZE` **The size check reads the symlink, not the file** - MINOR; the size check reads the symlink, so a symlinked file over 100 MB downloads in full and every symlink shows the wrong size; cause filemanager.py:282 and :836 use os.lstat; `src/media.ts`
   - repro: symlink an audio file over 100 MB and open the link: the whole file downloads
   - test-tags: E2E
   - log: 2026-11-03T09:03:05Z @kj added
   - log: 2026-11-03T09:03:05Z @kj rejected: Known limit, accepted by the owner on 2026-11-03
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: no file is downloaded first any more, so the full download of a symlinked file no longer occurs; the wrong size in the details stays
 - [-] `DEF-MEDIA-39-ZOOM-BELOWFIT` **Zoom out below the fit is stored, so Plus does nothing for as many presses** - MINOR; zoom out below the fit is stored, so Plus does nothing visible for as many presses as Minus overshot; Fit recovers at once; `src/audio.ts`
   - repro: open an audio file, press Fit, press - three times, then +: the waveform does not change for three presses
   - test-tags: E2E
@@ -323,11 +336,13 @@ Audio and video playback in JupyterLab
   - test-tags: E2E
   - log: 2026-11-03T09:03:15Z @kj added
   - log: 2026-11-03T09:03:16Z @kj rejected: Known limit, accepted by the owner on 2026-11-03
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: the viewer downloads no file any more, so this limit no longer occurs as filed
 - [-] `DEF-MEDIA-41-RESTORED-TABS` **Restored media tabs that are never shown still download their file** - MINOR; restored media tabs that are never shown still download their file on every lab reload, and audio tabs decode it; cause load() starts on context.ready, not on the first show; `src/media.ts`
   - repro: open three audio tabs, reload the page: all three files download
   - test-tags: E2E
   - log: 2026-11-03T09:03:16Z @kj added
   - log: 2026-11-03T09:03:16Z @kj rejected: Known limit, accepted by the owner on 2026-11-03
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: restored tabs no longer download or decode their file; each sets the file URL as source and asks the server for the peaks, which the disk cache answers after the first decode
 - [-] `DEF-MEDIA-42-SAVE-ADVICE` **Ctrl+S advises Save As, which this viewer refuses** - MINOR; Ctrl+S on a media tab shows JupyterLab's advice to use Save As, which this viewer also refuses; one wasted step, and the file is unchanged
   - repro: open an audio file, press Ctrl+S, then follow the advice and use Save As: it is refused
   - test-tags: E2E
@@ -372,6 +387,7 @@ Audio and video playback in JupyterLab
   - log: 2026-11-06T20:29:33Z @kj added
   - log: 2026-11-06T20:47:25Z @kj attempted: waveform shown again after loadBlob resolved - did NOT work: wavesurfer drew into the hidden container at width 0 and its 100 ms resize debounce skipped the redraw on a fast Reload; ACC-MEDIA-68-RELOAD read the shown range as NaN; now shown at wavesurfer's decode event, before the draw
   - log: 2026-11-06T21:11:38Z @kj closed
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: no file decodes in the browser; the cover and spinner states now hold while the peaks request is on its way; its test holds the peaks request in place of decodeAudioData; stays closed
 - [x] `DEF-MEDIA-50-SLIDER-VALUETEXT` **Seek and volume sliders read out raw numbers to a screen reader** - MINOR; the audio seek slider announces raw seconds such as 123.4 and the volume slider a fraction such as 0.5, where the video viewer's Plyr sliders announce a time of a length and a percentage; fix aria-valuetext on both; `src/audio.ts`
   - evidence: Galata DEF-MEDIA-50-SLIDER-VALUETEXT passes, media_audio.spec.ts 47/47 (logs/audio-r1-named.log); failed before the fix with aria-valuetext empty (logs/audio-r1-red.log)
   - repro: focus the seek or the volume slider of an audio tab with a screen reader: it reads a raw number
@@ -401,6 +417,7 @@ Audio and video playback in JupyterLab
   - log: 2026-11-06T21:29:14Z @kj added
   - log: 2026-11-06T21:37:47Z @kj fixed in the tree: zoom buttons disabled at load, enabled in the token-guarded once('decode') listener; Galata DEF-MEDIA-48-LOAD-COVER DEF-MEDIA-54-ZOOM-DECODE failed before (logs/audio-r2-red.log), media_audio.spec.ts 47/47 after (logs/audio-r2-named.log)
   - log: 2026-11-06T21:43:09Z @kj closed
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: no file decodes in the browser; the zoom buttons stay disabled until the peaks arrive; the test of DEF-MEDIA-48-LOAD-COVER holds the peaks request; stays closed
 - [x] `DEF-MEDIA-59-CHUNK-SENTENCE` **Over 100 MB a missing player chunk says the waveform could not be drawn** - MEDIUM; over 100 MB, on a page left open across an install, the file plays without a waveform under 'The waveform could not be drawn.', which never says to reload the page; fix drawPeaks shows the reload sentence of fail() for a ChunkLoadError; `src/audio.ts`
   - evidence: Galata DEF-MEDIA-59-CHUNK-SENTENCE passes in logs/audio-r3-named.log (84/84); failed before with 'The waveform could not be drawn.' in logs/audio-r3-red-client.log
   - related: DEF-MEDIA-23-STALE-CHUNK - the same sentence for the viewer chunk
@@ -410,6 +427,7 @@ Audio and video playback in JupyterLab
   - log: 2026-11-06T22:37:26Z @kj added
   - log: 2026-11-06T23:04:48Z @kj fixed in the tree: drawPeaks keeps the rejection and shows reloadSentence() of MediaViewer, shared with fail(); Galata DEF-MEDIA-59-CHUNK-SENTENCE failed before with 'The waveform could not be drawn.' (logs/audio-r3-red-client.log), passed after in media_audio and media_video 84/84 (logs/audio-r3-named.log)
   - log: 2026-11-06T23:13:03Z @kj closed
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: every audio file now loads the player chunk with the peaks, so this holds at every size; its test drops the faked size
 - [x] `DEF-MEDIA-60-UNMUTE-ZERO` **At volume 0 the mute button cannot bring the sound back** - MEDIUM; with the audio volume slider at 0, the mute button mutes and unmutes but the volume stays 0, so no sound comes back; Plyr's toggle in the video viewer restores the last audible volume; fix unmuting at volume 0 sets the volume as Plyr's toggleMuted does; `src/audio.ts`
   - evidence: Galata DEF-MEDIA-60-UNMUTE-ZERO passes in logs/audio-r3-named.log (84/84); failed before with muted true, volume 0 in logs/audio-r3-red-client.log
   - related: ACC-AUDIO-112-VOLUME - mute acts as in the video viewer
@@ -466,6 +484,28 @@ Audio and video playback in JupyterLab
   - log: 2026-11-07T00:12:49Z @kj fixed in the tree: save merges the changed keys into the stored record, volume and muted on volumechange, speed on a speed change, a damaged record read as empty; Galata DEF-MEDIA-65-SETTINGS-MERGE failed before, stored speed 1.5 not 2 (logs/audio-r4-red.log), passed after, media_audio 55/55 (logs/audio-r4-named.log)
   - log: 2026-11-07T00:24:59Z @kj closed
   - log: 2026-11-07T07:31:33Z @kj accepted by the owner on 2026-11-07: settings stored per key, as Plyr
+- [x] `DEF-MEDIA-67-NO-RETRY` **Dropped connection ends the file download with no retry** - MEDIUM; a file up to 100 MB is downloaded with one request and no retry, so a connection the browser drops as dead (net::ERR_HTTP2_PING_FAILED, TypeError: Failed to fetch) ends in 'This file cannot be read from the server.' while the next open works; `src/media.ts`, `src/audio.ts`
+  - overridden-by: ACC-MEDIA-134-LOST-CONNECTION
+  - evidence: superseded by the owner decision of 2026-11-07: downloadBlob and its retry are removed and every file streams from its file URL, so the browser's media player handles the network (ACC-MEDIA-134-LOST-CONNECTION); Galata 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a failed audio file request says the connection was lost, and Reload plays the file' with route.abort failed and connectionfailed, and 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a failed file request says the connection was lost, and Reload plays the file' and 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a connection lost after the metadata says so, and Reload plays the file' pass in logs/media-stream-galata.log, exit 0
+  - repro: abort the first /files/ request of a WAV or MP4 up to 100 MB with route.abort('connectionfailed'): the error sentence shows; a second open plays the file
+  - test-tags: UNIT, FUNCTIONAL
+  - root-cause: 2026-11-07T13:33:41Z @kj MediaViewer.load in src/media.ts and AudioViewer.load in src/audio.ts download the file with one fetch(url) and response.blob(); fetch rejects with TypeError on a connection the browser found dead, and fail() shows 'This file cannot be read from the server.' for every reason except ChunkLoadError
+  - log: 2026-11-07T13:33:41Z @kj added
+  - log: 2026-11-07T13:45:04Z @kj closed: fixed: downloadBlob in src/mediautil.ts tries the download once more after a TypeError; fail() shows the lost-connection sentence for a TypeError; reason: the evidence names the 4 Jest cases and the 3 Galata test titles
+  - log: 2026-11-07T14:22:17Z @kj owner decision of 2026-11-07: downloadBlob and its retry are removed and every file streams; overridden by ACC-MEDIA-134-LOST-CONNECTION; stays closed; the build stage replaces the evidence once the streaming tests pass
+  - log: 2026-11-07T15:10:20Z @kj edited evidence "Jest downloadBlob in src/__tests__/mediautil.spec.ts: 'tries a request that got no answer once more', 'does not try an HTTP error status again', 'rejects with the TypeError when the second request fails too', 'tries again when the body breaks off', 54/54 in logs/media-retry-test2.log; Galata DEF-MEDIA-67-NO-RETRY ACC-MEDIA-130-DOWNLOAD-RETRY: 'an audio file request on a dropped connection is tried once more and the file plays', 'a video file request on a dropped connection is tried once more and the file plays', 'an audio file request that fails on both tries says the connection was lost, and Reload plays the file', media_audio and media_video 89/89 in logs/media-retry-galata.log, exit 0" -> "superseded by the owner decision of 2026-11-07: downloadBlob and its retry are removed and every file streams from its file URL, so the browser's media player handles the network (ACC-MEDIA-134-LOST-CONNECTION); Galata 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a failed audio file request says the connection was lost, and Reload plays the file' with route.abort failed and connectionfailed, and 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a failed file request says the connection was lost, and Reload plays the file' and 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a connection lost after the metadata says so, and Reload plays the file' pass in logs/media-stream-galata.log, exit 0"; reason: names each test title and the run that proves it
+- [x] `DEF-MEDIA-68-BUFFER-CUE` **Audio that waits for data has no buffering cue** - MINOR; over a slow connection a seek into unloaded audio shows the Pause icon and a frozen time with no buffering cue; fix waiting and playing/seeked listeners with a translated string and an error guard; `src/audio.ts`
+  - evidence: ui-tests/tests/media_audio.spec.ts DEF-MEDIA-68-BUFFER-CUE cases: cue shows and clears on a held seek, waveform sentence survives, Loading cover survives playback before metadata; all pass in logs/stream-final-suite.log (176 passed, 23.9 min, exit 0); same three 60/60 in logs/buffer-cue4-audio.log, exit 0
+  - repro: hold the /files/ read at 20 MB/s, seek to 15 s and play: the Pause icon shows, the time text stays frozen, no buffering cue
+  - test-tags: E2E
+  - root-cause: 2026-11-08T23:26:24Z @kj nothing in `src/audio.ts` reacts to waiting or stalled; the message line is emptied at metadata; held currentTime at 15 s with paused false and readyState 1
+  - log: 2026-11-08T23:26:24Z @kj added
+  - log: 2026-11-09T07:16:13Z @kj attempted: src/audio.ts shows 'Buffering...' while a playing element has readyState below 3, clearing only that sentence; new Galata test in media_audio.spec.ts failed before, passes after; patch tmp/workflows/buffer-cue/patches/1-buffering-cue.patch; make test, lint and audio spec 58/58 green
+  - log: 2026-11-09T07:35:53Z @kj reverted per review round 3: cue and test removed because showMessage overwrote the no-waveform sentence and hid the load cover; owner ruling to fix stands, guarded form follows
+  - log: 2026-11-09T07:45:21Z @kj attempted: guarded cue restored - showBuffering writes 'Buffering...' only on an empty message line, keep clear-only-own-text and the error guard; two Galata cases pass: cue shows and clears, waveform failure sentence survives a held seek; patch tmp/workflows/buffer-cue/patches/2-buffering-cue-guarded.patch; audio spec 59/59, make test and lint green
+  - log: 2026-11-09T08:12:48Z @kj reverted: guarded cue removed per review round 4 STOP - it hid the Loading cover when playback starts before metadata (ACC-MEDIA-114-SPINNER); defect stays open for the owner
+  - log: 2026-11-09T08:38:06Z @kj attempted: direct-write form - showBuffering writes Buffering... into the message line, never showMessage(), so the Loading cover stays; three Galata cases pass (cue shows and clears on a held seek, waveform sentence survives, cover survives playback before metadata); patch tmp/workflows/buffer-cue/patches/3-buffering-cue-direct.patch; audio spec 60/60, make test and lint green
+  - log: 2026-11-09T09:36:02Z @kj closed: fixed: direct-write buffering cue writes Buffering... into the message line without showMessage(), so the Loading cover, the waveform sentence and the cue itself all survive; adversarial review round 6 returned SHIP
 
 ## Mesh viewer `MESH`
 

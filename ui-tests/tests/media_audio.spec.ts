@@ -39,7 +39,7 @@ const LOST =
 const STALE = 'This viewer was updated; reload the page to use it.';
 // The chunks of this extension that load when the first file opens.
 const CHUNKS = '**/jupyterlab-advanced-image-viewer-extension/static/*.js*';
-// The peaks request of a file over 100 MB, answered by the server part.
+// The peaks request of an audio file, answered by the server part.
 const PEAKS = '**/jupyterlab-advanced-image-viewer-extension/waveform?*';
 
 test.describe('Audio viewer', () => {
@@ -120,17 +120,6 @@ test.describe('Audio viewer', () => {
       .toBe(true);
   };
 
-  // The contents API reports the file over the limit, so it plays from its URL.
-  const overLimit = (page: any) =>
-    page.route(`**/api/contents/**/${NAME}?*`, async (route: any) => {
-      const response = await route.fetch();
-      const model = await response.json();
-      await route.fulfill({
-        response,
-        json: { ...model, size: 200 * 1024 * 1024 }
-      });
-    });
-
   // Boxes of wavesurfer's parts, which live in its open shadow root. The
   // overview strip holds a second player in a nested shadow root, which
   // querySelector does not enter, so each selector finds the main part.
@@ -187,6 +176,66 @@ test.describe('Audio viewer', () => {
       .textContent();
     const [start, end] = text.replace('showing', '').split(' - ');
     return seconds(end) - seconds(start);
+  };
+
+  // The colour of the seek slider's middle row at each of `times`, from a
+  // screenshot decoded in the page. A time lies where the centre of the 16 px
+  // thumb would stand: from 8 px inside one end to 8 px inside the other.
+  const sliderColours = async (
+    page: any,
+    times: number[],
+    duration: number
+  ): Promise<number[][]> => {
+    // Another extension's notification can float over the slider.
+    await page.evaluate(() => {
+      for (const toast of document.querySelectorAll<HTMLElement>(
+        '.Toastify__toast-container, .jp-toastContainer'
+      )) {
+        toast.style.display = 'none';
+      }
+    });
+    const box = (await seekBar(page).boundingBox())!;
+    const shot: Buffer = await seekBar(page).screenshot();
+    const xs = times.map(t => 8 + ((box.width - 16) * t) / duration);
+    return page.evaluate(
+      async ([base64, xs, width]: [string, number[], number]) => {
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const bitmap = await createImageBitmap(
+          new Blob([bytes], { type: 'image/png' })
+        );
+        const context = new OffscreenCanvas(
+          bitmap.width,
+          bitmap.height
+        ).getContext('2d')!;
+        context.drawImage(bitmap, 0, 0);
+        const scale = bitmap.width / width;
+        return xs.map(x =>
+          Array.from(
+            context
+              .getImageData(
+                Math.round(x * scale),
+                Math.floor(bitmap.height / 2),
+                1,
+                1
+              )
+              .data.slice(0, 3)
+          )
+        );
+      },
+      [shot.toString('base64'), xs, box.width]
+    );
+  };
+  // WCAG contrast of two opaque colours.
+  const contrast = (one: number[], two: number[]): number => {
+    const luminance = (rgb: number[]) => {
+      const [r, g, b] = rgb.map(v => {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [a, b] = [luminance(one), luminance(two)];
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
   };
 
   // A colour as the browser resolves it, to compare #rrggbb with rgb().
@@ -427,26 +476,12 @@ test.describe('Audio viewer', () => {
     });
   });
 
-  // ACC-AUDIO-46-SEEK. The file is served as the owner's server serves
-  // /files/ (DEF-MEDIA-7-SEEK): status 200, the whole file, no Accept-Ranges.
-  // A player on that URL cannot seek; the viewer seeks in a blob of it.
-  test('ACC-AUDIO-46-SEEK a click on the waveform seeks on a server without byte ranges', async ({
+  // ACC-AUDIO-46-SEEK
+  test('ACC-AUDIO-46-SEEK a click on the waveform seeks', async ({
     page,
     tmpPath
   }) => {
-    let served = 0;
-    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
-      served++;
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'audio/x-wav' },
-        body: TONE
-      });
-    });
     await open(page, `${tmpPath}/${NAME}`);
-    expect(served).toBe(1);
-    const src = await media(page).evaluate((m: HTMLMediaElement) => m.src);
-    expect(src.startsWith('blob:')).toBe(true);
 
     for (const [fraction, expected] of [
       [0.25, 15],
@@ -470,34 +505,6 @@ test.describe('Audio viewer', () => {
     await page.mouse.click(point.x, point.y);
     await expect.poll(() => currentTime(page)).toBeGreaterThan(29.5);
     expect(await currentTime(page)).toBeLessThan(31);
-  });
-
-  // ACC-MEDIA-74-BUFFER. The same owner server as above. Up to 100 MB the
-  // viewer downloads the file once and plays that copy, so the player has the
-  // whole length to seek in; a player on the plain URL has seekable [0,0].
-  test('ACC-MEDIA-74-BUFFER audio up to 100 MB is downloaded once and seeks without byte ranges', async ({
-    page,
-    tmpPath
-  }) => {
-    let served = 0;
-    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
-      served++;
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'audio/x-wav' },
-        body: TONE
-      });
-    });
-    await open(page, `${tmpPath}/${NAME}`);
-    const player = await media(page).evaluate((m: HTMLMediaElement) => ({
-      src: m.src,
-      seekable: m.seekable.length ? m.seekable.end(0) : 0
-    }));
-    expect(served).toBe(1);
-    expect(player.src.startsWith('blob:')).toBe(true);
-    expect(player.seekable).toBeCloseTo(60, 0);
-    await seek(page, 30);
-    expect(await currentTime(page)).toBeCloseTo(30, 0);
   });
 
   // ACC-AUDIO-47-OVERVIEW
@@ -1099,44 +1106,15 @@ test.describe('Audio viewer', () => {
   });
 
   // ACC-AUDIO-113-SEEKBAR, which took over this part of ACC-AUDIO-54-LARGE.
-  // The contents API reports the file over 100 MB and the peaks request is
-  // answered 404, so no waveform comes. The file URL is served with byte
-  // ranges, as the stock file handler serves it and as the platform fix of
-  // DEF-MEDIA-7-SEEK restores it, because above the limit the player streams
-  // from the file URL.
-  test('ACC-AUDIO-113-SEEKBAR a file over 100 MB plays without a waveform or the browser control and seeks with the slider of the time row', async ({
+  // The peaks request is answered 404, so no waveform comes. The test server
+  // answers byte ranges on the file URL, which the player streams from.
+  test('ACC-AUDIO-113-SEEKBAR a file with no waveform plays without the browser control and seeks with the slider of the time row', async ({
     page,
     tmpPath
   }) => {
-    await page.route(`**/api/contents/**/${NAME}?*`, async (route: any) => {
-      const response = await route.fetch();
-      const model = await response.json();
-      await route.fulfill({
-        response,
-        json: { ...model, size: 200 * 1024 * 1024 }
-      });
-    });
     await page.route(PEAKS, (route: any) =>
       route.fulfill({ status: 404, json: { message: '' } })
     );
-    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
-      const range = /bytes=(\d+)-(\d*)/.exec(
-        route.request().headers()['range'] ?? ''
-      );
-      const start = range ? Number(range[1]) : 0;
-      const end = range && range[2] ? Number(range[2]) : TONE.length - 1;
-      await route.fulfill({
-        status: range ? 206 : 200,
-        headers: {
-          'Content-Type': 'audio/x-wav',
-          'Accept-Ranges': 'bytes',
-          ...(range
-            ? { 'Content-Range': `bytes ${start}-${end}/${TONE.length}` }
-            : {})
-        },
-        body: TONE.subarray(start, end + 1)
-      });
-    });
     await page.filebrowser.open(`${tmpPath}/${NAME}`);
     await expect(
       viewer(page).locator('.jp-AdvancedMediaViewer-message')
@@ -1221,7 +1199,7 @@ test.describe('Audio viewer', () => {
     ).toBeCloseTo(60, 0);
   });
 
-  // ACC-AUDIO-123-SEEKBAR-ALWAYS. A file under 100 MB, with its waveform.
+  // ACC-AUDIO-123-SEEKBAR-ALWAYS. A file with its waveform.
   test('ACC-AUDIO-123-SEEKBAR-ALWAYS a file with a waveform has the seek slider between the played time and the length, and the shown range in the control row', async ({
     page,
     tmpPath
@@ -1299,13 +1277,24 @@ test.describe('Audio viewer', () => {
     await control(page, 'Pause').click();
   });
 
-  // ACC-AUDIO-54-LARGE. The contents API reports the file over 100 MB; the
-  // test server's own server part computes the peaks of the 60 s WAV.
-  test('ACC-AUDIO-54-LARGE a file over 100 MB shows the waveform from the peaks of the server and is never downloaded', async ({
+  // ACC-AUDIO-54-LARGE. The test server's own server part computes the peaks
+  // of the 60 s WAV; the browser decodes nothing.
+  test('ACC-AUDIO-54-LARGE every audio file shows the waveform from the peaks of the server and is never downloaded', async ({
     page,
     tmpPath
   }) => {
-    await overLimit(page);
+    await page.evaluate(() => {
+      const w = window as any;
+      w.decodes = 0;
+      const decode = BaseAudioContext.prototype.decodeAudioData;
+      BaseAudioContext.prototype.decodeAudioData = function (
+        this: BaseAudioContext,
+        ...args: any[]
+      ) {
+        w.decodes++;
+        return (decode as any).apply(this, args);
+      };
+    });
     const requests: { url: string; type: string }[] = [];
     page.on('request', (r: any) =>
       requests.push({ url: r.url(), type: r.resourceType() })
@@ -1359,7 +1348,7 @@ test.describe('Audio viewer', () => {
     }
     await expect(
       toolbar(page).locator('.jp-AdvancedMediaViewer-details')
-    ).toHaveText('WAV · mono · 200.0 MB · 01:00');
+    ).toHaveText('WAV · mono · 937.5 KB · 01:00');
 
     // The time under the mouse at the middle reads 00:30.
     const middle = at(p.wrapper, 0.5);
@@ -1401,11 +1390,343 @@ test.describe('Audio viewer', () => {
           ['fetch', 'xhr'].includes(r.type)
       )
     ).toEqual([]);
+    expect(await page.evaluate(() => (window as any).decodes)).toBe(0);
+  });
+
+  // ACC-MEDIA-131-STREAM-ALL. The test server's file handler answers byte
+  // ranges. Tornado answers a range that covers the whole file, as Chromium's
+  // first request asks, with 200 and Accept-Ranges.
+  test('ACC-MEDIA-131-STREAM-ALL every audio file plays from its file URL with byte ranges', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.evaluate(() => {
+      const w = window as any;
+      w.decodes = 0;
+      const decode = BaseAudioContext.prototype.decodeAudioData;
+      BaseAudioContext.prototype.decodeAudioData = function (
+        this: BaseAudioContext,
+        ...args: any[]
+      ) {
+        w.decodes++;
+        return (decode as any).apply(this, args);
+      };
+    });
+    const files: any[] = [];
+    const waveforms: string[] = [];
+    page.on('request', (r: any) => {
+      if (r.url().includes('/files/') && r.url().includes(NAME)) {
+        files.push(r);
+      }
+      if (
+        r.url().includes('/jupyterlab-advanced-image-viewer-extension/waveform')
+      ) {
+        waveforms.push(r.url());
+      }
+    });
+    await open(page, `${tmpPath}/${NAME}`);
+
+    const src: string = await media(page).evaluate(
+      (m: HTMLMediaElement) => m.src
+    );
+    expect(src).toContain('/files/');
+    expect(src.startsWith('blob:')).toBe(false);
+    expect(files.length).toBeGreaterThan(0);
+    for (const request of files) {
+      expect(request.resourceType(), request.url()).toBe('media');
+    }
+    expect((await files[0].allHeaders())['range']).toBe('bytes=0-');
+    const answer = await files[0].response();
+    expect([200, 206]).toContain(answer.status());
+    expect((await answer.allHeaders())['accept-ranges']).toBe('bytes');
+    expect(waveforms).toHaveLength(1);
+    expect(new URL(waveforms[0]).searchParams.get('path')).toBe(
+      `${tmpPath}/${NAME}`
+    );
+    expect(await page.evaluate(() => (window as any).decodes)).toBe(0);
+  });
+
+  // ACC-MEDIA-131-STREAM-ALL. The first request gets the first 15 s of the
+  // 60 s file and every later one is held, so the file plays while most of it
+  // has not arrived.
+  test('ACC-MEDIA-131-STREAM-ALL playback starts before the whole audio file arrives', async ({
+    page,
+    tmpPath
+  }) => {
+    const part = 44 + 15 * 2 * RATE;
+    let held = 0;
+    let served = 0;
+    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
+      if (served++) {
+        held++;
+        return;
+      }
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'audio/x-wav',
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes 0-${part - 1}/${TONE.length}`
+        },
+        body: TONE.subarray(0, part)
+      });
+    });
+    await open(page, `${tmpPath}/${NAME}`);
+    await control(page, 'Play').click();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(1);
+    await expect.poll(() => held).toBeGreaterThan(0);
+    const player = await media(page).evaluate((m: HTMLMediaElement) => ({
+      duration: m.duration,
+      buffered: m.buffered.length ? m.buffered.end(m.buffered.length - 1) : 0
+    }));
+    expect(player.duration).toBeCloseTo(60, 0);
+    expect(player.buffered).toBeLessThan(player.duration - 1);
+    await control(page, 'Pause').click();
+  });
+
+  // DEF-MEDIA-68-BUFFER-CUE. As ACC-VIDEO-133-BUFFERED: the first request
+  // gets the first 15 s, as in ACC-MEDIA-131-STREAM-ALL, and every later one
+  // is held. A seek into the part that has not arrived must say on the
+  // message line that the audio waits for data, then clear it and play on
+  // once the read is answered.
+  test('DEF-MEDIA-68-BUFFER-CUE the message line shows Buffering... while a seek waits for data', async ({
+    page,
+    tmpPath
+  }) => {
+    const end = 44 + 15 * 2 * RATE - 1;
+    const held: any[] = [];
+    let served = 0;
+    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
+      if (served++) {
+        held.push(route);
+        return;
+      }
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'audio/x-wav',
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes 0-${end}/${TONE.length}`
+        },
+        body: TONE.subarray(0, end + 1)
+      });
+    });
+    await open(page, `${tmpPath}/${NAME}`);
+    await control(page, 'Play').click();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(1);
+    // Seek into the part the server has not sent: the element waits for it.
+    await media(page).evaluate((m: HTMLMediaElement) => {
+      m.currentTime = 30;
+    });
+    await expect(message(page)).toHaveText('Buffering...', { timeout: 5000 });
+    await expect.poll(() => held.length, { timeout: 10000 }).toBeGreaterThan(0);
+    // Answer every held read with the rest of the file.
+    for (const route of held) {
+      const start = Number(
+        /bytes=(\d+)-/.exec(route.request().headers()['range'] ?? '')?.[1] ?? 0
+      );
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'audio/x-wav',
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes ${start}-${TONE.length - 1}/${TONE.length}`
+        },
+        body: TONE.subarray(start)
+      });
+    }
+    await expect(message(page)).toHaveText('', { timeout: 10000 });
+    await expect
+      .poll(() => currentTime(page), { timeout: 10000 })
+      .toBeGreaterThan(30.5);
+  });
+
+  // DEF-MEDIA-68-BUFFER-CUE. A failed peaks request leaves its sentence on
+  // the message line; a wait for data must not replace a sentence it does
+  // not own.
+  test('DEF-MEDIA-68-BUFFER-CUE a seek that waits for data keeps the waveform failure sentence', async ({
+    page,
+    tmpPath
+  }) => {
+    const end = 44 + 15 * 2 * RATE - 1;
+    const held: any[] = [];
+    let served = 0;
+    await page.route(PEAKS, (route: any) => route.abort('failed'));
+    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
+      if (served++) {
+        held.push(route);
+        return;
+      }
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'audio/x-wav',
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes 0-${end}/${TONE.length}`
+        },
+        body: TONE.subarray(0, end + 1)
+      });
+    });
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await viewer(page).waitFor();
+    await expect(message(page)).toHaveText('The waveform could not be drawn.');
+    await control(page, 'Play').click();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(1);
+    // Seek into the part the server has not sent: the element waits for it.
+    await media(page).evaluate((m: HTMLMediaElement) => {
+      m.currentTime = 30;
+    });
+    await expect.poll(() => held.length, { timeout: 10000 }).toBeGreaterThan(0);
+    await page.waitForTimeout(500);
+    await expect(message(page)).toHaveText('The waveform could not be drawn.');
+    expect(await message(page).textContent()).not.toBe('Buffering...');
+  });
+
+  // DEF-MEDIA-68-BUFFER-CUE. The round-4 probe: with only the 44-byte WAV
+  // header served and every later read held, opening stalls at readyState 0,
+  // and play() then fires waiting with the metadata still unread. The cue
+  // must not hide the Loading cover (ACC-MEDIA-114-SPINNER).
+  test('DEF-MEDIA-68-BUFFER-CUE playback started before the metadata keeps the Loading cover', async ({
+    page,
+    tmpPath
+  }) => {
+    const held: any[] = [];
+    let served = 0;
+    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
+      if (served++) {
+        held.push(route);
+        return;
+      }
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'audio/x-wav',
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes 0-43/${TONE.length}`
+        },
+        body: TONE.subarray(0, 44)
+      });
+    });
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    const spin = spinner(page);
+    await expect(spin).toBeVisible();
+    await expect(spin).toContainText('Loading...');
+    await expect.poll(() => held.length, { timeout: 10000 }).toBeGreaterThan(0);
+    await viewer(page).focus();
+    await page.keyboard.press('Space');
+    // A short wait: the cue must leave the cover alone.
+    await page.waitForTimeout(1000);
+    await expect(spin).toBeVisible();
+    await expect(spin).toContainText('Loading...');
+    // Answer every held read with the rest of the file.
+    for (const route of held) {
+      const start = Number(
+        /bytes=(\d+)-/.exec(route.request().headers()['range'] ?? '')?.[1] ?? 0
+      );
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'audio/x-wav',
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes ${start}-${TONE.length - 1}/${TONE.length}`
+        },
+        body: TONE.subarray(start)
+      });
+    }
+    await expect(spin).toBeHidden();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(0.5);
+  });
+
+  // ACC-AUDIO-132-BUFFERED. The file request from 0 gets the first 20 s, a
+  // request that starts between 38 s and 41 s gets 64 KiB, about 4 s, and
+  // every other request is held. Chromium asks in blocks of 32 KiB, so the
+  // request of a seek to 40 s can start up to 2 s before it.
+  test('ACC-AUDIO-132-BUFFERED the seek slider shows the buffered parts past the played part, at 3:1 against the track and the played part', async ({
+    page,
+    tmpPath
+  }) => {
+    const offset = (seconds: number) => 44 + seconds * 2 * RATE;
+    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
+      const start = Number(
+        /bytes=(\d+)-/.exec(route.request().headers()['range'] ?? '')?.[1] ?? 0
+      );
+      const end =
+        start === 0
+          ? offset(20) - 1
+          : start >= offset(38) && start < offset(41)
+            ? start + 64 * 1024 - 1
+            : -1;
+      if (end < 0) {
+        return;
+      }
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'audio/x-wav',
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes ${start}-${end}/${TONE.length}`
+        },
+        body: TONE.subarray(start, end + 1)
+      });
+    });
+    await open(page, `${tmpPath}/${NAME}`);
+    // Nothing past 20 s has arrived yet.
+    const [before30, before42] = await sliderColours(page, [30, 42], 60);
+    expect(before42).toEqual(before30);
+
+    await seek(page, 40);
+    await seek(page, 10);
+    const ranges = await media(page).evaluate((m: HTMLMediaElement) =>
+      Array.from({ length: m.buffered.length }, (_, i) => [
+        m.buffered.start(i),
+        m.buffered.end(i)
+      ])
+    );
+    expect(ranges, JSON.stringify(ranges)).toHaveLength(2);
+    expect(ranges[0][1]).toBeGreaterThan(19);
+    expect(ranges[0][1]).toBeLessThan(21);
+    expect(ranges[1][0]).toBeLessThan(41);
+    expect(ranges[1][1]).toBeGreaterThan(42.5);
+    expect(ranges[1][1]).toBeLessThan(50);
+    expect(await currentTime(page)).toBeCloseTo(10, 0);
+
+    for (const theme of ['light', 'dark']) {
+      if (theme === 'dark') {
+        await page.theme.setDarkTheme();
+        await expect
+          .poll(async () => (await sliderColours(page, [30], 60))[0])
+          .not.toEqual(before30);
+      }
+      const [played, fill15, track30, fill42, track52] = await sliderColours(
+        page,
+        [5, 15, 30, 42, 52],
+        60
+      );
+      const colours = JSON.stringify({
+        played,
+        fill15,
+        track30,
+        fill42,
+        track52
+      });
+      expect(fill42, `${theme} ${colours}`).toEqual(fill15);
+      expect(track52, `${theme} ${colours}`).toEqual(track30);
+      for (const fill of [fill15, fill42]) {
+        expect(
+          contrast(fill, track30),
+          `${theme} ${colours}`
+        ).toBeGreaterThanOrEqual(3);
+        expect(
+          contrast(fill, played),
+          `${theme} ${colours}`
+        ).toBeGreaterThanOrEqual(3);
+      }
+    }
   });
 
   // DEF-WAVE-57-SOURCE-CHANNELS. The server mixes more than two channels down
   // to two for the peaks; the details name the channels of the file.
-  test('DEF-WAVE-57-SOURCE-CHANNELS over 100 MB the file details of a 4-channel file read 4 channels', async ({
+  test('DEF-WAVE-57-SOURCE-CHANNELS the file details of a 4-channel file read 4 channels', async ({
     page,
     tmpPath
   }) => {
@@ -1414,7 +1735,6 @@ test.describe('Audio viewer', () => {
       'base64',
       `${tmpPath}/${NAME}`
     );
-    await overLimit(page);
     await page.filebrowser.open(`${tmpPath}/${NAME}`);
     await expect
       .poll(
@@ -1430,7 +1750,7 @@ test.describe('Audio viewer', () => {
       .toBe(true);
     await expect(
       toolbar(page).locator('.jp-AdvancedMediaViewer-details')
-    ).toHaveText('WAV · 4 channels · 200.0 MB · 00:10');
+    ).toHaveText('WAV · 4 channels · 625.0 KB · 00:10');
   });
 
   // DEF-WAVE-58-CANCEL-ABANDONED, the viewer half. The peaks answer is held
@@ -1445,7 +1765,6 @@ test.describe('Audio viewer', () => {
       'base64',
       `${tmpPath}/voice.wav`
     );
-    await overLimit(page);
     await page.route(PEAKS, () => undefined);
     const isPeaks = (r: any) =>
       r.url().includes('/jupyterlab-advanced-image-viewer-extension/waveform');
@@ -1468,7 +1787,6 @@ test.describe('Audio viewer', () => {
     page,
     tmpPath
   }) => {
-    await overLimit(page);
     let release = (): void => undefined;
     const released = new Promise<void>(resolve => (release = resolve));
     let asked = false;
@@ -1529,7 +1847,6 @@ test.describe('Audio viewer', () => {
     page,
     tmpPath
   }) => {
-    await overLimit(page);
     const answers: [string, (route: any) => Promise<void>][] = [
       ['404', route => route.fulfill({ status: 404, json: { message: '' } })],
       ['500', route => route.fulfill({ status: 500, json: { message: '' } })],
@@ -1599,7 +1916,6 @@ test.describe('Audio viewer', () => {
     page,
     tmpPath
   }) => {
-    await overLimit(page);
     let asked = (): void => undefined;
     const requested = new Promise<void>(resolve => (asked = resolve));
     await page.route(`**/files/**/${NAME}*`, () => asked());
@@ -1700,20 +2016,21 @@ test.describe('Audio viewer', () => {
   // live region it already has; a region that appears with its text in it is
   // not reliably read. So each line is empty while its region is first drawn,
   // and its text comes at least one drawn frame later. The file answer and
-  // the decode are held, so both lines stay up.
+  // the peaks answer are held, so both lines stay up.
   test('DEF-MEDIA-63-LIVE-REGIONS Loading... and Drawing the waveform... are written into their live regions a drawn frame after the regions show', async ({
     page,
     tmpPath
   }) => {
+    let releasePeaks = (): void => undefined;
+    const peaksReleased = new Promise<void>(
+      resolve => (releasePeaks = resolve)
+    );
+    await page.route(PEAKS, async (route: any) => {
+      await peaksReleased;
+      await route.continue();
+    });
     await page.evaluate(() => {
       const w = window as any;
-      const decode = w.BaseAudioContext.prototype.decodeAudioData;
-      const held = new Promise(resolve => (w.releaseDecode = resolve));
-      w.BaseAudioContext.prototype.decodeAudioData = function (
-        ...args: unknown[]
-      ) {
-        return held.then(() => decode.apply(this, args));
-      };
       // The frames drawn so far.
       w.frames = 0;
       const tick = () => {
@@ -1786,26 +2103,44 @@ test.describe('Audio viewer', () => {
         `${key}: ${JSON.stringify(list)}`
       ).toBeGreaterThanOrEqual(2);
     }
-    await page.evaluate(() => (window as any).releaseDecode());
+    releasePeaks();
   });
 
-  // DEF-MEDIA-22-LARGE-VIDEO
-  test('DEF-MEDIA-22-LARGE-VIDEO a failed audio file request says the connection was lost, and Reload plays the file', async ({
+  // DEF-MEDIA-22-LARGE-VIDEO and ACC-MEDIA-134-LOST-CONNECTION. 'failed' is a
+  // request that gets no answer; 'connectionfailed' fails it as a connection
+  // the browser found dead does (the repro of DEF-MEDIA-67-NO-RETRY). One
+  // route for the whole test.
+  test('DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a failed audio file request says the connection was lost, and Reload plays the file', async ({
     page,
     tmpPath
   }) => {
-    await overLimit(page);
-    const files = `**/files/**/${NAME}*`;
-    await page.route(files, (route: any) => route.abort('failed'));
-    await page.filebrowser.open(`${tmpPath}/${NAME}`);
-    await expect(message(page)).toHaveText(LOST);
+    let error: string | null = null;
+    await page.route(`**/files/**/${NAME}*`, (route: any) =>
+      error ? route.abort(error) : route.continue()
+    );
+    for (const [index, code] of ['failed', 'connectionfailed'].entries()) {
+      error = code;
+      if (index === 0) {
+        await page.filebrowser.open(`${tmpPath}/${NAME}`);
+      } else {
+        await button(page, 'Reload audio from disk').click();
+      }
+      await expect(message(page), code).toHaveText(LOST);
 
-    await page.unroute(files);
-    await button(page, 'Reload audio from disk').click();
-    await expect
-      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
-      .toBeCloseTo(60, 0);
-    await expect(message(page)).toHaveText('');
+      error = null;
+      await button(page, 'Reload audio from disk').click();
+      await expect
+        .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration), {
+          message: code
+        })
+        .toBeCloseTo(60, 0);
+      await expect(message(page), code).toHaveText('');
+      await control(page, 'Play').click();
+      await expect
+        .poll(() => currentTime(page), { message: code })
+        .toBeGreaterThan(0.5);
+      await control(page, 'Pause').click();
+    }
   });
 
   // ACC-AUDIO-55-ERROR
@@ -1842,29 +2177,42 @@ test.describe('Audio viewer', () => {
       'text',
       `${tmpPath}/broken.mp3`
     );
-    await page.filebrowser.open(`${tmpPath}/broken.mp3`);
-    await expect(currentTab(page)).toHaveText('broken.mp3');
-    const message = viewer(page).locator('.jp-AdvancedMediaViewer-message');
-    await expect(message).toHaveText(
-      'This file cannot be played: the file is damaged or in a format this browser cannot play',
-      { timeout: 15000 }
+    // A MIDI file of one note, which this browser does not play.
+    await page.contents.uploadContent(
+      Buffer.from(
+        '4d546864000000060000000100604d54726b0000000c00903c6460803c0000ff2f00',
+        'hex'
+      ).toString('base64'),
+      'base64',
+      `${tmpPath}/tune.mid`
     );
-    // The browser's own MediaError text is jargon and does not reach the
-    // user (DEF-MEDIA-11).
-    await expect(message).not.toHaveText(
-      /MediaError|Failed to load|no supported source|DEMUXER|PIPELINE|codec/i
-    );
+    // Both play from their file URL, which the server answers in full, so the
+    // sentence is the damaged file's, not the lost connection's.
+    for (const file of ['broken.mp3', 'tune.mid']) {
+      await page.filebrowser.open(`${tmpPath}/${file}`);
+      await expect(currentTab(page)).toHaveText(file);
+      const message = viewer(page).locator('.jp-AdvancedMediaViewer-message');
+      await expect(message, file).toHaveText(
+        'This file cannot be played: the file is damaged or in a format this browser cannot play',
+        { timeout: 15000 }
+      );
+      // The browser's own MediaError text is jargon and does not reach the
+      // user (DEF-MEDIA-11).
+      await expect(message, file).not.toHaveText(
+        /MediaError|Failed to load|no supported source|DEMUXER|PIPELINE|codec/i
+      );
+    }
   });
 
-  // DEF-MEDIA-29-DECODE-FAIL
-  test('DEF-MEDIA-29-DECODE-FAIL a failed decode leaves no browser control and a seek slider that seeks', async ({
+  // DEF-MEDIA-29-DECODE-FAIL. The server part answers 422 when PyAV cannot
+  // decode the file.
+  test('DEF-MEDIA-29-DECODE-FAIL a waveform the server cannot decode leaves no browser control and a seek slider that seeks', async ({
     page,
     tmpPath
   }) => {
-    await page.evaluate(() => {
-      (window as any).BaseAudioContext.prototype.decodeAudioData = () =>
-        Promise.reject(new Error('decode refused'));
-    });
+    await page.route(PEAKS, (route: any) =>
+      route.fulfill({ status: 422, json: { message: '' } })
+    );
     await page.filebrowser.open(`${tmpPath}/${NAME}`);
     await expect(
       viewer(page).locator('.jp-AdvancedMediaViewer-message')
@@ -1892,35 +2240,37 @@ test.describe('Audio viewer', () => {
     await expect.poll(() => currentTime(page)).toBeCloseTo(30, 0);
   });
 
-  // DEF-MEDIA-48-LOAD-COVER and DEF-MEDIA-54-ZOOM-DECODE. The in-browser decode
-  // is held until the tab is checked.
-  test('DEF-MEDIA-48-LOAD-COVER DEF-MEDIA-54-ZOOM-DECODE the file plays from the bar during the in-browser decode with the zoom buttons disabled, and a failed decode leaves no empty waveform box', async ({
+  // DEF-MEDIA-48-LOAD-COVER and DEF-MEDIA-54-ZOOM-DECODE. The peaks answer is
+  // held until the tab is checked, then the next one fails. One route for the
+  // whole test.
+  test('DEF-MEDIA-48-LOAD-COVER DEF-MEDIA-54-ZOOM-DECODE the file plays from the bar while the peaks are on their way with the zoom buttons disabled, and a failed peaks request leaves no empty waveform box', async ({
     page,
     tmpPath
   }) => {
-    await page.evaluate(() => {
-      const w = window as any;
-      const decode = w.BaseAudioContext.prototype.decodeAudioData;
-      const held = new Promise(resolve => (w.releaseDecode = resolve));
-      w.BaseAudioContext.prototype.decodeAudioData = function (
-        ...args: unknown[]
-      ) {
-        return held.then(() => decode.apply(this, args));
-      };
+    let release = (): void => undefined;
+    const released = new Promise<void>(resolve => (release = resolve));
+    let fail = false;
+    await page.route(PEAKS, async (route: any) => {
+      if (fail) {
+        await route.fulfill({ status: 500, json: { message: '' } });
+        return;
+      }
+      await released;
+      await route.continue();
     });
     await page.filebrowser.open(`${tmpPath}/${NAME}`);
     await viewer(page).waitFor();
     const peaks = viewer(page).locator('.jp-AdvancedMediaViewer-peaks');
     const wave = viewer(page).locator('.jp-AdvancedMediaViewer-wave');
     // The cover goes when the file can play, and the spinner of the waveform
-    // stands in the waveform's place until the decode ends.
+    // stands in the waveform's place until the peaks arrive.
     await expect(spinner(page)).toBeHidden({ timeout: 15000 });
     await expect(peaks).toBeVisible();
     await expect(peaks.getByRole('status')).toHaveText(
       'Drawing the waveform...'
     );
     await expect(wave).toBeHidden();
-    // There is no waveform to zoom yet, as above the limit.
+    // There is no waveform to zoom yet.
     for (const label of ['-', '+', 'Fit']) {
       await expect(labelled(page, label)).toHaveAttribute('disabled', '');
     }
@@ -1928,7 +2278,7 @@ test.describe('Audio viewer', () => {
     await expect.poll(() => currentTime(page)).toBeGreaterThan(0.5);
     await control(page, 'Pause').click();
 
-    await page.evaluate(() => (window as any).releaseDecode());
+    release();
     await expect
       .poll(
         () =>
@@ -1950,11 +2300,8 @@ test.describe('Audio viewer', () => {
       await expect(labelled(page, label)).not.toHaveAttribute('disabled', '');
     }
 
-    // A failed decode keeps the waveform box hidden, as above the limit.
-    await page.evaluate(() => {
-      (window as any).BaseAudioContext.prototype.decodeAudioData = () =>
-        Promise.reject(new Error('decode refused'));
-    });
+    // A failed peaks request keeps the waveform box hidden.
+    fail = true;
     await button(page, 'Reload audio from disk').click();
     await expect(message(page)).toHaveText('The waveform could not be drawn.', {
       timeout: 15000
@@ -1981,13 +2328,12 @@ test.describe('Audio viewer', () => {
     await expect(media(page)).toBeHidden();
   });
 
-  // DEF-MEDIA-59-CHUNK-SENTENCE. Over 100 MB the player chunk loads with the
-  // peaks, after the file already plays from its URL.
-  test('DEF-MEDIA-59-CHUNK-SENTENCE over 100 MB a missing player chunk asks for a page reload and the file still plays', async ({
+  // DEF-MEDIA-59-CHUNK-SENTENCE. The player chunk loads with the peaks, after
+  // the file already plays from its URL.
+  test('DEF-MEDIA-59-CHUNK-SENTENCE a missing player chunk asks for a page reload and the file still plays', async ({
     page,
     tmpPath
   }) => {
-    await overLimit(page);
     await page.route(CHUNKS, (route: any) => route.abort('failed'));
     await page.filebrowser.open(`${tmpPath}/${NAME}`);
     await expect(message(page)).toHaveText(STALE, { timeout: 15000 });

@@ -235,8 +235,7 @@ test.describe('Advanced Image Viewer', () => {
   // Pan clamp - ACC-PAN-38, 39, 40, 43.
   //
   // These assert the INVARIANT, never a fixed pixel geometry: the rendered
-  // size depends on whether jupyterlab_fit_image_size_extension is installed
-  // (it supplies the contain fit locally, and is absent in CI), so each test
+  // size depends on the fixture and the panel size, so each test
   // measures both rects and applies the rule that matches what it measured.
   // Smaller than the host on an axis means stay inside it; larger means keep
   // covering it. Tolerance is 1px, because getBoundingClientRect is

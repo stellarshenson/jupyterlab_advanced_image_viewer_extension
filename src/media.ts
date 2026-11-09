@@ -19,7 +19,7 @@ import { TranslationBundle } from '@jupyterlab/translation';
 
 import { PanelLayout, Widget } from '@lumino/widgets';
 
-import { formatSize, formatTime, WAVEFORM_LIMIT } from './mediautil';
+import { formatSize, formatTime } from './mediautil';
 
 // A file request that fails before the metadata gets the code of a damaged file,
 // MEDIA_ERR_SRC_NOT_SUPPORTED. Only the text differs: a damaged file names the
@@ -71,8 +71,7 @@ export class MediaViewer extends Widget {
       const error = this.media.error;
       this.showMessage(
         error?.code === MediaError.MEDIA_ERR_NETWORK ||
-          (error?.message === REQUEST_FAILED &&
-            !this.media.src.startsWith('blob:'))
+          error?.message === REQUEST_FAILED
           ? this.trans.__(
               'The connection to the server was lost; press Reload to try again.'
             )
@@ -105,38 +104,19 @@ export class MediaViewer extends Widget {
   protected size: number | undefined;
   // Counts load() calls, so a superseded load stops before it sets the source.
   protected loads = 0;
-  // The blob URL of the current file, to revoke when it is replaced.
-  private mediaUrl: string | null = null;
 
-  // Read the file (again) and point the player at it. Up to the 100 MB
-  // waveform limit it is downloaded once and played from the copy, so the
-  // player seeks in memory, also on a server that ignores byte ranges; above
-  // the limit it plays from the file URL, which needs byte ranges from the
-  // server (DEF-MEDIA-7-SEEK).
+  // Read the file (again) and play it from its file URL, which the browser
+  // streams; seeking needs byte ranges from the server (DEF-MEDIA-7-SEEK).
   async load(): Promise<void> {
     const token = ++this.loads;
     this.showLoading();
     try {
-      const size = await this.readSize();
+      await this.readSize();
       const url = await this.contents.getDownloadUrl(this.context.path);
       if (this.isDisposed || token !== this.loads) {
         return;
       }
-      if (size > WAVEFORM_LIMIT) {
-        this.playUrl(url);
-        return;
-      }
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}`);
-      }
-      const blob = await response.blob();
-      // A reload or a close while this one was fetching supersedes it.
-      if (this.isDisposed || token !== this.loads) {
-        return;
-      }
-      this.setFile(blob);
-      this.showMessage('');
+      this.playUrl(url);
     } catch (reason) {
       if (!this.isDisposed && token === this.loads) {
         this.fail(reason);
@@ -148,13 +128,17 @@ export class MediaViewer extends Widget {
   // stays, and one sentence says so.
   protected fail(reason: unknown): void {
     console.error('Media viewer: the file was not read', reason);
-    this.release();
     this.media.removeAttribute('src');
     this.media.load();
     this.details.textContent = '';
+    // A TypeError is a request that got no answer: the connection broke.
     this.showMessage(
       this.reloadSentence(reason) ??
-        this.trans.__('This file cannot be read from the server.')
+        (reason instanceof TypeError
+          ? this.trans.__(
+              'The connection to the server was lost; press Reload to try again.'
+            )
+          : this.trans.__('This file cannot be read from the server.'))
     );
   }
 
@@ -168,12 +152,11 @@ export class MediaViewer extends Widget {
 
   // The document context drops the size from the file model, so it is read
   // again here, still without the content.
-  protected async readSize(): Promise<number> {
+  protected async readSize(): Promise<void> {
     const model = await this.contents.get(this.context.path, {
       content: false
     });
     this.size = model.size;
-    return model.size ?? 0;
   }
 
   togglePlay(): void {
@@ -224,7 +207,7 @@ export class MediaViewer extends Widget {
   // with no message.
   protected playUrl(url: string): void {
     const token = this.loads;
-    this.setFile(url);
+    this.media.src = url;
     this.media.addEventListener(
       'loadedmetadata',
       () => {
@@ -236,31 +219,12 @@ export class MediaViewer extends Widget {
     );
   }
 
-  // Point the player at the file; a blob URL made here is revoked when the
-  // next file replaces it and when the tab closes.
-  private setFile(file: string | Blob): void {
-    this.release();
-    if (typeof file !== 'string') {
-      this.mediaUrl = URL.createObjectURL(file);
-      file = this.mediaUrl;
-    }
-    this.media.src = file;
-  }
-
-  private release(): void {
-    if (this.mediaUrl) {
-      URL.revokeObjectURL(this.mediaUrl);
-      this.mediaUrl = null;
-    }
-  }
-
   // Closing the tab stops the sound and drops the element, so no detached
   // element keeps playing or holds the file.
   dispose(): void {
     if (this.isDisposed) {
       return;
     }
-    this.release();
     this.media.pause();
     this.media.removeAttribute('src');
     this.media.load();

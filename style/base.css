@@ -4,6 +4,8 @@
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
 
+@import url('fit.css');
+
 /* Pan/zoom layer wrapping the <img> so our transform composes with the stock
    viewer's rotate/flip transform on the image itself. Fills the host. */
 .jp-AdvancedImageViewer-panlayer {
@@ -70,8 +72,8 @@
   background: var(--jp-layout-color0);
 }
 
-/* The waveform and the control row drive the audio element; it shows only as
-   the native player of a file whose waveform could not be drawn. */
+/* The waveform and the control row drive the audio element; it stays hidden
+   because audio.ts never sets controls and :not([controls]) matches. */
 .jp-AdvancedMediaViewer-audio .jp-AdvancedMediaViewer-media {
   width: 100%;
 }
@@ -120,10 +122,46 @@
   color: var(--jp-ui-font-color2);
 }
 
+/* The seek slider is drawn here, so its track can show the buffered part
+   (ACC-AUDIO-132-BUFFERED): the script writes the track's colours into
+   --jp-advanced-media-viewer-seek-track. The thumb keeps the 16 px of
+   Chromium's own, which the script's positions count on. */
 .jp-AdvancedMediaViewer-seek {
   flex: 1;
   min-width: 80px;
+  height: 16px;
   align-self: center;
+  appearance: none;
+}
+
+.jp-AdvancedMediaViewer-seek::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--jp-advanced-media-viewer-seek-track);
+}
+
+.jp-AdvancedMediaViewer-seek::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--jp-advanced-media-viewer-seek-track);
+}
+
+.jp-AdvancedMediaViewer-seek::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border: none;
+  border-radius: 50%;
+  appearance: none;
+  background: var(--jp-brand-color1);
+}
+
+.jp-AdvancedMediaViewer-seek::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: var(--jp-brand-color1);
 }
 
 .jp-AdvancedMediaViewer-controls {
@@ -209,13 +247,9 @@
   fill: #fff;
 }
 
-.jp-AdvancedMediaViewer-seek,
-.jp-AdvancedMediaViewer-volume {
-  accent-color: var(--jp-brand-color1);
-}
-
 .jp-AdvancedMediaViewer-volume {
   width: 80px;
+  accent-color: var(--jp-brand-color1);
 }
 
 /* The loading spinner covers the viewer, with Loading... under its circle;
@@ -257,10 +291,16 @@
 }
 
 /* The accent of the played part of the seek bar and of the highlighted
-   buttons. The width is for a file with sound only, which fitVideo never
-   sizes. */
+   buttons. Plyr draws the track of the seek bar over its buffer bar, both 25%
+   white, so the buffered part stays under 3:1 against the track and the
+   played part (ACC-VIDEO-133-BUFFERED). So the track is clear, and the buffer
+   bar under it is grey with its buffered part white: white reaches 3:1
+   against the played part in both themes and 6:1 against the grey. The width
+   is for a file with sound only, which fitVideo never sizes. */
 .jp-AdvancedMediaViewer-video .plyr {
   --plyr-color-main: var(--jp-brand-color1);
+  --plyr-video-range-track-background: transparent;
+  --plyr-video-progress-buffered-background: #fff;
 
   width: 100%;
   min-width: 0;
@@ -275,6 +315,11 @@
 
 .jp-AdvancedMediaViewer-video .plyr__controls .plyr__progress__container {
   flex-basis: 200px;
+}
+
+.jp-AdvancedMediaViewer-video .plyr__progress__buffer,
+.jp-AdvancedMediaViewer-video .plyr.plyr--loading .plyr__progress__buffer {
+  background-color: #616161;
 }
 /* stylelint-enable selector-class-pattern */
 

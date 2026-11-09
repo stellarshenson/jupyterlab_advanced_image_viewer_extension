@@ -104,22 +104,10 @@ export class VideoViewer extends MediaViewer {
     const height = this.video.videoHeight;
     this.setDetails(width && height ? [`${width}×${height}`] : []);
     // A browser recording has no duration in its header, and Plyr reads
-    // Infinity as 0, so the seek bar would stop working. A seek past the end
-    // makes the browser find the length; the listener then goes back to 0.
-    // Over the limit the scan would read the whole file from the server.
-    // shortcut: a recording over the limit keeps --:-- and a dead seek bar,
-    // see DEF-MEDIA-30-LARGE-RECORDING.
-    if (
-      this.media.duration === Infinity &&
-      this.media.src.startsWith('blob:')
-    ) {
-      this.media.addEventListener(
-        'durationchange',
-        () => (this.media.currentTime = 0),
-        { once: true }
-      );
-      this.media.currentTime = 1e101;
-    }
+    // Infinity as 0. A seek past the end would make the browser find the
+    // length, but it reads the whole file from the server.
+    // shortcut: such a recording keeps --:-- and a dead seek bar, see
+    // DEF-MEDIA-30-LARGE-RECORDING.
     this.fitVideo();
   }
 

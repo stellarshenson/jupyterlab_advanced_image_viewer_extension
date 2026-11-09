@@ -1,17 +1,30 @@
 // Pure helpers of the media viewers. This module imports nothing, so the unit
 // tests load it without the JupyterLab packages.
 
-// Above this size an audio file plays from its URL and is never decoded in
-// the browser, which would hold the whole file and its samples in memory; the
-// server part computes its peaks instead.
-export const WAVEFORM_LIMIT = 100 * 1024 * 1024;
-
 // Seconds moved by one press of Left or Right and by the back and forward
 // buttons.
 export const SEEK_STEP = 5;
 
-export function drawsWaveform(size: number): boolean {
-  return size <= WAVEFORM_LIMIT;
+// The parts of the file the browser holds past the played time, as [from, to]
+// fractions of the duration, for the seek slider (ACC-AUDIO-132-BUFFERED).
+// None while the duration is unknown.
+export function bufferedParts(
+  buffered: Pick<TimeRanges, 'length' | 'start' | 'end'>,
+  duration: number,
+  time: number
+): [number, number][] {
+  if (!(Number.isFinite(duration) && duration > 0)) {
+    return [];
+  }
+  const parts: [number, number][] = [];
+  for (let i = 0; i < buffered.length; i++) {
+    const from = Math.max(buffered.start(i), time);
+    const to = Math.min(buffered.end(i), duration);
+    if (to > from) {
+      parts.push([from / duration, to / duration]);
+    }
+  }
+  return parts;
 }
 
 // The peaks answer of the server part: per channel, one byte per millisecond,

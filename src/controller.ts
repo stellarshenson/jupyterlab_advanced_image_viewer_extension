@@ -5,9 +5,9 @@
 // the <img> in a pan layer and apply our translate+scale to the LAYER; the two
 // transforms then compose. Stock JupyterLab ships only two rules here,
 // .jp-ImageViewer { overflow: auto } and .jp-ImageViewer > img { box-sizing:
-// border-box; transform-origin: top left }. The contain fit comes from the
-// separately installed jupyterlab_fit_image_size_extension, whose
-// .jp-ImageViewer img rule is a descendant selector and so still matches
+// border-box; transform-origin: top left }. The contain fit ships in
+// style/fit.css, taken over unchanged from jupyterlab_fit_image_size_extension;
+// its .jp-ImageViewer img rule is a descendant selector and so still matches
 // through the pan layer. With that fit in place the identity layer transform
 // equals the fitted view, and stock rotate/flip keeps working.
 

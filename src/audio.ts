@@ -27,7 +27,7 @@ import sprite from '../style/plyr.svg';
 
 import { announce, MediaViewer } from './media';
 
-import { drawsWaveform, formatTime, readPeaks, SEEK_STEP } from './mediautil';
+import { bufferedParts, formatTime, readPeaks, SEEK_STEP } from './mediautil';
 
 import { addZoomButtons } from './toolbar';
 
@@ -145,8 +145,7 @@ export class AudioViewer extends MediaViewer {
       }
     };
     this.wave = part('div', 'wave');
-    // In the waveform's place while the server part computes the peaks of a
-    // file over the waveform limit, or the browser decodes a smaller file: the
+    // In the waveform's place while the server part computes the peaks: the
     // circle of the loading spinner and a line a screen reader reads as a
     // status.
     const circle = document.createElement('div');
@@ -238,7 +237,14 @@ export class AudioViewer extends MediaViewer {
         )
       )
     );
-    for (const type of ['timeupdate', 'durationchange', 'seeking', 'emptied']) {
+    for (const type of [
+      'timeupdate',
+      'durationchange',
+      'seeking',
+      'seeked',
+      'progress',
+      'emptied'
+    ]) {
       this.media.addEventListener(type, () => this.showTime());
     }
     this.showTime();
@@ -248,6 +254,11 @@ export class AudioViewer extends MediaViewer {
           ? setIcon(play, runIcon, trans.__('Play'))
           : setIcon(play, pauseIcon, trans.__('Pause'))
       );
+    }
+    // A wait for data says so on the message line and clears once it arrives
+    // (DEF-MEDIA-68-BUFFER-CUE).
+    for (const type of ['waiting', 'playing', 'canplay', 'pause', 'seeked']) {
+      this.media.addEventListener(type, () => this.showBuffering());
     }
     // As the video viewer shows them: the slider at 0 while muted, and the
     // muted icon and the name Unmute also at volume 0. The element keeps both
@@ -284,8 +295,8 @@ export class AudioViewer extends MediaViewer {
     });
   }
 
-  // The player of the waveform; null before the first one, and above the
-  // limit until the peaks arrive or when they do not.
+  // The player of the waveform; null until the peaks arrive, and when they do
+  // not.
   wavesurfer: WaveSurfer | null = null;
 
   async load(): Promise<void> {
@@ -295,11 +306,8 @@ export class AudioViewer extends MediaViewer {
     this.showLoading();
     this.peaks.hidden = true;
     this.wave.hidden = false;
-    // Until the file and the player are here a failure is the server's, then
-    // the file's.
-    let downloaded = false;
     try {
-      const size = await this.readSize();
+      await this.readSize();
       const url = await this.contents.getDownloadUrl(this.context.path);
       if (this.isDisposed || token !== this.loads) {
         return;
@@ -307,88 +315,26 @@ export class AudioViewer extends MediaViewer {
       this.showDetails();
       // The bar under the waveform plays the file, not the browser's control.
       this.media.controls = false;
-      const large = !drawsWaveform(size);
-      this.view.hidden = large;
+      this.view.hidden = true;
       // There is no waveform to zoom yet, so the buttons would do nothing.
       this.setZoomEnabled(false);
-      if (large) {
-        // Played from the file URL: seeking needs a server that answers byte
-        // ranges, as the stock file handler does. The waveform is drawn from
-        // the peaks of the server part, so the browser never downloads the
-        // file.
-        this.wavesurfer?.destroy();
-        this.wavesurfer = null;
-        this.playUrl(url);
-        await this.drawPeaks(token);
-        return;
-      }
-      // Fetched once and handed over as a blob: the player then seeks in
-      // memory, also on a server that ignores byte ranges.
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}`);
-      }
-      const blob = await response.blob();
-      const modules = await loadPlayer();
-      downloaded = true;
-      // A reload or a close while this one was fetching supersedes it.
-      if (this.isDisposed || token !== this.loads) {
-        return;
-      }
-      // One player per tab: a new player would load the element's previous
-      // source on its own, so a reload hands the existing one the new blob.
-      this.wavesurfer ??= this.createPlayer(modules);
-      // The file plays before the decode ends: the cover goes when it can, and
-      // the spinner of the waveform stands in the waveform's place meanwhile.
-      // A file the browser cannot play keeps the cover until its error.
-      this.media.addEventListener(
-        'loadedmetadata',
-        () => {
-          if (token === this.loads) {
-            this.showMessage('');
-            this.wave.hidden = true;
-            this.showPeaks();
-          }
-        },
-        { once: true }
-      );
-      // The player measures the waveform's width when it draws, right after
-      // the decode, so the waveform shows again first.
-      this.wavesurfer.once('decode', () => {
-        if (token === this.loads) {
-          this.peaks.hidden = true;
-          this.wave.hidden = false;
-          this.setZoomEnabled(true);
-        }
-      });
-      await this.wavesurfer.loadBlob(blob);
-      this.showMessage('');
+      // Played from the file URL: seeking needs a server that answers byte
+      // ranges, as the stock file handler does. The waveform is drawn from
+      // the peaks of the server part, so the browser never downloads the
+      // file.
+      this.wavesurfer?.destroy();
+      this.wavesurfer = null;
+      this.playUrl(url);
+      await this.drawPeaks(token);
     } catch (reason) {
-      // AbortError: a newer load of the same player took over.
-      if (
-        !this.isDisposed &&
-        token === this.loads &&
-        (reason as Error).name !== 'AbortError'
-      ) {
-        if (downloaded) {
-          // The element reads a file before wavesurfer decodes it, and reports
-          // an unreadable one itself, so this file plays without a waveform,
-          // from the bar under it.
-          console.error('Audio viewer: the waveform was not drawn', reason);
-          // The waveform box stays hidden, as above the limit.
-          this.peaks.hidden = true;
-          this.setZoomEnabled(false);
-          this.showMessage(this.trans.__('The waveform could not be drawn.'));
-        } else {
-          this.fail(reason);
-        }
+      if (!this.isDisposed && token === this.loads) {
+        this.fail(reason);
       }
     }
   }
 
   protected fail(reason: unknown): void {
-    // Emptied and kept, because a new player would load the element's previous
-    // source on its own.
+    // No waveform of the old file stays; the next load makes a new player.
     this.wavesurfer?.empty();
     this.setZoomEnabled(false);
     this.view.textContent = '';
@@ -451,7 +397,6 @@ export class AudioViewer extends MediaViewer {
       return;
     }
     this.themeObserver.disconnect();
-    // Revokes the blob URL it made for the media element.
     this.wavesurfer?.destroy();
     this.wavesurfer = null;
     this.peaksRequest.abort();
@@ -565,9 +510,9 @@ export class AudioViewer extends MediaViewer {
       { default: Regions },
       { default: Zoom }
     ]: Awaited<ReturnType<typeof loadPlayer>>,
-    // The server's peaks of a file over the limit. A player made for an element
-    // with a source downloads that source to decode it, unless it has them.
-    peaks?: { peaks: Float32Array[]; duration: number }
+    // The server's peaks. A player made for an element with a source downloads
+    // that source to decode it, unless it has them.
+    peaks: { peaks: Float32Array[]; duration: number }
   ): WaveSurfer {
     this.createMinimap = () =>
       Minimap.create({
@@ -703,6 +648,31 @@ export class AudioViewer extends MediaViewer {
     // The maximum first, so the value is not clamped to the old one.
     this.seek.max = String(Number.isFinite(duration) ? duration : 0);
     this.seek.value = String(currentTime);
+    // The track: the played part, then the parts the browser holds past it
+    // (ACC-AUDIO-132-BUFFERED). The 16 px thumb's centre runs from 8 px
+    // inside one end to 8 px inside the other, so a time is drawn there. The
+    // fill reaches 3:1 against the track and the played part in both themes.
+    const x = (fraction: number) => `calc(8px + (100% - 16px) * ${fraction})`;
+    const played =
+      Number.isFinite(duration) && duration > 0 ? currentTime / duration : 0;
+    const stops = [`var(--jp-brand-color1) 0 ${x(played)}`];
+    let end = x(played);
+    for (const [from, to] of bufferedParts(
+      this.media.buffered,
+      duration,
+      currentTime
+    )) {
+      stops.push(
+        `var(--jp-layout-color3) ${end} ${x(from)}`,
+        `var(--jp-inverse-layout-color1) ${x(from)} ${x(to)}`
+      );
+      end = x(to);
+    }
+    stops.push(`var(--jp-layout-color3) ${end} 100%`);
+    this.seek.style.setProperty(
+      '--jp-advanced-media-viewer-seek-track',
+      `linear-gradient(to right, ${stops.join(', ')})`
+    );
     this.seek.setAttribute(
       'aria-valuetext',
       this.trans.__(
@@ -711,6 +681,23 @@ export class AudioViewer extends MediaViewer {
         formatTime(duration, 0)
       )
     );
+  }
+
+  // The direct write keeps the Loading cover up; showMessage() would hide it.
+  private showBuffering(): void {
+    const buffering = this.trans.__('Buffering...');
+    if (this.media.error) {
+      return;
+    }
+    if (
+      !this.media.paused &&
+      this.media.readyState < 3 &&
+      !this.message.textContent
+    ) {
+      this.message.textContent = buffering;
+    } else if (this.message.textContent === buffering) {
+      this.message.textContent = '';
+    }
   }
 
   // A button under the waveform. The press leaves the focus on the viewer, as
@@ -771,7 +758,7 @@ export class AudioViewer extends MediaViewer {
   private wave: HTMLElement;
   private peaks: HTMLElement;
   private drawing: HTMLElement;
-  // The channels of a file over the limit, from the server.
+  // The channels of the file, from the server.
   private sourceChannels: number | undefined;
   private time: HTMLElement;
   private view: HTMLElement;

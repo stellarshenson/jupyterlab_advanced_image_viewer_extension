@@ -1,10 +1,4 @@
-import {
-  drawsWaveform,
-  formatSize,
-  formatTime,
-  readPeaks,
-  WAVEFORM_LIMIT
-} from '../mediautil';
+import { bufferedParts, formatSize, formatTime, readPeaks } from '../mediautil';
 import { stepPath } from '../navigate';
 
 describe('formatTime', () => {
@@ -56,16 +50,37 @@ describe('formatSize', () => {
   });
 });
 
-// ACC-AUDIO-54: a file over 100 MB is not decoded in the browser.
-describe('the waveform limit', () => {
-  it('is 100 MB', () => {
-    expect(WAVEFORM_LIMIT).toBe(104857600);
+// ACC-AUDIO-132-BUFFERED: the fill of the seek slider.
+describe('bufferedParts', () => {
+  const ranges = (...pairs: [number, number][]) => ({
+    length: pairs.length,
+    start: (i: number) => pairs[i][0],
+    end: (i: number) => pairs[i][1]
   });
 
-  it('decodes in the browser up to the limit and not above', () => {
-    expect(drawsWaveform(0)).toBe(true);
-    expect(drawsWaveform(WAVEFORM_LIMIT)).toBe(true);
-    expect(drawsWaveform(WAVEFORM_LIMIT + 1)).toBe(false);
+  it('gives no fill without ranges', () => {
+    expect(bufferedParts(ranges(), 60, 0)).toEqual([]);
+  });
+
+  it('gives each range as fractions of the duration', () => {
+    expect(bufferedParts(ranges([0, 15], [30, 45]), 60, 0)).toEqual([
+      [0, 0.25],
+      [0.5, 0.75]
+    ]);
+  });
+
+  it('shows a range under the played part only past the played end', () => {
+    expect(bufferedParts(ranges([0, 15], [30, 45]), 60, 6)).toEqual([
+      [0.1, 0.25],
+      [0.5, 0.75]
+    ]);
+    expect(bufferedParts(ranges([0, 15]), 60, 20)).toEqual([]);
+  });
+
+  it('gives no fill while the duration is unknown', () => {
+    for (const duration of [0, NaN, Infinity]) {
+      expect(bufferedParts(ranges([0, 15]), duration, 0)).toEqual([]);
+    }
   });
 });
 

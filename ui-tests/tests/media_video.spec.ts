@@ -20,7 +20,7 @@ const SHORT = readFileSync(path.join(__dirname, 'fixtures', 'clip-short.mp4'));
 const NAME = 'clip.mp4';
 const FACTORY = 'AdvancedVideoViewer';
 const SHOWN = '.jp-MainAreaWidget:not(.lm-mod-hidden)';
-// WAVEFORM_LIMIT of src/mediautil.ts.
+// 100 MB, the size the large-file test pads past.
 const LIMIT = 100 * 1024 * 1024;
 const LOST =
   'The connection to the server was lost; press Reload to try again.';
@@ -117,14 +117,6 @@ test.describe('Video viewer', () => {
       };
     }, SHOWN);
 
-  // The contents API reports the file over the limit, so it plays from its URL.
-  const overLimit = (page: any, name = NAME) =>
-    page.route(`**/api/contents/**/${name}?*`, async (route: any) => {
-      const response = await route.fetch();
-      const model = await response.json();
-      await route.fulfill({ response, json: { ...model, size: 2 * LIMIT } });
-    });
-
   // A 2.5 s browser recording as base64: a WebM with no duration in its header,
   // with sound only or with a picture from a canvas as well.
   const record = (page: any, picture: boolean): Promise<string> =>
@@ -183,6 +175,57 @@ test.describe('Video viewer', () => {
           .color,
       SHOWN
     );
+
+  // The colour of the middle row of Plyr's seek bar at each of `fractions` of
+  // its width, from a screenshot decoded in the page. Plyr draws the played
+  // part and its buffer bar over the whole width of the range input.
+  const seekBarColours = async (
+    page: any,
+    fractions: number[]
+  ): Promise<number[][]> => {
+    const seek = viewer(page).locator('[data-plyr="seek"]');
+    const box = (await seek.boundingBox())!;
+    const shot: Buffer = await seek.screenshot();
+    return page.evaluate(
+      async ([base64, xs, width]: [string, number[], number]) => {
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const bitmap = await createImageBitmap(
+          new Blob([bytes], { type: 'image/png' })
+        );
+        const context = new OffscreenCanvas(
+          bitmap.width,
+          bitmap.height
+        ).getContext('2d')!;
+        context.drawImage(bitmap, 0, 0);
+        const scale = bitmap.width / width;
+        return xs.map(x =>
+          Array.from(
+            context
+              .getImageData(
+                Math.round(x * scale),
+                Math.floor(bitmap.height / 2),
+                1,
+                1
+              )
+              .data.slice(0, 3)
+          )
+        );
+      },
+      [shot.toString('base64'), fractions.map(f => f * box.width), box.width]
+    );
+  };
+  // WCAG contrast of two opaque colours.
+  const contrast = (one: number[], two: number[]): number => {
+    const luminance = (rgb: number[]) => {
+      const [r, g, b] = rgb.map(v => {
+        v /= 255;
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const [a, b] = [luminance(one), luminance(two)];
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  };
 
   const expectInside = (
     inner: { x: number; right: number; y: number; bottom: number },
@@ -299,20 +342,11 @@ test.describe('Video viewer', () => {
       .toBe(true);
   });
 
-  // ACC-VIDEO-57-SEEK. The file is served as the owner's server serves
-  // /files/ (DEF-MEDIA-7-SEEK): status 200, the whole file, no Accept-Ranges.
-  // A player on that URL cannot seek; the viewer seeks in a blob of it.
+  // ACC-VIDEO-57-SEEK
   test('ACC-VIDEO-57-SEEK a click on the seek bar moves playback to that point', async ({
     page,
     tmpPath
   }) => {
-    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'video/mp4' },
-        body: CLIP
-      });
-    });
     await open(page, `${tmpPath}/${NAME}`);
 
     for (const fraction of [0.1, 0.25, 0.5, 0.75, 0.9]) {
@@ -424,14 +458,16 @@ test.describe('Video viewer', () => {
     }
   });
 
-  // DEF-MEDIA-27-WEBM-DURATION
-  test('DEF-MEDIA-27-WEBM-DURATION a browser recording shows its length and seeks', async ({
+  // DEF-MEDIA-30-LARGE-RECORDING. The viewer runs no duration scan, which
+  // would read the whole file from the server, so the length stays unknown.
+  // The sound-only recording shows no frame size (DEF-MEDIA-26).
+  test('DEF-MEDIA-30-LARGE-RECORDING a browser recording with no length in its header plays from its URL and shows --:--', async ({
     page,
     tmpPath
   }) => {
     for (const [file, picture, read] of [
-      ['recording.webm', true, /^WEBM · 320×180 · .+ KB · 00:0[23]$/],
-      ['voice.webm', false, /^WEBM · [^×]+ KB · 00:0[23]$/]
+      ['recording.webm', true, /^WEBM · 320×180 · .+ KB · --:--$/],
+      ['voice.webm', false, /^WEBM · [^×]+ KB · --:--$/]
     ] as const) {
       await page.contents.uploadContent(
         await record(page, picture),
@@ -440,44 +476,17 @@ test.describe('Video viewer', () => {
       );
       await open(page, `${tmpPath}/${file}`);
       await expect(details(page)).toHaveText(read);
-      await expect.poll(() => currentTime(page)).toBe(0);
-      const duration: number = await media(page).evaluate(
-        (m: HTMLMediaElement) => m.duration
-      );
-      expect(duration).toBeGreaterThan(2);
-      expect(duration).toBeLessThan(4);
-
+      const player = await playerInfo(page);
+      expect(player.src).toContain('/files/');
+      expect(player.duration).toBe(Infinity);
       const box = (await viewer(page)
         .locator('[data-plyr="seek"]')
         .boundingBox())!;
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-      await expect
-        .poll(() => currentTime(page))
-        .toBeGreaterThan(duration / 2 - 0.5);
-      expect(await currentTime(page)).toBeLessThan(duration / 2 + 0.5);
+      await page.waitForTimeout(500);
+      expect(await currentTime(page)).toBe(0);
+      await expect(message(page)).toHaveText('');
     }
-  });
-
-  // DEF-MEDIA-30-LARGE-RECORDING. The wait gives a duration scan time to end: it
-  // only moves the duration away from Infinity if it runs.
-  test('DEF-MEDIA-30-LARGE-RECORDING a browser recording over 100 MB plays from its URL with no duration scan', async ({
-    page,
-    tmpPath
-  }) => {
-    await page.contents.uploadContent(
-      await record(page, true),
-      'base64',
-      `${tmpPath}/large.webm`
-    );
-    await overLimit(page, 'large.webm');
-    await open(page, `${tmpPath}/large.webm`);
-    await page.waitForTimeout(1000);
-    const player = await playerInfo(page);
-    expect(player.src).toContain('/files/');
-    expect(player.duration).toBe(Infinity);
-    expect(await currentTime(page)).toBe(0);
-    await expect(message(page)).toHaveText('');
-    await expect(details(page)).toHaveText(/--:--$/);
   });
 
   // ACC-VIDEO-59-DETAILS
@@ -522,6 +531,118 @@ test.describe('Video viewer', () => {
     expect(dark).not.toBe(light);
     await expect.poll(() => seekColour(page)).toBe(dark);
     await accent(dark);
+  });
+
+  // ACC-MEDIA-131-STREAM-ALL. The test server's file handler answers byte
+  // ranges. Tornado answers a range that covers the whole file, as Chromium's
+  // first request asks, with 200 and Accept-Ranges.
+  test('ACC-MEDIA-131-STREAM-ALL every video file plays from its file URL with byte ranges', async ({
+    page,
+    tmpPath
+  }) => {
+    const files: any[] = [];
+    page.on('request', (r: any) => {
+      if (r.url().includes('/files/') && r.url().includes(NAME)) {
+        files.push(r);
+      }
+    });
+    await open(page, `${tmpPath}/${NAME}`);
+    const { src } = await playerInfo(page);
+    expect(src).toContain('/files/');
+    expect(src.startsWith('blob:')).toBe(false);
+    expect(files.length).toBeGreaterThan(0);
+    for (const request of files) {
+      expect(request.resourceType(), request.url()).toBe('media');
+    }
+    expect((await files[0].allHeaders())['range']).toBe('bytes=0-');
+    const answer = await files[0].response();
+    expect([200, 206]).toContain(answer.status());
+    expect((await answer.allHeaders())['accept-ranges']).toBe('bytes');
+  });
+
+  // ACC-VIDEO-133-BUFFERED. The first file request gets the first 96 KiB,
+  // about half of the file, and every later one is held. Chromium plays only
+  // whole blocks of 32 KiB, so the part ends at a block. Playback, not a
+  // seek, moves the played part: a seek aborts the read held at the end of
+  // the part, and Chromium then counts the whole file as buffered.
+  test('ACC-VIDEO-133-BUFFERED the seek bar shows its buffer bar, at 3:1 against the track and the played part', async ({
+    page,
+    tmpPath
+  }) => {
+    const end = 3 * 32 * 1024 - 1;
+    let served = 0;
+    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
+      if (served++) {
+        return;
+      }
+      await route.fulfill({
+        status: 206,
+        headers: {
+          'Content-Type': 'video/mp4',
+          'Accept-Ranges': 'bytes',
+          'Content-Range': `bytes 0-${end}/${CLIP.length}`
+        },
+        body: CLIP.subarray(0, end + 1)
+      });
+    });
+    await open(page, `${tmpPath}/${NAME}`);
+    await viewer(page).locator('[data-plyr="play"]').click();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(2);
+    await media(page).evaluate((m: HTMLMediaElement) => m.pause());
+    const time = await currentTime(page);
+    const ranges: number[][] = await media(page).evaluate(
+      (m: HTMLMediaElement) =>
+        Array.from({ length: m.buffered.length }, (_, i) => [
+          m.buffered.start(i),
+          m.buffered.end(i)
+        ])
+    );
+    const buffered = ranges[0]?.[1] ?? 0;
+    const state = JSON.stringify({ served, ranges });
+    expect(buffered, state).toBeGreaterThan(3);
+    expect(buffered, state).toBeLessThan(18);
+    const bar = viewer(page).locator('.plyr__progress__buffer');
+    await expect
+      .poll(async () =>
+        Math.abs(
+          (await bar.evaluate((el: HTMLProgressElement) => el.value)) -
+            (buffered / 20) * 100
+        )
+      )
+      .toBeLessThan(2);
+    await expect(bar).toBeVisible();
+    expect((await bar.boundingBox())!.width).toBeGreaterThan(0);
+
+    // The played part at half the played time, the buffered part midway
+    // between the played time and the buffered end, the track at 90%.
+    const at = [time / 2 / 20, (time + buffered) / 2 / 20, 0.9];
+    const [lightPlayed] = await seekBarColours(page, at);
+    for (const theme of ['light', 'dark']) {
+      if (theme === 'dark') {
+        await page.theme.setDarkTheme();
+        await expect
+          .poll(async () => (await seekBarColours(page, at))[0])
+          .not.toEqual(lightPlayed);
+      }
+      const [played, fill, track] = await seekBarColours(page, at);
+      const colours = `${theme} ${JSON.stringify({ played, fill, track })}`;
+      expect(contrast(fill, track), colours).toBeGreaterThanOrEqual(3);
+      expect(contrast(fill, played), colours).toBeGreaterThanOrEqual(3);
+    }
+
+    // Playback drains into the held read and the player enters Plyr's loading
+    // state, which paints the buffer element from
+    // --plyr-video-progress-buffered-background, white here. The grey track
+    // must survive that state, or the white buffered fill sits on white at 1:1.
+    await viewer(page).locator('[data-plyr="play"]').click();
+    await expect(viewer(page).locator('.plyr')).toHaveClass(/plyr--loading/, {
+      timeout: 30000
+    });
+    await expect
+      .poll(() =>
+        bar.evaluate((el: Element) => getComputedStyle(el).backgroundColor)
+      )
+      .toBe('rgb(97, 97, 97)');
   });
 
   // ACC-KEYS-61-ARROWS
@@ -845,8 +966,8 @@ test.describe('Video viewer', () => {
       .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
       .toBeCloseTo(10, 0);
     await expect(details(page)).toHaveText('MP4 · 320×180 · 91.7 KB · 00:10');
-    // Still the downloaded copy, not the file URL.
-    expect((await playerInfo(page)).src.startsWith('blob:')).toBe(true);
+    // Still the file URL (ACC-MEDIA-131-STREAM-ALL).
+    expect((await playerInfo(page)).src).toContain('/files/');
   });
 
   // DEF-MEDIA-16-RELOAD-DELETED
@@ -1081,60 +1202,6 @@ test.describe('Video viewer', () => {
     }
   });
 
-  // ACC-MEDIA-74-BUFFER. The same owner server as above. Up to 100 MB the
-  // viewer downloads the file once and plays that copy, so the player has
-  // the whole length to seek in; a player on the plain URL has seekable
-  // [0,0]. Above 100 MB it plays from the file URL itself.
-  test('ACC-MEDIA-74-BUFFER video up to 100 MB is downloaded once and seeks without byte ranges', async ({
-    page,
-    tmpPath
-  }) => {
-    let served = 0;
-    await page.route(`**/files/**/${NAME}*`, async (route: any) => {
-      served++;
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'video/mp4' },
-        body: CLIP
-      });
-    });
-    await open(page, `${tmpPath}/${NAME}`);
-    const player = await playerInfo(page);
-    expect(served).toBe(1);
-    expect(player.src.startsWith('blob:')).toBe(true);
-    expect(player.seekable).toBeCloseTo(20, 0);
-    await seek(page, 10);
-    expect(await currentTime(page)).toBeCloseTo(10, 0);
-
-    // A click at half of the seek bar lands at half of the file.
-    const box = (await viewer(page)
-      .locator('[data-plyr="seek"]')
-      .boundingBox())!;
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    await expect.poll(() => currentTime(page)).toBeGreaterThan(9.5);
-    expect(await currentTime(page)).toBeLessThan(10.5);
-
-    // Over the limit the file plays from its URL and is not downloaded.
-    await page.route(`**/api/contents/**/${NAME}?*`, async (route: any) => {
-      const response = await route.fetch();
-      const model = await response.json();
-      await route.fulfill({
-        response,
-        json: { ...model, size: 200 * 1024 * 1024 }
-      });
-    });
-    await page
-      .locator(
-        '#jp-main-dock-panel .lm-TabBar-tab.lm-mod-current .lm-TabBar-tabCloseIcon'
-      )
-      .click();
-    await expect(viewer(page)).toHaveCount(0);
-    await open(page, `${tmpPath}/${NAME}`);
-    const large = await playerInfo(page);
-    expect(large.src).toContain('/files/');
-    expect(large.src.startsWith('blob:')).toBe(false);
-  });
-
   // DEF-MEDIA-22-LARGE-VIDEO. No route fakes the size: a free box after the
   // movie, which the format ignores, pads the fixture past the limit. The file
   // is sparse and lies in the temporary server root.
@@ -1197,7 +1264,6 @@ test.describe('Video viewer', () => {
     page,
     tmpPath
   }) => {
-    await overLimit(page);
     let asked = (): void => undefined;
     const requested = new Promise<void>(resolve => (asked = resolve));
     await page.route(`**/files/**/${NAME}*`, () => asked());
@@ -1271,13 +1337,13 @@ test.describe('Video viewer', () => {
     await expect(spin).toBeHidden();
   });
 
-  // DEF-MEDIA-22-LARGE-VIDEO. Before the metadata Chromium reports a failed
-  // request as an unsupported source, the code a damaged file also gets.
-  test('DEF-MEDIA-22-LARGE-VIDEO a failed file request says the connection was lost, and Reload plays the file', async ({
+  // DEF-MEDIA-22-LARGE-VIDEO and ACC-MEDIA-134-LOST-CONNECTION. Before the
+  // metadata Chromium reports a failed request as an unsupported source, the
+  // code a damaged file also gets.
+  test('DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a failed file request says the connection was lost, and Reload plays the file', async ({
     page,
     tmpPath
   }) => {
-    await overLimit(page);
     const files = `**/files/**/${NAME}*`;
     await page.route(files, (route: any) => route.abort('failed'));
     await page.filebrowser.open(`${tmpPath}/${NAME}`);
@@ -1289,17 +1355,17 @@ test.describe('Video viewer', () => {
       .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
       .toBeCloseTo(20, 0);
     await expect(message(page)).toHaveText('');
-    await expect(details(page)).toHaveText('MP4 · 320×180 · 200.0 MB · 00:20');
+    await expect(details(page)).toHaveText('MP4 · 320×180 · 181.6 KB · 00:20');
   });
 
-  // DEF-MEDIA-22-LARGE-VIDEO. After the metadata Chromium retries a failed
-  // request for about 30 s, then reports MEDIA_ERR_NETWORK.
-  test('DEF-MEDIA-22-LARGE-VIDEO a connection lost after the metadata says so, and Reload plays the file', async ({
+  // DEF-MEDIA-22-LARGE-VIDEO and ACC-MEDIA-134-LOST-CONNECTION. After the
+  // metadata Chromium retries a failed request for about 30 s, then reports
+  // MEDIA_ERR_NETWORK.
+  test('DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a connection lost after the metadata says so, and Reload plays the file', async ({
     page,
     tmpPath
   }) => {
     test.setTimeout(120000);
-    await overLimit(page);
     const files = `**/files/**/${NAME}*`;
     let served = 0;
     await page.route(files, async (route: any) => {

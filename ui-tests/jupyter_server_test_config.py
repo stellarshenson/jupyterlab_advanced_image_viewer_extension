@@ -29,5 +29,20 @@ c.GalaxaHubMotd.open_on_start = False
 # file URL gets 404. This narrower section wins whichever file loads last.
 c.FileContentsManager.files_handler_params = {"path": c.ServerApp.root_dir}
 
+# This extension ships the image fit that jupyterlab_fit_image_size_extension
+# used to supply. The test pages disable that extension, so its stylesheet never
+# loads and the suite measures this extension's fit alone, as in CI where it is
+# not installed. A no-op where it is not installed.
+FIT_EXTENSION = "@stellarshenson/jupyterlab-fit-image-size-extension"
+
+
+def _disable_fit_extension(handler, page_config):
+    if FIT_EXTENSION not in page_config["disabledExtensions"]:
+        page_config["disabledExtensions"].append(FIT_EXTENSION)
+    return page_config
+
+
+c.ServerApp.tornado_settings.update({"page_config_hook": _disable_fit_extension})
+
 # Uncomment to set server log level to debug level
 # c.ServerApp.log_level = "DEBUG"

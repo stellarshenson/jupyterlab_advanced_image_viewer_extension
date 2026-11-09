@@ -60,6 +60,7 @@ Every image opens fitted to the panel, matching the stock viewer pixel for pixel
   - log: 2026-09-02T12:20:41Z @kj closed: closed on recorded evidence from the shipped 1.0.11 verification
   - log: 2026-09-30T14:28:04Z @kj edited evidence "JOURNAL entry 4 records growth SVG 918x69 and warping 918x423 - both flush to the host width 918 on one axis and under the host height 853 on the other [JOURNAL.md entry 4; host 918x853 in docs/image_fit_reference.md]" -> "2026-09-30 A/B at 1500x950 vs stock (this extension disabled) on image-warping-correction-2.png, image-2.png, 03_growth_models.svg, 05_operations.svg: identical img rects, max diff 0.0 px; wide PNG and both SVGs flush to the host width 1170, under the host height 829"
   - log: 2026-09-30T15:17:53Z @kj edited evidence "2026-09-30 A/B at 1500x950 vs stock (this extension disabled) on image-warping-correction-2.png, image-2.png, 03_growth_models.svg, 05_operations.svg: identical img rects, max diff 0.0 px; wide PNG and both SVGs flush to the host width 1170, under the host height 829" -> "2026-09-30 A/B vs stock on four reference files: identical img rects, max diff 0.0 px; Galata 'the image opens whole, at its aspect, and fits the host' checks the SVG half, red when the img width is capped; raster half has no CI spec: CI lacks jupyterlab_fit_image_size_extension"
+  - log: 2026-11-07T12:21:31Z @kj the image fit rule of jupyterlab_fit_image_size_extension 1.0.9 moves into this extension's stylesheet; the raster half gets a Galata test whose server disables @stellarshenson/jupyterlab-fit-image-size-extension in its own page config, filed as ACC-FIT-125-STANDALONE
 - [x] `ACC-FIT-4` **No raster upscaling** - HIGH; a raster smaller than the host renders at natural size (`img.w==naturalW`, `img.h==naturalH`, +-1px) and is not enlarged
   - evidence: 2026-09-30 A/B vs stock: image-2.png renders at its natural 314x306, max diff 0.0 px; Galata 'the image opens whole, at its aspect, and fits the host' asserts a 200x150 PNG renders at 200x150 within 1 px, 30/30 local
   - test: open a raster smaller than the host, compare rendered size against natural size
@@ -104,6 +105,41 @@ Every image opens fitted to the panel, matching the stock viewer pixel for pixel
   - mechanism: 2026-10-05T16:18:12Z @kj stock JupyterLab registers no avif file type; the extension adds one (image/avif, base64) bound to the stock Image factory, and lists .avif among the image and raster extensions
   - log: 2026-10-05T16:18:12Z @kj added
   - log: 2026-10-05T16:34:20Z @kj closed
+- [x] `ACC-FIT-125-STANDALONE` **Viewer fits without the fit extension** - CRITICAL; with @stellarshenson/jupyterlab-fit-image-size-extension absent, an image larger than the viewer still opens in the contain fit: whole, at its aspect, flush to the host on one axis (ACC-FIT-1, ACC-FIT-2, ACC-FIT-3)
+  - evidence: Galata image_fit.spec.ts 'the image viewer fits an image larger than the panel' and 'the fit rule comes from this extension alone' passed: logs/fit-named.log 37/37, logs/fit-suite.log 171/171, fit extension disabled in the test server, red without style/fit.css (logs/fit-red.log); A/B fit extension on vs off: 3000x2000 viewer image 1069.98x713.33 in both (tmp/workflows/image-fit/03-verify.json)
+  - test: Galata server with @stellarshenson/jupyterlab-fit-image-size-extension disabled in its own page config; open generated 3000x300 and 300x3000 PNGs; assert each img rect inside the host rect, flush to host width or height within 2px, aspect within 1%
+  - test-tags: E2E
+  - mechanism: 2026-11-07T12:21:15Z @kj the .jp-ImageViewer img rule of jupyterlab_fit_image_size_extension 1.0.9 (max-width and max-height 100%, width and height auto, object-fit contain, all !important) ships verbatim in this extension's stylesheet; stock JupyterLab 4.6 has no fit rule for the viewer
+  - log: 2026-11-07T12:21:15Z @kj added
+  - log: 2026-11-07T13:32:36Z @kj closed: closed: whole Galata suite 171/171 with the fit extension disabled in the test server
+- [x] `ACC-FIT-126-OUTPUT-IMG` **Notebook output image fits the output width** - HIGH; a raster image in a notebook output renders min(naturalW, output width) wide with its aspect kept: an image wider than the output shrinks to the output width, a narrower one keeps its natural size
+  - evidence: Galata image_fit.spec.ts 'a notebook PNG output fits the output width' passed: logs/fit-named.log 37/37, logs/fit-suite.log 171/171, fit extension disabled in the test server, red without style/fit.css (logs/fit-red.log); A/B fit extension on vs off: 3000x2000 output PNG 967.98x645.33 of 968 wide, 200x150 kept, in both (tmp/workflows/image-fit/03-verify.json)
+  - test: run a cell displaying a generated 3000x300 PNG and a 200x150 PNG; assert the large img rect is the .jp-OutputArea-output content width wide within 2px and 10:1 within 1%, the small img rect 200x150 within 1px
+  - test-tags: E2E
+  - mechanism: 2026-11-07T12:21:27Z @kj stock JupyterLab 4.6 .jp-RenderedImage img already sets max-width 100%, height auto; the migrated .jp-OutputArea-output img and .jp-RenderedImage img rules repeat it with !important, which also overrides the stock max-width: none of an unconfined image
+  - log: 2026-11-07T12:21:27Z @kj added
+  - log: 2026-11-07T13:32:36Z @kj closed: closed: whole Galata suite 171/171 with the fit extension disabled in the test server
+- [x] `ACC-FIT-127-OUTPUT-SVG` **Notebook SVG output fits the output width** - HIGH; an SVG in a notebook output renders min(SVG width, output width) wide with its viewBox aspect kept: an SVG wider than the output shrinks to the output width, a narrower one keeps its size
+  - evidence: Galata image_fit.spec.ts 'a notebook SVG output fits the output width' passed: logs/fit-named.log 37/37, logs/fit-suite.log 171/171, fit extension disabled in the test server, red without style/fit.css (logs/fit-red.log); A/B fit extension on vs off: 3000x300 SVG output 967.97x96.80 in both (tmp/workflows/image-fit/03-verify.json)
+  - test: run a cell displaying generated SVGs of width 3000 height 300 viewBox 0 0 3000 300 and width 200 height 150; assert the large img rect is the .jp-OutputArea-output content width wide within 2px and 10:1 within 1%, the small img rect 200x150 within 1px
+  - test-tags: E2E
+  - mechanism: 2026-11-07T12:21:27Z @kj JupyterLab 4.6 renders an SVG output as an <img> inside .jp-RenderedSVG, which no stock rule fits; the migrated .jp-OutputArea-output img rule is its only fit
+  - log: 2026-11-07T12:21:27Z @kj added
+  - log: 2026-11-07T13:32:36Z @kj closed: closed: whole Galata suite 171/171 with the fit extension disabled in the test server
+- [x] `ACC-FIT-128-MARKDOWN-IMG` **Markdown cell image fits the cell width** - HIGH; an image in a rendered markdown cell renders min(naturalW, cell width) wide with its aspect kept: an image wider than the cell shrinks to the cell width, a narrower one keeps its natural size
+  - evidence: Galata image_fit.spec.ts 'a markdown cell image fits the cell width' passed: logs/fit-named.log 37/37, logs/fit-suite.log 171/171, fit extension disabled in the test server; A/B fit extension on vs off: 3000x2000 markdown image 940.98x627.33 in both (tmp/workflows/image-fit/03-verify.json)
+  - test: upload a generated 3000x300 PNG and a 200x150 PNG, render a markdown cell showing both; assert the large img rect is the .jp-RenderedMarkdown content width wide within 2px and 10:1 within 1%, the small img rect 200x150 within 1px
+  - test-tags: E2E
+  - mechanism: 2026-11-07T12:21:27Z @kj stock JupyterLab 4.6 .jp-RenderedHTMLCommon img already sets max-width 100%, height auto; the migrated .jp-RenderedMarkdown img rule repeats it with !important
+  - log: 2026-11-07T12:21:27Z @kj added
+  - log: 2026-11-07T13:32:36Z @kj closed: closed: whole Galata suite 171/171 with the fit extension disabled in the test server
+- [x] `ACC-FIT-129-HTML-IMG` **HTML output image fits the output width** - MEDIUM; an <img> in an HTML output renders min(naturalW, output width) wide with its aspect kept: an image wider than the output shrinks to the output width, a narrower one keeps its natural size
+  - evidence: Galata image_fit.spec.ts 'an HTML output image fits the output width' passed: logs/fit-named.log 37/37, logs/fit-suite.log 171/171, fit extension disabled in the test server; A/B fit extension on vs off: 3000x2000 HTML output image 948x632 in both (tmp/workflows/image-fit/03-verify.json)
+  - test: run a cell displaying HTML with <img> tags of a generated 3000x300 PNG and a 200x150 PNG; assert the large img rect is the .jp-OutputArea-output content width wide within 2px and 10:1 within 1%, the small img rect 200x150 within 1px
+  - test-tags: E2E
+  - mechanism: 2026-11-07T12:21:27Z @kj stock JupyterLab 4.6 .jp-RenderedHTMLCommon img already sets max-width 100%, height auto; the migrated .jp-RenderedHTMLCommon img and .jp-OutputArea-output img rules repeat it with !important
+  - log: 2026-11-07T12:21:27Z @kj added
+  - log: 2026-11-07T13:32:36Z @kj closed: closed: whole Galata suite 171/171 with the fit extension disabled in the test server
 
 ## Zoom `ZOOM`
 
@@ -475,13 +511,13 @@ Audio files open in a waveform player built on wavesurfer.js
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
   - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-AUDIO-53-DETAILS the toolbar shows format, channels, size and duration passes, Galata 76/76 local" -> "1 test titled ACC-AUDIO-53-DETAILS in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
-- [x] `ACC-AUDIO-54-LARGE` **Large audio file** - HIGH; a file over 100 MB shows the waveform, overview strip, time ruler, time under the mouse, zoom and loop region as a file under 100 MB does, from peaks the server computes; the browser never downloads or decodes the whole file and plays it from the file URL; with no peaks, the control row and the seek slider stay, as ACC-WAVE-121-FALLBACK states
-  - evidence: Galata media_audio.spec.ts:1161 'ACC-AUDIO-54-LARGE a file over 100 MB shows the waveform from the peaks of the server and is never downloaded' passed; Jest 'the waveform limit' in src/__tests__/mediautil.spec.ts passed (Jest 50/50 in logs/audio-w-final-test.log); whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+- [x] `ACC-AUDIO-54-LARGE` **Audio waveform from the server peaks** - HIGH; every audio file, of any size, shows the waveform, overview strip, time ruler, time under the mouse, zoom and loop region from peaks the server computes; the browser never downloads or decodes the whole file and plays it from the file URL; with no peaks, the control row and the seek slider stay, as ACC-WAVE-121-FALLBACK states
+  - evidence: Galata 'ACC-AUDIO-54-LARGE every audio file shows the waveform from the peaks of the server and is never downloaded' passes with no decodeAudioData call and no fetch or XHR of the file URL, media_audio and media_video 88/88 in logs/media-stream-galata.log, exit 0
   - related: ACC-WAVE-121-FALLBACK - the control row and the seek slider when no peaks come
-  - related: DEF-MEDIA-37-DECODE-QUEUE - files over 100 MB no longer decode in the browser; files under 100 MB still do
+  - related: DEF-MEDIA-37-DECODE-QUEUE - no file decodes in the browser any more
   - mechanism: 2026-11-06T16:11:09Z @kj the package's new server extension decodes the file with PyAV and answers its peaks; wavesurfer draws them over the file URL without decoding
-  - test: unit test the size limit; open the 60 s WAV reported over 100 MB, assert the waveform, overview strip and ruler draw, hover reads 00:30 at 50%, + narrows the shown range, a drag makes a loop region; record requests, assert no fetch or XHR of the file URL
-  - test-tags: UNIT, E2E
+  - test: open the 60 s WAV, size not faked: one waveform request for its path; waveform, overview strip and ruler draw; hover reads 00:30 at 50%; + narrows the shown range; a drag makes a loop region; no fetch or XHR of the file URL and no decodeAudioData call
+  - test-tags: E2E
   - log: 2026-10-28T13:59:53Z @kj added
   - log: 2026-10-28T16:14:53Z @kj closed
   - log: 2026-11-03T10:12:28Z @kj edited evidence "Jest the waveform limit suite and ACC-AUDIO-54-LARGE a file over 100 MB plays without a waveform and seeks pass, Galata 76/76 local" -> "Jest the waveform limit suite in mediautil.spec.ts passed, logs/media-close5-test.log 48/48; 1 test titled ACC-AUDIO-54-LARGE in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
@@ -492,6 +528,13 @@ Audio files open in a waveform player built on wavesurfer.js
   - log: 2026-11-06T16:11:09Z @kj edited test "unit test the size limit; open a file reported over the limit, assert no controls attribute, click the seek slider at 50%, assert currentTime 30 s within 0.5 s, assert the line shows" -> "unit test the size limit; open the 60 s WAV reported over 100 MB, assert the waveform, overview strip and ruler draw, hover reads 00:30 at 50%, + narrows the shown range, a drag makes a loop region; record requests, assert no fetch or XHR of the file URL"; reason: Star Colonel decision of 2026-11-06: the server waveform above 100 MB
   - log: 2026-11-06T16:11:09Z @kj mechanism recorded; reason: Star Colonel decision of 2026-11-06: PyAV decoder in a new server extension
   - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+  - log: 2026-11-07T14:22:15Z @kj amended title "Large audio file" -> "Audio waveform from the server peaks"; text "a file over 100 MB shows the waveform, overview strip, time ruler, time under the mouse, zoom and loop region as a file under 100 MB does, from peaks the server computes; the browser never downloads or decodes the whole file and plays it from the file URL; with no peaks, the control row and the seek slider stay, as ACC-WAVE-121-FALLBACK states" -> "every audio file, of any size, shows the waveform, overview strip, time ruler, time under the mouse, zoom and loop region from peaks the server computes; the browser never downloads or decodes the whole file and plays it from the file URL; with no peaks, the control row and the seek slider stay, as ACC-WAVE-121-FALLBACK states"; reason: owner decision of 2026-11-07: the server waveform serves every audio file, not only files over 100 MB
+  - log: 2026-11-07T14:22:15Z @kj edited test "unit test the size limit; open the 60 s WAV reported over 100 MB, assert the waveform, overview strip and ruler draw, hover reads 00:30 at 50%, + narrows the shown range, a drag makes a loop region; record requests, assert no fetch or XHR of the file URL" -> "open the 60 s WAV, size not faked: one waveform request for its path; waveform, overview strip and ruler draw; hover reads 00:30 at 50%; + narrows the shown range; a drag makes a loop region; no fetch or XHR of the file URL and no decodeAudioData call"; test-tags "UNIT, E2E" -> "E2E"; reason: owner decision of 2026-11-07: no size is faked; the Jest waveform limit goes with WAVEFORM_LIMIT
+  - log: 2026-11-07T14:22:15Z @kj reopened: owner decision of 2026-11-07: every audio file gets its waveform from the server peaks; closed again on the streaming runs; evidence retired: Galata media_audio.spec.ts:1161 'ACC-AUDIO-54-LARGE a file over 100 MB shows the waveform from the peaks of the server and is never downloaded' passed; Jest 'the waveform limit' in src/__tests__/mediautil.spec.ts passed (Jest 50/50 in logs/audio-w-final-test.log); whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - log: 2026-11-07T14:22:15Z @kj related DEF-MEDIA-37-DECODE-QUEUE removed, line read "DEF-MEDIA-37-DECODE-QUEUE - files over 100 MB no longer decode in the browser; files under 100 MB still do" - the related text said files under 100 MB still decode in the browser
+  - log: 2026-11-07T14:22:23Z @kj related DEF-MEDIA-37-DECODE-QUEUE removed, line read "DEF-MEDIA-37-DECODE-QUEUE - no file decodes in the browser any more" - the related text said files under 100 MB still decode in the browser
+  - log: 2026-11-07T14:22:36Z @kj the removal at 2026-11-07T14:22:23Z was a rerun of the spec script; the same related line was written again at once; nothing changed
+  - log: 2026-11-07T15:10:19Z @kj closed
 - [x] `ACC-AUDIO-55-ERROR` **Unreadable audio** - MEDIUM; every audio file type JupyterLab registers opens in this viewer; a file the browser cannot decode shows an error line in the viewer, never an empty or stuck panel
   - evidence: 1 test titled ACC-AUDIO-55-ERROR in media_audio.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - test: open a WAV and a corrupt .mp3, assert the waveform and the error line
@@ -509,15 +552,17 @@ Audio files open in a waveform player built on wavesurfer.js
   - log: 2026-11-07T00:25:06Z @kj reopened: reopened: text amended for DEF-MEDIA-64-MUTE-NAME, closed again on the round 4 runs; evidence retired: Galata media_audio.spec.ts:893 'ACC-AUDIO-112-VOLUME mute and the volume slider act as in the video viewer and hold after Reload' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
   - log: 2026-11-07T00:25:06Z @kj closed
 - [x] `ACC-AUDIO-113-SEEKBAR` **Seek slider without a waveform** - HIGH; an audio file with no waveform, of any size, has no browser audio control; the seek slider of the time row covers the whole file, follows playback, and a click or a drag on it moves playback there
-  - evidence: Galata media_audio.spec.ts:964 'ACC-AUDIO-113-SEEKBAR a file over 100 MB plays without a waveform or the browser control and seeks with the slider of the time row' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
+  - evidence: Galata 'ACC-AUDIO-113-SEEKBAR a file with no waveform plays without the browser control and seeks with the slider of the time row' passes, media_audio and media_video 88/88 in logs/media-stream-galata.log, exit 0
   - related: DEF-MEDIA-34-NATIVE-KEYS - the browser audio control it names is no longer shown
   - related: DEF-MEDIA-9-MEDIA - -, + and Fit stay disabled while no waveform shows
-  - test: open the 60 s WAV reported over 100 MB, its peaks request, if any, answered 404; assert no controls attribute; click the slider at 50%, assert currentTime 30 s within 0.5 s; drag it to 75%, assert 45 s; play 1 s, assert the slider moved
+  - test: open the 60 s WAV with its peaks request answered 404; assert no controls attribute; click the slider at 50%, assert currentTime 30 s within 0.5 s; drag it to 75%, assert 45 s; play 1 s, assert the slider moved
   - test-tags: E2E
   - log: 2026-11-06T16:10:46Z @kj added; reason: Star Colonel decision of 2026-11-06: audio layout B replaces the browser audio control with the viewer's own seek slider; moved here from ACC-AUDIO-54-LARGE, which now states the server waveform
   - log: 2026-11-06T18:45:46Z @kj amended text "an audio file over 100 MB with no waveform has no browser audio control; the middle of the time row shows a seek slider over the whole file in place of the shown range; the slider follows playback, and a click or a drag on it moves playback there" -> "an audio file with no waveform, of any size, has no browser audio control; the seek slider of the time row covers the whole file, follows playback, and a click or a drag on it moves playback there"
   - log: 2026-11-06T18:45:46Z @kj covers every file with no waveform, of any size: a failed decode under 100 MB showed two seek bars, the browser control and the slider
   - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+  - log: 2026-11-07T14:22:16Z @kj edited test "open the 60 s WAV reported over 100 MB, its peaks request, if any, answered 404; assert no controls attribute; click the slider at 50%, assert currentTime 30 s within 0.5 s; drag it to 75%, assert 45 s; play 1 s, assert the slider moved" -> "open the 60 s WAV with its peaks request answered 404; assert no controls attribute; click the slider at 50%, assert currentTime 30 s within 0.5 s; drag it to 75%, assert 45 s; play 1 s, assert the slider moved"; reason: owner decision of 2026-11-07: no size is faked, every file takes the file URL path
+  - log: 2026-11-07T15:10:20Z @kj edited evidence "Galata media_audio.spec.ts:964 'ACC-AUDIO-113-SEEKBAR a file over 100 MB plays without a waveform or the browser control and seeks with the slider of the time row' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log" -> "Galata 'ACC-AUDIO-113-SEEKBAR a file with no waveform plays without the browser control and seeks with the slider of the time row' passes, media_audio and media_video 88/88 in logs/media-stream-galata.log, exit 0"
 - [x] `ACC-AUDIO-123-SEEKBAR-ALWAYS` **Seek bar for every audio file** - HIGH; every audio file, with or without a waveform, has a seek slider over the whole file in the time row between the played time and the length; it follows playback; a click or a drag moves playback there; the shown range moves to the left cell of the control row
   - evidence: Galata ACC-AUDIO-123-SEEKBAR-ALWAYS and the updated ACC-AUDIO-51-CONTROLS, ACC-AUDIO-52-TIME, ACC-AUDIO-54-LARGE, ACC-AUDIO-113-SEEKBAR pass, media_audio.spec.ts 44/44 in logs/audio-c-named.log; red before the change in logs/audio-c-red.log (slider hidden); verifier rerun 10/10 in logs/audio-c-verify.log
   - related: ACC-AUDIO-113-SEEKBAR - the same slider, now shown for every file
@@ -535,6 +580,13 @@ Audio files open in a waveform player built on wavesurfer.js
   - log: 2026-11-06T23:04:48Z @kj met in the tree: Galata DEF-MEDIA-61-AUDIO-SETTINGS ACC-AUDIO-124-SETTINGS-CARRY failed before (logs/audio-r3-red-client.log), passed after, media_audio and media_video 84/84 (logs/audio-r3-named.log)
   - log: 2026-11-06T23:13:03Z @kj closed
   - log: 2026-11-07T07:31:34Z @kj accepted by the owner on 2026-11-07
+- [x] `ACC-AUDIO-132-BUFFERED` **Buffered amount on the audio seek slider** - MEDIUM; the seek slider of the time row draws every range of media.buffered as a fill behind the played part, updated on progress and on every seek; the fill reaches 3:1 against the unbuffered track and against the played part, in the light and the dark theme
+  - evidence: Jest describe 'bufferedParts' 4 cases pass, 52/52 in logs/media-stream-test.log; Galata 'ACC-AUDIO-132-BUFFERED the seek slider shows the buffered parts past the played part, at 3:1 against the track and the played part' passes, media_audio and media_video 88/88 in logs/media-stream-galata.log, exit 0; failed before the change with one buffered range [0, 20] in logs/media-stream-red.log
+  - related: ACC-AUDIO-123-SEEKBAR-ALWAYS - the slider that draws the fill
+  - test: first file request answered 206 with 0-20 s of the 60 s WAV, later ones 64 KiB or held; seek to 40 s, back to 10 s; slider pixels at points from media.buffered: fill against track and against played at least 3:1, both themes; Jest the fill helper
+  - test-tags: UNIT, FUNCTIONAL
+  - log: 2026-11-07T14:22:12Z @kj added; reason: owner decision of 2026-11-07: streaming and the buffered amount, one rule per item
+  - log: 2026-11-07T15:10:19Z @kj closed; reason: names each test title and the run that proves it
 
 ## Video viewer `VIDEO`
 
@@ -577,6 +629,14 @@ Video files open in a Plyr player
   - log: 2026-10-28T13:59:54Z @kj added
   - log: 2026-10-28T16:14:57Z @kj closed
   - log: 2026-11-03T10:12:29Z @kj edited evidence "ACC-VIDEO-60-ACCENT the seek bar and the highlighted buttons use the brand colour passes, Galata 76/76 local" -> "1 test titled ACC-VIDEO-60-ACCENT in media_video.spec.ts passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+- [x] `ACC-VIDEO-133-BUFFERED` **Buffered amount on the video seek bar** - MEDIUM; the Plyr seek bar shows its buffer bar up to the end of the first range of media.buffered; the bar is visible and reaches 3:1 against the unbuffered track and against the played part, in the light and the dark theme
+  - evidence: Galata 'ACC-VIDEO-133-BUFFERED the seek bar shows its buffer bar, at 3:1 against the track and the played part' passes, media_audio and media_video 88/88 in logs/media-stream-galata.log, exit 0
+  - related: ACC-VIDEO-60-ACCENT - the played part the fill is measured against
+  - test: first request of clip.mp4 answered 206 with 96 KiB, three blocks of 32 KiB, the rest held; play past 2 s, pause; .plyr__progress__buffer visible, value within 2 of buffered.end(0) / duration x 100; bar pixels: fill against track and against played at least 3:1, both themes
+  - test-tags: FUNCTIONAL
+  - log: 2026-11-07T14:22:12Z @kj added; reason: owner decision of 2026-11-07: streaming and the buffered amount, one rule per item
+  - log: 2026-11-07T15:10:19Z @kj edited test "first request of clip.mp4 answered 206 with a third of the file, the rest held, seek to 2 s; .plyr__progress__buffer visible, value within 2 of buffered.end(0) / duration x 100; bar pixels: fill against track and against played at least 3:1, both themes" -> "first request of clip.mp4 answered 206 with 96 KiB, three blocks of 32 KiB, the rest held; play past 2 s, pause; .plyr__progress__buffer visible, value within 2 of buffered.end(0) / duration x 100; bar pixels: fill against track and against played at least 3:1, both themes"; reason: Chromium plays only whole 32 KiB blocks, so a third of the file stalled playback at 1.75 s, and a seek aborted the held read and made Chromium count the whole file as buffered
+  - log: 2026-11-07T15:10:19Z @kj closed
 
 ## Media keys `KEYS`
 
@@ -691,11 +751,13 @@ How the audio and video viewers fit into JupyterLab
 - [x] `ACC-MEDIA-74-BUFFER` **Small files seek without byte ranges** - CRITICAL; audio and video files up to 100 MB are downloaded once from the file URL and played from the downloaded copy, so seeking works on a server without byte ranges; larger files play from the file URL
   - evidence: 2 tests titled ACC-MEDIA-74-BUFFER, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0
   - related: DEF-MEDIA-7-SEEK - the seek failure this works around for files up to 100 MB
+  - overridden-by: ACC-MEDIA-131-STREAM-ALL
   - test: serve /files/ as status 200 without Accept-Ranges through page.route, open a WAV and the video fixture, seek to 50%, assert currentTime within 0.5 s
   - test-tags: E2E
   - log: 2026-10-28T14:26:15Z @kj added
   - log: 2026-10-28T16:15:02Z @kj closed
   - log: 2026-11-03T10:12:28Z @kj edited evidence "ACC-MEDIA-74-BUFFER audio and video up to 100 MB are downloaded once and seek without byte ranges pass, Galata 76/76 local" -> "2 tests titled ACC-MEDIA-74-BUFFER, 1 in media_audio.spec.ts and 1 in media_video.spec.ts, passed, re-proved 2026-11-03 in logs/media-r5-final-suite.log, whole Galata suite 144/144, exit 0"
+  - log: 2026-11-07T14:22:16Z @kj owner decision of 2026-11-07: every file streams from its file URL and no file is downloaded first; overridden by ACC-MEDIA-131-STREAM-ALL; its two Galata tests are deleted; stays closed with its evidence
 - [x] `ACC-MEDIA-114-SPINNER` **Loading spinner** - MEDIUM; from the start of a load until the file can play, the centre of an audio or video tab shows a spinner with Loading... under it, in place of the Loading... line at the panel foot; the spinner goes when the file can play or when an error sentence shows
   - evidence: Galata media_audio.spec.ts:1415 'ACC-MEDIA-114-SPINNER a spinner with Loading... under it shows in the centre of the audio viewer until the file can play, and goes on an error', media_video.spec.ts:1215 'ACC-MEDIA-114-SPINNER a spinner with Loading... under it shows in the centre of the video viewer until the file can play' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
   - related: DEF-MEDIA-43-MESSAGE-POSITION - Loading... leaves the panel foot for the centre; the error sentence keeps its place
@@ -703,6 +765,37 @@ How the audio and video viewers fit into JupyterLab
   - test-tags: E2E
   - log: 2026-11-06T16:10:46Z @kj added; reason: Star Colonel decision of 2026-11-06: a spinner in the centre of the audio and video viewers replaces the Loading... line at the panel foot
   - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+- [x] `ACC-MEDIA-130-DOWNLOAD-RETRY` **Download tried again after a network failure** - MEDIUM; an audio or video file up to 100 MB is downloaded again once after a network failure (fetch or blob() rejects with TypeError), not after an HTTP error status; a second network failure shows 'The connection to the server was lost; press Reload to try again.'
+  - evidence: Jest downloadBlob in src/__tests__/mediautil.spec.ts: 'tries a request that got no answer once more', 'does not try an HTTP error status again', 'rejects with the TypeError when the second request fails too', 'tries again when the body breaks off', 54/54 in logs/media-retry-test2.log; Galata DEF-MEDIA-67-NO-RETRY ACC-MEDIA-130-DOWNLOAD-RETRY: 'an audio file request on a dropped connection is tried once more and the file plays', 'a video file request on a dropped connection is tried once more and the file plays', 'an audio file request that fails on both tries says the connection was lost, and Reload plays the file', media_audio and media_video 89/89 in logs/media-retry-galata.log, exit 0
+  - related: DEF-MEDIA-67-NO-RETRY - the defect this fixes
+  - overridden-by: ACC-MEDIA-134-LOST-CONNECTION
+  - test: Jest downloadBlob with a mocked fetch; Galata: abort the first file request with 'connectionfailed', the file plays after two requests; abort every request, the lost-connection sentence shows
+  - test-tags: UNIT, FUNCTIONAL
+  - mechanism: 2026-11-07T13:33:46Z @kj downloadBlob in src/mediautil.ts runs fetch and blob() and on a TypeError runs both once more at once, on the new connection the browser opens; MediaViewer.fail maps a TypeError to the lost-connection sentence
+  - log: 2026-11-07T13:33:46Z @kj added
+  - log: 2026-11-07T13:45:04Z @kj closed; reason: the evidence names the 4 Jest cases and the 3 Galata test titles
+  - log: 2026-11-07T14:22:16Z @kj owner decision of 2026-11-07: downloadBlob and its retry are removed, the browser's media player handles the network; overridden by ACC-MEDIA-134-LOST-CONNECTION; its 4 Jest cases and 3 Galata tests are deleted; stays closed with its evidence
+- [x] `ACC-MEDIA-131-STREAM-ALL` **Every file streams from its file URL** - HIGH; every audio and video file, of any size, plays from its /files/ URL, never a blob: copy, and no fetch or XHR reads it; playback starts before the whole file arrives; the first file request carries Range: bytes=0-, answered with Accept-Ranges: bytes; the audio waveform comes from the waveform endpoint, never a browser decode
+  - evidence: Galata 'ACC-MEDIA-131-STREAM-ALL every audio file plays from its file URL with byte ranges', 'ACC-MEDIA-131-STREAM-ALL playback starts before the whole audio file arrives' and 'ACC-MEDIA-131-STREAM-ALL every video file plays from its file URL with byte ranges' pass, media_audio and media_video 88/88 in logs/media-stream-galata.log, exit 0; the audio test failed before the change on src blob: in logs/media-stream-red.log
+  - overrides: ACC-MEDIA-74-BUFFER
+  - related: ACC-AUDIO-54-LARGE - the server waveform of every audio file
+  - related: ACC-MEDIA-71-STREAM - the file URL, never the contents API
+  - related: DEF-MEDIA-7-SEEK - seeking at every size rests on the byte ranges of /files/
+  - related: DEF-MEDIA-30-LARGE-RECORDING - a recording with no length in its header shows --:-- at every size, accepted
+  - test: 60 s WAV and clip.mp4, size not faked, page.on request and response: src not blob:, every file request resourceType media, first Range bytes=0- with Accept-Ranges bytes, one waveform request, no decodeAudioData call; first request answered 206 with a quarter of the file, the rest held: Play advances currentTime
+  - test-tags: FUNCTIONAL
+  - mechanism: 2026-11-07T14:22:12Z @kj MediaViewer.load sets media.src to the getDownloadUrl URL for every file and the browser streams it with byte ranges; AudioViewer asks the server part for the peaks of every file; downloadBlob, the blob URL and the size branch go
+  - log: 2026-11-07T14:22:12Z @kj added; reason: owner decision of 2026-11-07: streaming and the buffered amount, one rule per item
+  - log: 2026-11-07T15:10:19Z @kj closed; reason: names each test title and the run that proves it
+- [x] `ACC-MEDIA-134-LOST-CONNECTION` **Lost connection while streaming** - MEDIUM; the viewer never requests the file again itself; when the media element's file request fails, before or after the metadata, the tab shows 'The connection to the server was lost; press Reload to try again.', and Reload plays the file
+  - evidence: Galata 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a failed audio file request says the connection was lost, and Reload plays the file' with route.abort failed and connectionfailed, 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a failed file request says the connection was lost, and Reload plays the file' and 'DEF-MEDIA-22-LARGE-VIDEO ACC-MEDIA-134-LOST-CONNECTION a connection lost after the metadata says so, and Reload plays the file' pass, media_audio and media_video 88/88 in logs/media-stream-galata.log, exit 0
+  - overrides: ACC-MEDIA-130-DOWNLOAD-RETRY
+  - overrides: DEF-MEDIA-67-NO-RETRY
+  - related: DEF-MEDIA-22-LARGE-VIDEO - the ruling that maps a failed file request to this sentence
+  - test: abort every file request with 'failed', then with 'connectionfailed': the sentence shows; unroute, Reload, the file plays; clip.mp4 answered 32 KiB then aborted, seek to 15 s: the sentence within 45 s
+  - test-tags: FUNCTIONAL
+  - log: 2026-11-07T14:22:12Z @kj added; reason: owner decision of 2026-11-07: streaming and the buffered amount, one rule per item
+  - log: 2026-11-07T15:10:19Z @kj closed; reason: names each test title and the run that proves it
 
 ## Mesh viewer `MESH`
 
@@ -950,9 +1043,10 @@ STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
 
 ## Server waveform `WAVE`
 
-Waveform peaks of audio files over 100 MB, computed by the extension's server part with PyAV
+Waveform peaks of every audio file, computed by the extension's server part with PyAV
 
 - log: 2026-11-06T16:10:56Z @kj category created
+- log: 2026-11-07T14:22:16Z @kj description "Waveform peaks of audio files over 100 MB, computed by the extension's server part with PyAV" -> "Waveform peaks of every audio file, computed by the extension's server part with PyAV"
 
 - [x] `ACC-WAVE-115-FORMATS` **Peaks for every audio type** - HIGH; the server computes peaks for AAC, MP3, WAV, OGG, M4A, FLAC and OPUS files with PyAV and its bundled FFmpeg libraries, with no ffmpeg binary or system package installed
   - evidence: pytest in logs/audio-w-final-test.log (17/17): test_wave_115_peaks_for_every_audio_type[aac], [flac], [m4a], [mp3], [ogg], [opus], [wav] passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
@@ -960,6 +1054,7 @@ Waveform peaks of audio files over 100 MB, computed by the extension's server pa
   - test-tags: INTEGRATION
   - log: 2026-11-06T16:10:56Z @kj added; reason: Star Colonel decision of 2026-11-06: the server waveform covers every audio type JupyterLab registers that a browser plays
   - log: 2026-11-06T19:28:46Z @kj closed; reason: names each passing test and the suite runs
+  - log: 2026-11-07T14:22:16Z @kj audio types JupyterLab 4.6 registers: aac, flac, m4a, mp3, ogg, opus, wav, all in DEMUXERS, and midi (.mid, .midi); MIDI gets no waveform: PyAV 19.0.2 has no MIDI demuxer, a generated .mid fails with InvalidDataError, Chromium plays no MIDI; reported as a gap, not added
 - [x] `ACC-WAVE-116-MEMORY` **Peaks decoded as a stream** - HIGH; the server decodes the file frame by frame and never holds the whole decoded file in memory
   - evidence: pytest in logs/audio-w-final-test.log (17/17): test_wave_116_a_long_file_decodes_as_a_stream passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
   - test: pytest against a started server: after a warm-up request on a small WAV, request the peaks of a sparse 20 min 48 kHz stereo 16-bit WAV of silence, 230 MB decoded; assert the server RSS grows less than 64 MB
@@ -991,17 +1086,19 @@ Waveform peaks of audio files over 100 MB, computed by the extension's server pa
   - log: 2026-11-06T19:28:47Z @kj closed; reason: names each passing test and the suite runs
 - [x] `ACC-WAVE-120-PROGRESS` **Spinner while the peaks compute** - MEDIUM; while the server computes the peaks, the waveform area shows a spinner with a line saying that the waveform is being drawn, and the playback controls already work
   - evidence: Galata media_audio.spec.ts:1265 'ACC-WAVE-120-PROGRESS while the peaks compute, the waveform area shows a spinner with a line and the file already plays' passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
-  - test: hold the peaks answer with page.route, open the 60 s WAV reported over 100 MB, assert the spinner and the line in the waveform area; click Play, assert currentTime advances; release the answer, assert no spinner and the waveform drawn
+  - test: hold the peaks answer with page.route, open the 60 s WAV, assert the spinner and the line in the waveform area; click Play, assert currentTime advances; release the answer, assert no spinner and the waveform drawn
   - test-tags: E2E
   - log: 2026-11-06T16:11:03Z @kj added; reason: Star Colonel decision of 2026-11-06: playback starts from the file URL before the peaks arrive
   - log: 2026-11-06T19:28:47Z @kj closed; reason: names each passing test and the suite runs
+  - log: 2026-11-07T14:22:16Z @kj edited test "hold the peaks answer with page.route, open the 60 s WAV reported over 100 MB, assert the spinner and the line in the waveform area; click Play, assert currentTime advances; release the answer, assert no spinner and the waveform drawn" -> "hold the peaks answer with page.route, open the 60 s WAV, assert the spinner and the line in the waveform area; click Play, assert currentTime advances; release the answer, assert no spinner and the waveform drawn"; reason: owner decision of 2026-11-07: no size is faked, every file takes the file URL path
 - [x] `ACC-WAVE-121-FALLBACK` **No peaks: seek slider and a sentence** - HIGH; when the peaks request fails, because the server part is missing or the file is unsupported or damaged, the spinner goes, the tab stays as ACC-AUDIO-113-SEEKBAR states, and a sentence says that the waveform could not be drawn
   - evidence: Galata media_audio.spec.ts:1326 'ACC-WAVE-121-FALLBACK a failed peaks request leaves the seek slider and says that the waveform could not be drawn' passed; pytest in logs/audio-w-final-test.log (17/17): test_wave_121_a_damaged_wav_gets_an_error_status_not_peaks passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
   - related: ACC-AUDIO-113-SEEKBAR - the state a failed peaks request leaves
-  - test: for the 60 s WAV reported over 100 MB, answer the peaks request 404, then 500; each time assert the sentence, no spinner, no controls attribute, and that the slider at 50% moves playback to 30 s; pytest: a damaged WAV gets an error status, not peaks
+  - test: for the 60 s WAV, answer the peaks request 404, then 500; each time assert the sentence, no spinner, no controls attribute, and that the slider at 50% moves playback to 30 s; pytest: a damaged WAV gets an error status, not peaks
   - test-tags: E2E, INTEGRATION
   - log: 2026-11-06T16:11:03Z @kj added; reason: Star Colonel decision of 2026-11-06: the bar and its seek slider are the fallback of the server waveform
   - log: 2026-11-06T19:28:47Z @kj closed; reason: names each passing test and the suite runs
+  - log: 2026-11-07T14:22:16Z @kj edited test "for the 60 s WAV reported over 100 MB, answer the peaks request 404, then 500; each time assert the sentence, no spinner, no controls attribute, and that the slider at 50% moves playback to 30 s; pytest: a damaged WAV gets an error status, not peaks" -> "for the 60 s WAV, answer the peaks request 404, then 500; each time assert the sentence, no spinner, no controls attribute, and that the slider at 50% moves playback to 30 s; pytest: a damaged WAV gets an error status, not peaks"; reason: owner decision of 2026-11-07: no size is faked, every file takes the file URL path
 - [x] `ACC-WAVE-122-INSTALL` **Server part installed and enabled** - HIGH; installing the package installs PyAV and enables the extension's server part with no further step
   - evidence: pytest in logs/audio-w-final-test.log (17/17): test_wave_122_the_installed_package_enables_the_server_part passed; whole Galata suite 153/154 in logs/audio-w-suite.log, the one failure ACC-MESH-107-PERF-FPS outside this change, passed 3/3 alone in logs/audio-w-mesh107.log
   - test: build the wheel, assert it holds the jupyter_server_config.d JSON enabling the server part and lists av in Requires-Dist; after make -o increment_version install, assert `jupyter server extension list` shows it enabled OK
