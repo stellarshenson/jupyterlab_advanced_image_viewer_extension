@@ -573,6 +573,14 @@ Wrong behaviour of the 3D viewer for STL, PLY, OBJ, 3MF, GLB and STEP files
   - log: 2026-11-10T23:33:00Z @kj edited text "a GLB POINTS primitive with baseColorFactor [1, 0.25, 0, 1] draws neutral grey 0x6f7480 instead of its authored colour; cause assemble() builds the cloud from part.color alone, null for GLB points, so the parsed material never reaches it; fix copy colour, map and opacity onto the cloud; `src/meshscene.ts`" -> "a GLB POINTS primitive with baseColorFactor [1, 0.25, 0, 1] draws neutral grey 0x6f7480 instead of its authored colour; cause assemble() builds the cloud from part.color alone, null for GLB points, so the parsed material never reaches it; fix copy the authored colour unless it is the glTF default white, copy opacity only together with the authored transparent flag, and leave the map off because points carry no uv; src/meshscene.ts"; reason: the fix clause prescribed the copy round 3 reverted
   - log: 2026-11-10T23:33:03Z @kj attempted: completed fix - authored colour unless the default white, opacity only with transparent, no map; test asserts 0xff4000; patch tmp/workflows/mesh-review/patches-r4/1-points-colour-complete.patch; gates install 0, Jest 52/52, pytest 24/24, lint 0 errors 15 warnings, media_mesh 51/51
   - log: 2026-11-11T00:08:50Z @kj closed: fixed: a GLB points part keeps its authored colour and transparent opacity; round 5 review SHIP
+- [x] `DEF-MESH-73-FIT-TOGGLE` **Fit, zoom and Reload toolbar buttons stay pressed after one click** - MINOR; after one click the Fit, - and + buttons and Reload stay pressed; cause ToolbarButton toggles pressed on every click and toolbar.ts never clears it; fix clear the pressed state after the action; `src/toolbar.ts`
+  - evidence: test 'DEF-MESH-73-FIT-TOGGLE Fit, - + and Reload stay unpressed after one click' passed in media_mesh.spec.ts within the whole Galata suite (181 passed, exit 0, logs/fit-toggle-galata.log); Jest 52/52, pytest 24/24, lint 0 errors 15 warnings
+  - repro: open a mesh file, click Fit or - or + or Reload once: its toolbar button stays pressed
+  - test-tags: E2E
+  - root-cause: 2026-11-11T12:41:40Z @kj ToolbarButton sets pressed = !pressed on every click and toolbar.ts passes the action straight through, so the four momentary buttons latch; the mesh toggles and the Views and Lighting menu buttons already handle their state
+  - log: 2026-11-11T12:41:40Z @kj added
+  - log: 2026-11-11T13:10:17Z @kj attempted: red case failed reading pressed true after one Fit click against the installed build (logs/fit-toggle-red.log, exit 1)
+  - log: 2026-11-11T13:10:19Z @kj closed: fixed: a momentary helper clears pressed after the action on Reload, - + and Fit
 
 ## Server waveform `WAVE`
 

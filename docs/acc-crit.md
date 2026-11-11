@@ -845,13 +845,15 @@ STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
   - test-tags: E2E
   - log: 2026-10-31T19:55:13Z @kj added
   - log: 2026-11-01T12:51:05Z @kj closed
-- [x] `ACC-MESH-82-SMOOTH` **Flat and Smooth shading** - HIGH; Smooth is the default and rounds a coarse mesh while edges sharper than 40 degrees stay sharp; a toolbar button switches to Flat, which shows the facets, and shows its pressed state
-  - evidence: media_mesh.spec.ts ACC-MESH-82-SMOOTH: Flat lowers the shade count and raises the largest step, a cube edge stays sharp at 40 degrees, pressed state asserted, both stick after Reload and Page Down; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
-  - test: render a coarse sphere and a cube; assert the sphere's shade count falls in Flat, and a cube edge stays sharp in Smooth
+- [x] `ACC-MESH-82-SMOOTH` **Shading toggle** - HIGH; Shading is on by default and rounds a coarse mesh while edges sharper than 40 degrees stay sharp; the toggle shows its pressed state and, turned off, shows the flat facets; the Shading and Wireframe states both stick across Reload and Page Down
+  - evidence: media_mesh.spec.ts ACC-MESH-82-SMOOTH Shading is on at open, off shows the flat facets, and on again restores the smooth surface passed; ACC-MESH-82-SMOOTH ACC-MESH-83-WIRE Shading and Wireframe keep their pressed state after Reload and Page Down passed; Galata 181/181, logs/toolbar-finish-galata.log
+  - test: render a coarse sphere and a cube; assert the sphere's shade count falls with Shading off and returns with it on, and a cube edge stays sharp with Shading on
   - test-tags: E2E
   - log: 2026-10-31T19:55:13Z @kj added
   - log: 2026-10-31T23:56:15Z @kj amended text "Smooth is the default and rounds a coarse mesh while edges sharper than 30 degrees stay sharp; a toolbar button switches to Flat, which shows the facets, and shows its pressed state" -> "Smooth is the default and rounds a coarse mesh while edges sharper than 40 degrees stay sharp; a toolbar button switches to Flat, which shows the facets, and shows its pressed state"; reason: main session ruling on DEF-MESH-15-SEAMS: 40 degrees rounds the 22.5 degree globe and keeps an 8-sided column sharp
   - log: 2026-11-01T12:51:05Z @kj closed
+  - log: 2026-11-11T15:06:01Z @kj edited title "Flat and Smooth shading" -> "Shading toggle"; text "Smooth is the default and rounds a coarse mesh while edges sharper than 40 degrees stay sharp; a toolbar button switches to Flat, which shows the facets, and shows its pressed state" -> "HIGH; Shading is on by default and rounds a coarse mesh while edges sharper than 40 degrees stay sharp; the toggle shows its pressed state and, turned off, shows the flat facets; the Shading and Wireframe states both stick across Reload and Page Down"; test "render a coarse sphere and a cube; assert the sphere's shade count falls in Flat, and a cube edge stays sharp in Smooth" -> "render a coarse sphere and a cube; assert the sphere's shade count falls with Shading off and returns with it on, and a cube edge stays sharp with Shading on"
+  - log: 2026-11-11T15:42:28Z @kj edited evidence "media_mesh.spec.ts ACC-MESH-82-SMOOTH: Flat lowers the shade count and raises the largest step, a cube edge stays sharp at 40 degrees, pressed state asserted, both stick after Reload and Page Down; Galata 84 passed, logs/mesh-galata-verify-formats-2.log" -> "media_mesh.spec.ts ACC-MESH-82-SMOOTH Shading is on at open, off shows the flat facets, and on again restores the smooth surface passed; ACC-MESH-82-SMOOTH ACC-MESH-83-WIRE Shading and Wireframe keep their pressed state after Reload and Page Down passed; Galata 181/181, logs/toolbar-finish-galata.log"; reason: evidence names the two passing test titles
 - [x] `ACC-MESH-83-WIRE` **Wireframe** - MEDIUM; a toolbar button shows triangle edges in place of the surface, shows its pressed state, and restores the surface on a second press
   - evidence: media_mesh.spec.ts ACC-MESH-83-WIRE: wireframe lowers covered below 0.6, a second press restores the exact count, pressed state asserted; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
   - test: toggle twice; assert covered pixels fall, then return to the first count
@@ -1040,6 +1042,18 @@ STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
   - test-tags: E2E
   - log: 2026-11-02T14:10:58Z @kj added
   - log: 2026-11-02T14:11:01Z @kj closed
+- [x] `ACC-MESH-135-TOOLBAR-ICONS` **Toolbar icons** - HIGH; every toolbar control carries its icon, and each icon's tooltip is its accessible name
+  - evidence: media_mesh.spec.ts ACC-MESH-85-FIT opens centred and filling the panel; Fit restores it; Reset to fit, Zoom out and Zoom in read as in the image viewer; a resize keeps the shape passed, reading every toolbar item's aria-label and title; ACC-MEDIA-66-TOOLBAR passed with equal icons and empty text; ACC-MESH-89-HELP and ACC-MEDIA-67-HELP passed with aria-label 'Keybindings and help' and one svg; Galata 181/181, logs/toolbar-finish-galata.log
+  - test: open a mesh, read every toolbar item's aria-label and icon
+  - test-tags: E2E
+  - log: 2026-11-11T15:05:58Z @kj added
+  - log: 2026-11-11T15:42:23Z @kj closed; reason: evidence names the passing test titles
+- [x] `ACC-MESH-136-MOMENTARY` **Momentary buttons** - MEDIUM; Reload, Zoom out, Zoom in and Fit act once and never stay pressed
+  - evidence: media_mesh.spec.ts DEF-MESH-73-FIT-TOGGLE Fit, - + and Reload stay unpressed after one click passed: each control read aria-pressed false before and after the click; Galata 181/181, logs/toolbar-finish-galata.log
+  - test: click each of the four once and read aria-pressed false before and after
+  - test-tags: E2E
+  - log: 2026-11-11T15:05:58Z @kj added
+  - log: 2026-11-11T15:42:26Z @kj closed; reason: evidence names the passing test title
 
 ## Server waveform `WAVE`
 

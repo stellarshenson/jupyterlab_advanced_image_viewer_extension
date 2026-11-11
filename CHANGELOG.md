@@ -2,6 +2,23 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.13] - 2026-11-11
+
+### Added
+
+- Icons on all eleven mesh toolbar controls, each tooltip being the control's accessible name
+
+### Changed
+
+- Flat is now a Shading on/off toggle with the gradient icon, on by default: on shows the smooth surface, off shows the flat facets
+- Reload, Zoom out, Zoom in and Fit are momentary buttons that act once and never stay pressed
+- The image, audio and mesh help dialogs name the icon controls, including Reload in the mesh Toolbar list
+
+### Fixed
+
+- The Orthographic control's tooltip and accessible name state the action its click performs, not the current projection
+- Closing the Views or Lighting menu with Escape or a choice returns the keyboard focus to its toolbar button
+
 ## [1.2.12] - 2026-11-11
 
 ### Added

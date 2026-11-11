@@ -9,6 +9,26 @@ import { refreshIcon } from '@jupyterlab/ui-components';
 
 import { Widget } from '@lumino/widgets';
 
+import { fitIcon, helpIcon, zoomInIcon, zoomOutIcon } from './icons';
+
+type ButtonOptions = NonNullable<
+  ConstructorParameters<typeof ToolbarButton>[0]
+>;
+
+// ToolbarButton flips its pressed state on every click; a button that acts
+// once must not latch.
+function momentary(options: ButtonOptions): ToolbarButton {
+  const action = options.onClick;
+  const button = new ToolbarButton({
+    ...options,
+    onClick: event => {
+      action?.(event);
+      button.pressed = false;
+    }
+  });
+  return button;
+}
+
 export function addReloadButton(
   toolbar: Toolbar,
   tooltip: string,
@@ -16,7 +36,7 @@ export function addReloadButton(
 ): void {
   toolbar.addItem(
     'advanced-refresh',
-    new ToolbarButton({
+    momentary({
       icon: refreshIcon,
       tooltip,
       noFocusOnClick: true,
@@ -32,22 +52,22 @@ export function addZoomButtons(
   zoomIn: () => void,
   fit: () => void
 ): { zoomOut: ToolbarButton; zoomIn: ToolbarButton; fit: ToolbarButton } {
-  const zoomOutButton = new ToolbarButton({
-    label: '-',
+  const zoomOutButton = momentary({
+    icon: zoomOutIcon,
     tooltip: trans.__('Zoom out'),
     noFocusOnClick: true,
     onClick: zoomOut
   });
   toolbar.addItem('advanced-zoom-out', zoomOutButton);
-  const zoomInButton = new ToolbarButton({
-    label: '+',
+  const zoomInButton = momentary({
+    icon: zoomInIcon,
     tooltip: trans.__('Zoom in'),
     noFocusOnClick: true,
     onClick: zoomIn
   });
   toolbar.addItem('advanced-zoom-in', zoomInButton);
-  const fitButton = new ToolbarButton({
-    label: trans.__('Fit'),
+  const fitButton = momentary({
+    icon: fitIcon,
     tooltip: trans.__('Reset to fit'),
     noFocusOnClick: true,
     onClick: fit
@@ -64,8 +84,9 @@ export function addHelpLink(
 ): void {
   const helpLink = new Widget({ node: document.createElement('a') });
   const helpAnchor = helpLink.node as HTMLAnchorElement;
-  helpAnchor.textContent = trans.__('help');
+  helpAnchor.innerHTML = helpIcon.svgstr;
   helpAnchor.href = '#';
+  helpAnchor.setAttribute('aria-label', trans.__('Keybindings and help'));
   helpAnchor.title = trans.__('Keybindings and help');
   helpAnchor.className = 'jp-AdvancedImageViewer-help-link';
   helpAnchor.addEventListener('click', event => {

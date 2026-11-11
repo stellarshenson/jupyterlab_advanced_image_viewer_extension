@@ -513,8 +513,8 @@ test.describe('Audio viewer', () => {
     tmpPath
   }) => {
     await open(page, `${tmpPath}/${NAME}`);
-    await labelled(page, '+').click();
-    await labelled(page, '+').click();
+    await button(page, 'Zoom in').click();
+    await button(page, 'Zoom in').click();
     await expect.poll(() => shownSpan(page)).toBeLessThan(20);
 
     let p = await parts(page);
@@ -555,17 +555,17 @@ test.describe('Audio viewer', () => {
     tmpPath
   }) => {
     await open(page, `${tmpPath}/${NAME}`);
-    for (const label of ['-', '+', 'Fit']) {
-      await expect(labelled(page, label)).not.toHaveAttribute('disabled', '');
+    for (const label of ['Zoom out', 'Zoom in', 'Reset to fit']) {
+      await expect(button(page, label)).not.toHaveAttribute('disabled', '');
     }
     await expect.poll(() => shownSpan(page)).toBeCloseTo(60, 0);
-    await labelled(page, '+').click();
+    await button(page, 'Zoom in').click();
     await expect.poll(() => shownSpan(page)).toBeCloseTo(30, 0);
-    await labelled(page, '+').click();
+    await button(page, 'Zoom in').click();
     await expect.poll(() => shownSpan(page)).toBeCloseTo(15, 0);
-    await labelled(page, '-').click();
+    await button(page, 'Zoom out').click();
     await expect.poll(() => shownSpan(page)).toBeCloseTo(30, 0);
-    await labelled(page, 'Fit').click();
+    await button(page, 'Reset to fit').click();
     await expect.poll(() => shownSpan(page)).toBeCloseTo(60, 0);
 
     const p = await parts(page);
@@ -573,13 +573,13 @@ test.describe('Audio viewer', () => {
     await page.mouse.move(point.x, point.y);
     await page.mouse.wheel(0, -600);
     await expect.poll(() => shownSpan(page)).toBeLessThan(55);
-    await labelled(page, 'Fit').click();
+    await button(page, 'Reset to fit').click();
     await expect.poll(() => shownSpan(page)).toBeCloseTo(60, 0);
 
     // During playback the view follows the playback line out of the
     // first quarter.
-    await labelled(page, '+').click();
-    await labelled(page, '+').click();
+    await button(page, 'Zoom in').click();
+    await button(page, 'Zoom in').click();
     await expect.poll(() => shownSpan(page)).toBeCloseTo(15, 0);
     await seek(page, 14);
     await control(page, 'Play').click();
@@ -1125,8 +1125,8 @@ test.describe('Audio viewer', () => {
     ).toHaveCount(0);
     // There is no waveform to zoom, so the buttons are disabled rather than
     // enabled and doing nothing (DEF-MEDIA-9).
-    for (const label of ['-', '+', 'Fit']) {
-      await expect(labelled(page, label)).toHaveAttribute('disabled', '');
+    for (const label of ['Zoom out', 'Zoom in', 'Reset to fit']) {
+      await expect(button(page, label)).toHaveAttribute('disabled', '');
     }
     expect(
       await page.evaluate(
@@ -1343,8 +1343,8 @@ test.describe('Audio viewer', () => {
       )
     ).toHaveText('showing 00:00.0 - 01:00.0');
     await expect(message(page)).toHaveText('');
-    for (const label of ['-', '+', 'Fit']) {
-      await expect(labelled(page, label)).not.toHaveAttribute('disabled', '');
+    for (const label of ['Zoom out', 'Zoom in', 'Reset to fit']) {
+      await expect(button(page, label)).not.toHaveAttribute('disabled', '');
     }
     await expect(
       toolbar(page).locator('.jp-AdvancedMediaViewer-details')
@@ -1375,7 +1375,7 @@ test.describe('Audio viewer', () => {
 
     // + narrows the shown range.
     await expect.poll(() => shownSpan(page)).toBeCloseTo(60, 0);
-    await labelled(page, '+').click();
+    await button(page, 'Zoom in').click();
     await expect.poll(() => shownSpan(page)).toBeCloseTo(30, 0);
 
     // The element plays the file URL, and nothing fetches the file.
@@ -1889,11 +1889,8 @@ test.describe('Audio viewer', () => {
         ),
         name
       ).toBe(false);
-      for (const label of ['-', '+', 'Fit']) {
-        await expect(labelled(page, label), name).toHaveAttribute(
-          'disabled',
-          ''
-        );
+      for (const label of ['Zoom out', 'Zoom in', 'Reset to fit']) {
+        await expect(button(page, label), name).toHaveAttribute('disabled', '');
       }
       // The slider at 50% moves playback to 30 s.
       await expect
@@ -2271,8 +2268,8 @@ test.describe('Audio viewer', () => {
     );
     await expect(wave).toBeHidden();
     // There is no waveform to zoom yet.
-    for (const label of ['-', '+', 'Fit']) {
-      await expect(labelled(page, label)).toHaveAttribute('disabled', '');
+    for (const label of ['Zoom out', 'Zoom in', 'Reset to fit']) {
+      await expect(button(page, label)).toHaveAttribute('disabled', '');
     }
     await control(page, 'Play').click();
     await expect.poll(() => currentTime(page)).toBeGreaterThan(0.5);
@@ -2296,8 +2293,8 @@ test.describe('Audio viewer', () => {
     await expect
       .poll(async () => (await parts(page)).canvas?.width ?? 0)
       .toBeGreaterThan(100);
-    for (const label of ['-', '+', 'Fit']) {
-      await expect(labelled(page, label)).not.toHaveAttribute('disabled', '');
+    for (const label of ['Zoom out', 'Zoom in', 'Reset to fit']) {
+      await expect(button(page, label)).not.toHaveAttribute('disabled', '');
     }
 
     // A failed peaks request keeps the waveform box hidden.
@@ -2546,15 +2543,16 @@ test.describe('Audio viewer', () => {
     expect(audio[0].name).toBe(image[0].name);
     expect(audio[0].icon).toBe(image[0].icon);
     expect(audio[0].title).toBe('Reload audio from disk');
-    // The same -, + and Fit buttons with the same tooltips, in that order.
+    // The same zoom buttons with the same tooltips, in that order; their
+    // labels are icons now, so the button text is empty.
     const zoom = (list: any[]) =>
       list
         .filter(item => /^advanced-(zoom|reset)/.test(item.name ?? ''))
         .map(item => [item.text, item.title]);
     expect(zoom(audio)).toEqual([
-      ['-', 'Zoom out'],
-      ['+', 'Zoom in'],
-      ['Fit', 'Reset to fit']
+      ['', 'Zoom out'],
+      ['', 'Zoom in'],
+      ['', 'Reset to fit']
     ]);
     expect(zoom(audio)).toEqual(zoom(image));
     // Reload, -, +, Fit, Loop, a spacer, the details and help, in that order:
@@ -2587,7 +2585,8 @@ test.describe('Audio viewer', () => {
   }) => {
     await open(page, `${tmpPath}/${NAME}`);
     const help = toolbar(page).locator('.jp-AdvancedImageViewer-help-link');
-    await expect(help).toHaveText('help');
+    await expect(help).toHaveAttribute('aria-label', 'Keybindings and help');
+    await expect(help.locator('svg')).toHaveCount(1);
     const { color, brand, underline } = await help.evaluate(
       (el: HTMLElement) => {
         const probe = document.createElement('span');
@@ -2910,7 +2909,7 @@ test.describe('Audio viewer', () => {
     await open(page, `${tmpPath}/${NAME}`);
     await control(page, 'Play').click();
     await expect.poll(() => currentTime(page)).toBeGreaterThan(1);
-    await labelled(page, '+').click();
+    await button(page, 'Zoom in').click();
     await control(page, 'Pause').click();
     const origin = new URL(baseURL!).origin;
     const foreign = urls.filter(

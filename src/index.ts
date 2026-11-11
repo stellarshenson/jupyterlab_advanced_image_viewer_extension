@@ -164,7 +164,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         '<ul>',
         '<li><b>Wheel up / down</b> - zoom in / out at the cursor</li>',
         '<li><b>Click and drag</b> - pan the image at any zoom</li>',
-        '<li><b>Toolbar buttons</b> - zoom in, zoom out, reset to fit</li>',
+        '<li><b>Toolbar buttons</b> - reload, zoom in, zoom out, reset to fit</li>',
         '<li><b>Left / Right arrows</b> - previous / next image in the folder</li>',
         '</ul>',
         '<p class="jp-AdvancedImageViewer-help-section">Standard viewer keys (compose with the above)</p>',
@@ -445,7 +445,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
           ],
           [trans.__('Drag'), trans.__('mark a region and loop it')],
           [
-            trans.__('Wheel, - / + / Fit'),
+            trans.__('Wheel, Zoom out / Zoom in / Reset to fit'),
             trans.__('zoom out / in, show the whole file')
           ],
           [trans.__('Loop'), trans.__('loop the region; off removes it')],
@@ -611,8 +611,18 @@ const plugin: JupyterFrontEndPlugin<void> = {
         [trans.__('Wheel'), trans.__('zoom toward the pointer')]
       ]);
       section(trans.__('Toolbar'), [
-        [trans.__('- / + / Fit'), trans.__('zoom out / in, frame the model')],
-        [trans.__('Flat'), trans.__('show the flat facets')],
+        [
+          trans.__('Reload'),
+          trans.__('read the file again and keep the camera')
+        ],
+        [
+          trans.__('Zoom and Fit buttons'),
+          trans.__('zoom out / in, frame the model')
+        ],
+        [
+          trans.__('Shading'),
+          trans.__('turn the smooth shading off and show the flat facets')
+        ],
         [trans.__('Wireframe'), trans.__('show the triangle edges')],
         [trans.__('Grid'), trans.__('show the ground grid')],
         [

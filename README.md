@@ -12,7 +12,7 @@ A JupyterLab 4 extension that makes the built-in image viewer interactive and ad
 
 ![Advanced image viewer](.resources/screenshot.png)
 
-The viewer toolbar adds zoom in / out / fit controls and a `help` link that lists every keybinding.
+The viewer toolbar adds zoom in / out / fit controls and a help button that lists every keybinding.
 
 ## Features
 
@@ -33,10 +33,10 @@ Audio files open in a waveform player built on wavesurfer.js and video files in 
 ![Audio viewer](.resources/audio-viewer.png)
 ![Video viewer](.resources/video-viewer.png)
 
-- **Audio controls** - under the waveform, a time row shows the played time, a seek slider over the whole file that shows the buffered part and the file length; a control row below it shows the range the waveform shows at the left, holds back 5 s, play/pause and forward 5 s in the centre, and mute, a volume slider and a speed choice of 0.5x to 2x at the right. While playback waits for data, the panel foot reads `Buffering...` and clears when the data arrives. The toolbar holds waveform zoom with - / + / Fit and Loop. The waveform adds an overview strip that seeks anywhere in the file, the time under the mouse, and a drag-marked loop region of at least 1 s. Volume, mute and speed carry to the next audio file and across a page reload, as in the video viewer
+- **Audio controls** - under the waveform, a time row shows the played time, a seek slider over the whole file that shows the buffered part and the file length; a control row below it shows the range the waveform shows at the left, holds back 5 s, play/pause and forward 5 s in the centre, and mute, a volume slider and a speed choice of 0.5x to 2x at the right. While playback waits for data, the panel foot reads `Buffering...` and clears when the data arrives. The toolbar holds waveform zoom (zoom out, zoom in, reset to fit) and Loop. The waveform adds an overview strip that seeks anywhere in the file, the time under the mouse, and a drag-marked loop region of at least 1 s. Volume, mute and speed carry to the next audio file and across a page reload, as in the video viewer
 - **Video controls** - play/pause, a seek bar that shows the buffered part, the current time, mute and volume, a speed menu, picture in picture and full screen, in a player fitted to the panel with the aspect ratio kept
 - **Keys in a focused media tab** - Space plays and pauses, Left and Right seek 5 s, and Page Up / Page Down open the previous and next file of the same kind in the folder, in the order the file browser lists them (the folder navigation setting turns this off)
-- **Help dialog** - a `help` link in each media toolbar lists the keys and the waveform gestures
+- **Help dialog** - a help button in each media toolbar lists the keys and the waveform gestures
 - **File details** - the toolbar shows the format, the size and the duration, plus the channel count for audio and the frame size for video
 - **Streaming** - every audio and video file plays from its file URL, so playback starts before the whole file has arrived and the seek bar shows how much of the file the browser holds; seeking needs a server that answers byte ranges, as JupyterLab's own file handler does. The extension's server part computes the audio waveform with PyAV for AAC, FLAC, M4A, MP3, OGG, OPUS and WAV files, so the server part must be enabled; the install enables it, and `jupyter server extension list` shows it. The server keeps each waveform in the user cache folder (`$XDG_CACHE_HOME/jupyterlab_advanced_image_viewer_extension`, or `~/.cache/jupyterlab_advanced_image_viewer_extension` when XDG_CACHE_HOME is unset, at most 1 GiB), so the next open of an unchanged file draws at once, also after a server restart. While the server computes, a spinner stands in the waveform's place and the file already plays. Without a waveform the time row with its seek slider and the control row stay. A WebM recorded in a browser with no length in its header shows --:-- and cannot be seeked
 
@@ -47,14 +47,14 @@ Mesh files open in a 3D viewer built on three.js, with STEP read by occt-import-
 ![Mesh viewer](.resources/mesh-viewer.png)
 
 - **Formats** - STL, PLY, OBJ, 3MF, GLB and STEP
-- **Controls** - hold the left button to orbit, the right button to pan, and the wheel to zoom at the cursor; Reload reads the file again and keeps the camera, - / + / Fit zoom and frame the model, Flat and Wireframe switch the shading, Grid shows the ground grid, Orthographic switches the projection, Views picks a standard view and Lighting picks a lighting style
+- **Controls** - hold the left button to orbit, the right button to pan, and the wheel to zoom at the cursor; the toolbar buttons are icons - Reload reads the file again and keeps the camera, Zoom out, Zoom in and Fit zoom and frame the model, the Shading toggle (on by default) shows the smooth surface and turns it off to show the flat facets, Wireframe shows the triangle edges, Grid shows the ground grid, Orthographic switches the projection, Views picks a standard view and Lighting picks a lighting style
 - **Standard views** - Front, Back, Right, Left, Top, Bottom and the four isometric corners, one at a time; a view is not carried to the next file
 - **Lighting styles** - Studio (the default), Neutral and Three-point
 - **Grid** - off by default; its lines are drawn in theme colours that reach 3:1 against the panel
 - **Projection** - perspective by default; the Orthographic toggle keeps the model the same size and centred
 - **Read-out** - the toolbar shows the format, the triangle count, the dimensions and the size
 - **Keys in a focused mesh tab** - Page Up / Page Down open the previous and next mesh file in the folder, in the order the file browser lists them (the folder navigation setting turns this off)
-- **Help dialog** - a `help` link in the mesh toolbar lists the controls
+- **Help dialog** - a help button in the mesh toolbar lists the controls
 - **1 GiB limit** - a file up to 1 GiB is downloaded and shown; above 1 GiB the file is not downloaded and the viewer says so
 - **STEP files** - occt-import-js reads them under LGPL-2.1 in a Web Worker; the WASM file ships in the wheel, and no request leaves the lab host
 

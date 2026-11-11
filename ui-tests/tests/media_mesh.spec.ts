@@ -937,6 +937,11 @@ const button = (page: any, title: string) =>
   toolbar(page).locator(`[title="${title}"]`).first();
 const labelled = (page: any, label: string) =>
   toolbar(page).locator(`button[aria-label="${label}"]`);
+// An icon button takes its aria-label from the tooltip, and a toggle's
+// tooltip follows its pressed state, so a toggle is located by item name.
+const item = (page: any, name: string) =>
+  toolbar(page).locator(`[data-jp-item-name="${name}"] button`);
+const toggle = (page: any, name: string) => item(page, `advanced-${name}`);
 const tabs = (page: any) =>
   page.locator('#jp-main-dock-panel .lm-TabBar-tabLabel');
 const currentTab = (page: any) =>
@@ -1565,7 +1570,7 @@ const resolved = (page: any, colour: string): Promise<number[]> =>
 
 // A toolbar menu: its button, then the item whose label is exact.
 const choose = async (page: any, menu: string, label: string) => {
-  await labelled(page, menu).click();
+  await item(page, menu).click();
   await page
     .locator('.lm-Menu-itemLabel')
     .filter({ hasText: new RegExp(`^${label}$`) })
@@ -2447,27 +2452,27 @@ test.describe('Mesh viewer', () => {
   });
 
   // ACC-MESH-82-SMOOTH
-  test('ACC-MESH-82-SMOOTH Smooth rounds a coarse mesh and keeps sharp edges; Flat shows the facets', async ({
+  test('ACC-MESH-82-SMOOTH Shading is on at open, off shows the flat facets, and on again restores the smooth surface', async ({
     page,
     tmpPath
   }) => {
     // Facets meet at 15 degrees and diagonal ones at 21, both below the crease
-    // angle, so Smooth rounds it and Flat shows its facets.
+    // angle, so Smooth rounds it and Shading off shows its facets.
     await upload(page, `${tmpPath}/globe.stl`, stl(globe(12, 24)));
     await open(page, `${tmpPath}/globe.stl`);
-    const flat = labelled(page, 'Flat');
-    await expect(flat).toHaveAttribute('aria-pressed', 'false');
+    const shading = toggle(page, 'shading');
+    await expect(shading).toHaveAttribute('aria-pressed', 'true');
     const smooth = await measure(page);
 
-    await flat.click();
-    await expect(flat).toHaveAttribute('aria-pressed', 'true');
+    await shading.click();
+    await expect(shading).toHaveAttribute('aria-pressed', 'false');
     const faceted = await measure(page);
     expect(faceted.colours).toBeLessThan(smooth.colours);
     // A facet boundary is a jump in shade; a smooth surface has none.
     expect(faceted.largestStep).toBeGreaterThan(smooth.largestStep * 2);
 
-    await flat.click();
-    await expect(flat).toHaveAttribute('aria-pressed', 'false');
+    await shading.click();
+    await expect(shading).toHaveAttribute('aria-pressed', 'true');
     expect((await measure(page)).colours).toBe(smooth.colours);
 
     // A cube edge is sharper than the crease angle, so it stays sharp.
@@ -2477,13 +2482,16 @@ test.describe('Mesh viewer', () => {
     expect(cube.largestStep).toBeGreaterThan(smooth.largestStep * 2);
 
     // Either side of the crease angle of 40 degrees: a side that stays sharp is
-    // drawn as Flat draws it, and a side that rounds is not.
+    // drawn as Shading off draws it, and a side that rounds is not.
     const smoothAgainstFlat = async (sides: number) => {
       await upload(page, `${tmpPath}/prism${sides}.stl`, stl(prism(sides)));
       await open(page, `${tmpPath}/prism${sides}.stl`);
       const rounded = await measure(page);
-      await flat.click();
-      await expect(flat).toHaveAttribute('aria-pressed', 'true');
+      await toggle(page, 'shading').click();
+      await expect(toggle(page, 'shading')).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
       return change(rounded, await measure(page));
     };
     expect(await smoothAgainstFlat(8)).toBeLessThan(0.01);
@@ -2497,20 +2505,20 @@ test.describe('Mesh viewer', () => {
   }) => {
     // Diagonal facets meet at 31.8 degrees. With a crease angle below that, faces
     // sharing a vertex get different normals, so every facet edge stays a jump in
-    // shade. Largest step measured against the 70 of Flat: 8 with a crease of 40
-    // degrees, 38 with one of 30.
+    // shade. Largest step measured against the 70 with Shading off: 8 with a
+    // crease of 40 degrees, 38 with one of 30.
     await upload(page, `${tmpPath}/globe.stl`, stl(globe(8, 16)));
     await open(page, `${tmpPath}/globe.stl`);
     const smooth = await measure(page);
-    const flat = labelled(page, 'Flat');
-    await flat.click();
-    await expect(flat).toHaveAttribute('aria-pressed', 'true');
+    const shading = toggle(page, 'shading');
+    await shading.click();
+    await expect(shading).toHaveAttribute('aria-pressed', 'false');
     const faceted = await measure(page);
     expect(faceted.largestStep).toBeGreaterThan(smooth.largestStep * 4);
   });
 
   // ACC-MESH-82-SMOOTH, ACC-MESH-83-WIRE
-  test('ACC-MESH-82-SMOOTH ACC-MESH-83-WIRE Flat and Wireframe stay on, with the button pressed, after Reload and Page Down', async ({
+  test('ACC-MESH-82-SMOOTH ACC-MESH-83-WIRE Shading and Wireframe keep their pressed state after Reload and Page Down', async ({
     page,
     tmpPath
   }) => {
@@ -2520,12 +2528,21 @@ test.describe('Mesh viewer', () => {
     await upload(page, `${dir}/b.stl`, stl(triangles));
     await open(page, `${dir}/a.stl`);
     const smooth = await measure(page);
+    const shading = toggle(page, 'shading');
+    const wireframe = toggle(page, 'wireframe');
 
-    const expectShading = async (on: string, off: string, shot: IShot) => {
-      await expect(labelled(page, on)).toHaveAttribute('aria-pressed', 'true');
-      await expect(labelled(page, off)).toHaveAttribute(
+    const expectState = async (
+      shadingPressed: boolean,
+      wireframePressed: boolean,
+      shot: IShot
+    ) => {
+      await expect(shading).toHaveAttribute(
         'aria-pressed',
-        'false'
+        String(shadingPressed)
+      );
+      await expect(wireframe).toHaveAttribute(
+        'aria-pressed',
+        String(wireframePressed)
       );
       expect(change(shot, await measure(page))).toBeLessThan(0.01);
     };
@@ -2550,36 +2567,36 @@ test.describe('Mesh viewer', () => {
       await expect(message(page)).toHaveText('');
     };
 
-    await labelled(page, 'Flat').click();
+    // Shading is on at open: one click shows the facets and stays off.
+    await expect(shading).toHaveAttribute('aria-pressed', 'true');
+    await shading.click();
+    await expect(shading).toHaveAttribute('aria-pressed', 'false');
     const flat = await measure(page);
     expect(change(smooth, flat)).toBeGreaterThan(0.1);
     await reload(`${dir}/a.stl`);
-    await expectShading('Flat', 'Wireframe', flat);
+    await expectState(false, false, flat);
     await step('PageDown', 'b.stl');
-    await expectShading('Flat', 'Wireframe', flat);
+    await expectState(false, false, flat);
 
-    await labelled(page, 'Flat').click();
-    await labelled(page, 'Wireframe').click();
+    // On again, with Wireframe on: the edges on the smooth surface.
+    await shading.click();
+    await expect(shading).toHaveAttribute('aria-pressed', 'true');
+    await wireframe.click();
     const edges = await measure(page);
     expect(change(smooth, edges)).toBeGreaterThan(0.1);
     await reload(`${dir}/b.stl`);
-    await expectShading('Wireframe', 'Flat', edges);
+    await expectState(true, true, edges);
     await step('PageUp', 'a.stl');
-    await expectShading('Wireframe', 'Flat', edges);
+    await expectState(true, true, edges);
 
     // Off stays off as well.
-    await labelled(page, 'Wireframe').click();
-    await expect(labelled(page, 'Wireframe')).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    );
+    await wireframe.click();
+    await expect(wireframe).toHaveAttribute('aria-pressed', 'false');
     expect(change(smooth, await measure(page))).toBeLessThan(0.01);
     await step('PageDown', 'b.stl');
-    await expect(labelled(page, 'Wireframe')).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    );
+    await expect(wireframe).toHaveAttribute('aria-pressed', 'false');
     expect(change(smooth, await measure(page))).toBeLessThan(0.01);
+    await expect(shading).toHaveAttribute('aria-pressed', 'true');
   });
 
   // ACC-MESH-83-WIRE
@@ -2589,7 +2606,7 @@ test.describe('Mesh viewer', () => {
   }) => {
     await upload(page, `${tmpPath}/globe.stl`, stl(globe()));
     await open(page, `${tmpPath}/globe.stl`);
-    const wireframe = labelled(page, 'Wireframe');
+    const wireframe = toggle(page, 'wireframe');
     await expect(wireframe).toHaveAttribute('aria-pressed', 'false');
     const surface = await measure(page);
 
@@ -2626,7 +2643,7 @@ test.describe('Mesh viewer', () => {
 
     // It then moves back from the camera, to leave room for the pan.
     for (let i = 0; i < 4; i++) {
-      await labelled(page, '-').click();
+      await labelled(page, 'Zoom out').click();
     }
     const orbited = await measure(page);
 
@@ -2645,9 +2662,9 @@ test.describe('Mesh viewer', () => {
     // Wheel: the model grows about the pointer. Back at a small centred view, a
     // pointer 150 px left of the model moves it right by (scale - 1) x 150 px;
     // growing about the panel centre would not move it.
-    await labelled(page, 'Fit').click();
+    await labelled(page, 'Reset to fit').click();
     for (let i = 0; i < 6; i++) {
-      await labelled(page, '-').click();
+      await labelled(page, 'Zoom out').click();
     }
     const small = await measure(page);
     const panel = (await viewer(page).boundingBox())!;
@@ -2674,7 +2691,7 @@ test.describe('Mesh viewer', () => {
   });
 
   // ACC-MESH-85-FIT
-  test('ACC-MESH-85-FIT opens centred and filling the panel; Fit restores it; - + Fit read as in the image viewer; a resize keeps the shape', async ({
+  test('ACC-MESH-85-FIT opens centred and filling the panel; Fit restores it; Reset to fit, Zoom out and Zoom in read as in the image viewer; a resize keeps the shape', async ({
     page,
     tmpPath
   }) => {
@@ -2683,10 +2700,15 @@ test.describe('Mesh viewer', () => {
       Promise.all(
         ['advanced-zoom-out', 'advanced-zoom-in', 'advanced-reset-fit'].map(
           async name => {
-            const item = toolbar(page).locator(
-              `[data-jp-item-name="${name}"] [title]`
+            // The jp-button host holds both attributes; the button in its
+            // shadow root carries the aria-label but not the title.
+            const button = toolbar(page).locator(
+              `[data-jp-item-name="${name}"] jp-button`
             );
-            return [await item.innerText(), await item.getAttribute('title')];
+            return [
+              await button.getAttribute('aria-label'),
+              await button.getAttribute('title')
+            ];
           }
         )
       );
@@ -2708,33 +2730,33 @@ test.describe('Mesh viewer', () => {
     const framed = await measure(page);
     expectFramed(framed);
 
-    await labelled(page, '+').click();
+    await labelled(page, 'Zoom in').click();
     const larger = await measure(page);
     expect(boxHeight(larger)).toBeGreaterThan(boxHeight(framed));
-    await labelled(page, '-').click();
-    await labelled(page, '-').click();
+    await labelled(page, 'Zoom out').click();
+    await labelled(page, 'Zoom out').click();
     const smaller = await measure(page);
     expect(boxHeight(smaller)).toBeLessThan(boxHeight(framed));
 
     // Any camera move, then Fit.
     await drag(page, 'left', 200, 90);
     await drag(page, 'right', 80, 60);
-    await labelled(page, 'Fit').click();
+    await labelled(page, 'Reset to fit').click();
     const again = await measure(page);
     expectFramed(again);
     expect(again.covered).toBe(framed.covered);
 
     // The zoom buttons follow the zoom step setting.
     await setSetting(page, 'zoomStep', 0.5);
-    await labelled(page, '+').click();
+    await labelled(page, 'Zoom in').click();
     const stepped = await measure(page);
     expect(boxHeight(stepped)).toBeGreaterThan(boxHeight(larger));
-    await labelled(page, 'Fit').click();
+    await labelled(page, 'Reset to fit').click();
 
     // A panel resize changes the panel, not the shape of the model. The model
     // first moves back from the camera, so the narrow panel does not clip it.
     for (let i = 0; i < 2; i++) {
-      await labelled(page, '-').click();
+      await labelled(page, 'Zoom out').click();
     }
     const before = await measure(page);
     await page.setViewportSize({ width: 800, height: 1000 });
@@ -2759,7 +2781,7 @@ test.describe('Mesh viewer', () => {
     // In a panel taller than wide the width limits the view, so Fit and a first
     // open move back further and the whole model stays on show.
     expect(resized.height).toBeGreaterThan(resized.width);
-    await labelled(page, 'Fit').click();
+    await labelled(page, 'Reset to fit').click();
     expectFramed(await measure(page));
     await upload(page, `${tmpPath}/tall.stl`, stl(box(1, 1, 1)));
     // The toolbar overflows at this width and the read-out moves into the
@@ -2771,6 +2793,23 @@ test.describe('Mesh viewer', () => {
       .poll(async () => (await measure(page)).covered)
       .toBeGreaterThan(5000);
     expectFramed(await modelOnShow(page));
+  });
+
+  // DEF-MESH-73-FIT-TOGGLE
+  test('DEF-MESH-73-FIT-TOGGLE Fit, - + and Reload stay unpressed after one click', async ({
+    page,
+    tmpPath
+  }) => {
+    await upload(page, `${tmpPath}/cube.stl`, stl(box(1, 1, 1)));
+    await open(page, `${tmpPath}/cube.stl`);
+    for (const label of ['Reset to fit', 'Zoom out', 'Zoom in', RELOAD]) {
+      const control = labelled(page, label);
+      await expect(control).toHaveAttribute('aria-pressed', 'false');
+      await control.click();
+      // The widget re-renders on the next frame, so read the attribute after it.
+      await settled(page);
+      await expect(control).toHaveAttribute('aria-pressed', 'false');
+    }
   });
 
   // ACC-MESH-85-FIT
@@ -2785,7 +2824,7 @@ test.describe('Mesh viewer', () => {
 
     await drag(page, 'left', 200, 90);
     await drag(page, 'right', 80, 60);
-    await labelled(page, 'Fit').click();
+    await labelled(page, 'Reset to fit').click();
     const again = await modelOnShow(page);
     expectFramed(again);
     expect(Math.abs(again.covered / framed.covered - 1)).toBeLessThan(0.01);
@@ -2949,7 +2988,7 @@ test.describe('Mesh viewer', () => {
     await upload(page, file, stl(box(1, 1, 1)));
     await open(page, file);
     for (let i = 0; i < 30; i++) {
-      await labelled(page, '-').click();
+      await labelled(page, 'Zoom out').click();
     }
     await drag(page, 'right', 250, 0);
     const far = await measure(page);
@@ -2994,7 +3033,8 @@ test.describe('Mesh viewer', () => {
     await upload(page, `${tmpPath}/cube.stl`, stl(box(1, 1, 1)));
     await open(page, `${tmpPath}/cube.stl`);
     const link = toolbar(page).locator('.jp-AdvancedImageViewer-help-link');
-    await expect(link).toHaveText('help');
+    await expect(link).toHaveAttribute('aria-label', 'Keybindings and help');
+    await expect(link.locator('svg')).toHaveCount(1);
     const toolbarBox = (await toolbar(page).boundingBox())!;
     const linkBox = (await link.boundingBox())!;
     expect(linkBox.x + linkBox.width).toBeGreaterThan(
@@ -3009,7 +3049,7 @@ test.describe('Mesh viewer', () => {
       'zoom',
       'Page Up',
       'Page Down',
-      'Flat',
+      'Shading',
       'Wireframe'
     ]) {
       await expect(dialog).toContainText(text);
@@ -3696,7 +3736,7 @@ test.describe('Mesh viewer', () => {
       await open(page, `${tmpPath}/lit-cube.stl`);
       const grids: { [style: string]: IShot } = {};
       for (const style of styles) {
-        await choose(page, 'Lighting', style);
+        await choose(page, 'advanced-lighting', style);
         const shot = await shotOf(page);
         grids[style] = await measure(page);
         const report = await contrastReport(page, shot);
@@ -3717,7 +3757,7 @@ test.describe('Mesh viewer', () => {
 
       await open(page, `${tmpPath}/lit-torus.stl`);
       for (const style of styles) {
-        await choose(page, 'Lighting', style);
+        await choose(page, 'advanced-lighting', style);
         const shot = await shotOf(page);
         const report = await contrastReport(page, shot);
         // The curved mesh's interior median holds 3:1 in every style; the
@@ -3750,12 +3790,12 @@ test.describe('Mesh viewer', () => {
     // file never opened before shows the menu check on Three-point.
     await page.theme.setLightTheme();
     await open(page, `${tmpPath}/lit-torus.stl`);
-    await choose(page, 'Lighting', 'Three-point');
+    await choose(page, 'advanced-lighting', 'Three-point');
     await viewer(page).focus();
     await page.keyboard.press('PageDown');
     await expect(currentTab(page)).toHaveText('lit-z.stl');
     await expect(message(page)).toHaveText('');
-    await labelled(page, 'Lighting').click();
+    await item(page, 'advanced-lighting').click();
     // Only the active style renders as a checked menuitemcheckbox, and it is
     // Three-point, the style set on the previous file.
     const checked = page.locator('.lm-Menu-item[role="menuitemcheckbox"]');
@@ -3784,14 +3824,14 @@ test.describe('Mesh viewer', () => {
         await page.theme.setLightTheme();
       }
       await open(page, `${dir}/a.stl`);
-      await expect(labelled(page, 'Grid')).toHaveAttribute(
+      await expect(toggle(page, 'grid')).toHaveAttribute(
         'aria-pressed',
         'false'
       );
       const off = await shotOf(page);
-      await labelled(page, 'Grid').click();
+      await toggle(page, 'grid').click();
       await settled(page);
-      await expect(labelled(page, 'Grid')).toHaveAttribute(
+      await expect(toggle(page, 'grid')).toHaveAttribute(
         'aria-pressed',
         'true'
       );
@@ -3804,9 +3844,9 @@ test.describe('Mesh viewer', () => {
       expect(report.interiorSampled).toBeGreaterThan(10000);
       expect(report.interiorChanged).toBe(0);
       // Off again restores every pixel of the first shot.
-      await labelled(page, 'Grid').click();
+      await toggle(page, 'grid').click();
       await settled(page);
-      await expect(labelled(page, 'Grid')).toHaveAttribute(
+      await expect(toggle(page, 'grid')).toHaveAttribute(
         'aria-pressed',
         'false'
       );
@@ -3819,18 +3859,18 @@ test.describe('Mesh viewer', () => {
     // Page Down carries the grid to the next file.
     await page.theme.setLightTheme();
     await open(page, `${dir}/a.stl`);
-    await labelled(page, 'Grid').click();
+    await toggle(page, 'grid').click();
     await settled(page);
     const countGrid = async () => {
-      await expect(labelled(page, 'Grid')).toHaveAttribute(
+      await expect(toggle(page, 'grid')).toHaveAttribute(
         'aria-pressed',
         'true'
       );
       const on = await shotOf(page);
-      await labelled(page, 'Grid').click();
+      await toggle(page, 'grid').click();
       await settled(page);
       const off = await shotOf(page);
-      await labelled(page, 'Grid').click();
+      await toggle(page, 'grid').click();
       await settled(page);
       const report = await gridReport(page, off, on);
       expect(report.gridPixels).toBeGreaterThanOrEqual(2000);
@@ -3871,9 +3911,9 @@ test.describe('Mesh viewer', () => {
     const stateBefore = await cameraState(page);
     expect(stateBefore.orthographic).toBe(false);
     expect(stateBefore.up).toEqual([0, 0, 1]);
-    await labelled(page, 'Orthographic').click();
+    await toggle(page, 'orthographic').click();
     await settled(page);
-    await expect(labelled(page, 'Orthographic')).toHaveAttribute(
+    await expect(toggle(page, 'orthographic')).toHaveAttribute(
       'aria-pressed',
       'true'
     );
@@ -3897,9 +3937,9 @@ test.describe('Mesh viewer', () => {
       )
     ).toBeLessThanOrEqual(0.1 * Math.max(boxWidth(before), boxHeight(before)));
     expect(after.covered).toBeGreaterThan(5000);
-    await labelled(page, 'Orthographic').click();
+    await toggle(page, 'orthographic').click();
     await settled(page);
-    await expect(labelled(page, 'Orthographic')).toHaveAttribute(
+    await expect(toggle(page, 'orthographic')).toHaveAttribute(
       'aria-pressed',
       'false'
     );
@@ -3933,7 +3973,7 @@ test.describe('Mesh viewer', () => {
     };
     const reports: { [view: string]: any } = {};
     for (const name of Object.keys(faces)) {
-      await choose(page, 'Views', name);
+      await choose(page, 'advanced-views', name);
       const report = await viewReport(page, await shotOf(page));
       reports[name] = report;
       for (const colour of [
@@ -4001,6 +4041,37 @@ test.describe('Mesh viewer', () => {
     );
   });
 
+  // ACC-MESH-104-VIEWS
+  test('ACC-MESH-104-VIEWS the Views and Lighting buttons take the keyboard focus back when their menu closes', async ({
+    page,
+    tmpPath
+  }) => {
+    test.setTimeout(180000);
+    await upload(page, `${tmpPath}/focus.stl`, stl(box(1, 1, 1)));
+    await open(page, `${tmpPath}/focus.stl`);
+    // The button is a jp-button element whose real button sits in its shadow
+    // root, and document.activeElement retargets to that host.
+    const focusIsOn = (name: string) =>
+      page.evaluate(
+        (name: string) =>
+          document.activeElement ===
+          document.querySelector(`[data-jp-item-name="${name}"] jp-button`),
+        name
+      );
+    await item(page, 'advanced-views').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.lm-Menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    expect(await focusIsOn('advanced-views')).toBe(true);
+    await choose(page, 'advanced-views', 'Front');
+    expect(await focusIsOn('advanced-views')).toBe(true);
+    await item(page, 'advanced-lighting').focus();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.lm-Menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    expect(await focusIsOn('advanced-lighting')).toBe(true);
+  });
+
   // ACC-MESH-105-REALFILE
   test('ACC-MESH-105-REALFILE the supplied binary STL opens, reads 12,616 triangles and stays on show through Reload, Front, Grid and Orthographic', async ({
     page,
@@ -4017,13 +4088,13 @@ test.describe('Mesh viewer', () => {
     await expect(message(page)).toHaveText('');
     await modelOnShow(page);
 
-    await choose(page, 'Views', 'Front');
+    await choose(page, 'advanced-views', 'Front');
     await modelOnShow(page);
 
     // The grid leaves the model's pixels as they were and adds lines around
     // them.
     const front = await shotOf(page);
-    await labelled(page, 'Grid').click();
+    await toggle(page, 'grid').click();
     await settled(page);
     const gridOn = await shotOf(page);
     const report = await gridReport(page, front, gridOn);
@@ -4032,9 +4103,9 @@ test.describe('Mesh viewer', () => {
     expect(report.interiorChanged).toBe(0);
     await modelOnShow(page);
 
-    await labelled(page, 'Orthographic').click();
+    await toggle(page, 'orthographic').click();
     await settled(page);
-    await expect(labelled(page, 'Orthographic')).toHaveAttribute(
+    await expect(toggle(page, 'orthographic')).toHaveAttribute(
       'aria-pressed',
       'true'
     );

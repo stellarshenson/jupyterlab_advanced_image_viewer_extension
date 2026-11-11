@@ -898,7 +898,8 @@ test.describe('Video viewer', () => {
   }) => {
     await open(page, `${tmpPath}/${NAME}`);
     const help = toolbar(page).locator('.jp-AdvancedImageViewer-help-link');
-    await expect(help).toHaveText('help');
+    await expect(help).toHaveAttribute('aria-label', 'Keybindings and help');
+    await expect(help.locator('svg')).toHaveCount(1);
     const { color, brand, underline } = await help.evaluate(
       (el: HTMLElement) => {
         const probe = document.createElement('span');

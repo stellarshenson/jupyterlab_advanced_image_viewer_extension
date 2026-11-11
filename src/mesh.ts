@@ -16,6 +16,15 @@ import { Menu, Widget } from '@lumino/widgets';
 
 import { formatSize } from './mediautil';
 
+import {
+  gridIcon,
+  lightingIcon,
+  orthographicIcon,
+  shadingIcon,
+  viewsIcon,
+  wireframeIcon
+} from './icons';
+
 import type { IMeshStats, MeshScene } from './meshscene';
 
 import {
@@ -51,18 +60,19 @@ export class MeshViewer extends Widget {
     this.details = document.createElement('span');
     this.details.className = 'jp-AdvancedMediaViewer-details';
     this.node.append(this.message);
-    this.flat = new ToolbarButton({
-      label: this.trans.__('Flat'),
-      tooltip: this.trans.__(
-        'Show the flat facets instead of a smooth surface'
+    this.shading = new ToolbarButton({
+      icon: shadingIcon,
+      tooltip: this.trans.__('Turn the smooth shading on'),
+      pressedTooltip: this.trans.__(
+        'Turn the shading off and show the flat facets'
       ),
-      pressedTooltip: this.trans.__('Show the smooth surface again'),
       className: 'jp-AdvancedMeshViewer-toggle',
       noFocusOnClick: true,
+      pressed: true,
       onClick: () => this.applyShading()
     });
     this.wireframe = new ToolbarButton({
-      label: this.trans.__('Wireframe'),
+      icon: wireframeIcon,
       tooltip: this.trans.__('Show the triangle edges instead of the surface'),
       pressedTooltip: this.trans.__(
         'Show the surface instead of the triangle edges'
@@ -72,7 +82,7 @@ export class MeshViewer extends Widget {
       onClick: () => this.applyShading()
     });
     this.grid = new ToolbarButton({
-      label: this.trans.__('Grid'),
+      icon: gridIcon,
       tooltip: this.trans.__('Show the ground grid'),
       pressedTooltip: this.trans.__('Hide the ground grid'),
       className: 'jp-AdvancedMeshViewer-toggle',
@@ -80,11 +90,9 @@ export class MeshViewer extends Widget {
       onClick: () => this.scene?.setGrid(this.grid.pressed)
     });
     this.orthographic = new ToolbarButton({
-      label: this.trans.__('Orthographic'),
-      tooltip: this.trans.__('Show the model in perspective'),
-      pressedTooltip: this.trans.__(
-        'Show the model in orthographic projection'
-      ),
+      icon: orthographicIcon,
+      tooltip: this.trans.__('Show the model in orthographic projection'),
+      pressedTooltip: this.trans.__('Show the model in perspective'),
       className: 'jp-AdvancedMeshViewer-toggle',
       noFocusOnClick: true,
       onClick: () => this.scene?.setProjection(this.orthographic.pressed)
@@ -105,13 +113,13 @@ export class MeshViewer extends Widget {
       });
     }
     this.views = new ToolbarButton({
-      label: this.trans.__('Views'),
+      icon: viewsIcon,
       tooltip: this.trans.__('Choose a standard view'),
       noFocusOnClick: true,
       onClick: () => this.openMenu(this.viewsMenu, this.views)
     });
     this.lightingButton = new ToolbarButton({
-      label: this.trans.__('Lighting'),
+      icon: lightingIcon,
       tooltip: this.trans.__('Choose the lighting style'),
       noFocusOnClick: true,
       onClick: () => this.openMenu(this.lightingMenu, this.lightingButton)
@@ -261,7 +269,7 @@ export class MeshViewer extends Widget {
   // The display buttons, between the zoom buttons and the details on the
   // toolbar.
   addControls(toolbar: Toolbar): void {
-    toolbar.addItem('advanced-flat', this.flat);
+    toolbar.addItem('advanced-shading', this.shading);
     toolbar.addItem('advanced-wireframe', this.wireframe);
     toolbar.addItem('advanced-grid', this.grid);
     toolbar.addItem('advanced-orthographic', this.orthographic);
@@ -286,7 +294,7 @@ export class MeshViewer extends Widget {
   // Folder navigation opens each file in a new viewer, which keeps the display
   // state of the one before it.
   takeDisplay(previous: MeshViewer): void {
-    this.flat.pressed = previous.flat.pressed;
+    this.shading.pressed = previous.shading.pressed;
     this.wireframe.pressed = previous.wireframe.pressed;
     this.grid.pressed = previous.grid.pressed;
     this.orthographic.pressed = previous.orthographic.pressed;
@@ -337,7 +345,7 @@ export class MeshViewer extends Widget {
   }
 
   private applyShading(): void {
-    this.scene?.setShading(this.flat.pressed, this.wireframe.pressed);
+    this.scene?.setShading(!this.shading.pressed, this.wireframe.pressed);
   }
 
   // Every display state the viewer holds, in one place, so a new file and a
@@ -358,7 +366,18 @@ export class MeshViewer extends Widget {
   }
 
   private focusButton(button: ToolbarButton): void {
-    button.node.querySelector('button')?.focus();
+    const host = button.node.querySelector<HTMLElement>('jp-button');
+    // The toolbar keeps one item tabbable and moves the focus into that item
+    // when the focus enters from outside, so make this button that item first.
+    const toolbar = button.node.parentElement as HTMLElement & {
+      activeIndex: number;
+      focusableElements: HTMLElement[];
+    };
+    const index = host ? toolbar.focusableElements.indexOf(host) : -1;
+    if (index >= 0) {
+      toolbar.activeIndex = index;
+    }
+    host?.shadowRoot?.querySelector('button')?.focus();
   }
 
   private showDetails(format: string, stats: IMeshStats, bytes: number): void {
@@ -387,7 +406,7 @@ export class MeshViewer extends Widget {
   private readonly contents: Contents.IManager;
   private readonly trans: TranslationBundle;
   private readonly message: HTMLElement;
-  private readonly flat: ToolbarButton;
+  private readonly shading: ToolbarButton;
   private readonly wireframe: ToolbarButton;
   private readonly grid: ToolbarButton;
   private readonly orthographic: ToolbarButton;

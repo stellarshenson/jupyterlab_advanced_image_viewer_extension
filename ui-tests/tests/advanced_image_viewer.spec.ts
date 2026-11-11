@@ -69,7 +69,8 @@ test.describe('Advanced Image Viewer', () => {
     // in the document toolbar (a sibling of the .jp-ImageViewer content), so
     // it is located at page scope - only one viewer is open in this test.
     const help = page.locator('.jp-AdvancedImageViewer-help-link');
-    await expect(help).toHaveText('help');
+    await expect(help).toHaveAttribute('aria-label', 'Keybindings and help');
+    await expect(help.locator('svg')).toHaveCount(1);
     // The link colour must equal the resolved --jp-brand-color1 accent
     // (the exact rgb differs between themes/versions, so compare values).
     const { color, brand } = await help.evaluate(el => {
@@ -127,12 +128,12 @@ test.describe('Advanced Image Viewer', () => {
     expect(layerStyle).toMatch(/scale\(1\.[0-9]/);
 
     const wheeled = await scaleOf(viewer);
-    await toolbarButton(page, '+').click();
+    await toolbarButton(page, 'Zoom in').click();
     await expect(img).toHaveAttribute('style', rotated);
     expect(await scaleOf(viewer)).toBeGreaterThan(wheeled);
     await drag(page, viewer, 40, 40);
     await expect(img).toHaveAttribute('style', rotated);
-    await toolbarButton(page, 'Fit').click();
+    await toolbarButton(page, 'Reset to fit').click();
     await expect(img).toHaveAttribute('style', rotated);
     expect(await layerTransform(viewer)).toBe('translate(0px, 0px) scale(1)');
   });
@@ -185,7 +186,7 @@ test.describe('Advanced Image Viewer', () => {
       )
       .toEqual([200, 150]);
 
-    await toolbarButton(page, '+').click();
+    await toolbarButton(page, 'Zoom in').click();
     expect(await scaleOf(viewer)).toBeCloseTo(1.1, 5);
     await viewer.click();
     await page.keyboard.press(']');
@@ -420,12 +421,12 @@ test.describe('Advanced Image Viewer', () => {
       '#jp-main-dock-panel .lm-TabBar-tab.lm-mod-current .lm-TabBar-tabLabel'
     );
 
-  const toolbarButton = (page: any, text: string) =>
+  // The zoom buttons are icons; their aria-label is the tooltip.
+  const toolbarButton = (page: any, label: string) =>
     page
       .locator(
-        '.jp-MainAreaWidget:not(.lm-mod-hidden) .jp-Toolbar .jp-ToolbarButtonComponent'
+        `.jp-MainAreaWidget:not(.lm-mod-hidden) .jp-Toolbar button[aria-label="${label}"]`
       )
-      .filter({ hasText: text })
       .first();
 
   const layerTransform = (viewer: any): Promise<string> =>
@@ -512,9 +513,9 @@ test.describe('Advanced Image Viewer', () => {
     await viewer.waitFor();
     const img = viewer.locator('img');
     const buttons = [
-      toolbarButton(page, '+'),
-      toolbarButton(page, '-'),
-      toolbarButton(page, 'Fit'),
+      toolbarButton(page, 'Zoom in'),
+      toolbarButton(page, 'Zoom out'),
+      toolbarButton(page, 'Reset to fit'),
       page
         .locator('.jp-MainAreaWidget:not(.lm-mod-hidden) .jp-Toolbar')
         .locator('[title="Reload image from disk"]')
@@ -733,7 +734,7 @@ test.describe('Advanced Image Viewer', () => {
     const moved = await geometry(viewer);
     expect(Math.abs(moved.img.left - baseline.img.left)).toBeGreaterThan(50);
 
-    await toolbarButton(page, 'Fit').click();
+    await toolbarButton(page, 'Reset to fit').click();
     const back = await geometry(viewer);
     expect(back.img.left).toBeCloseTo(baseline.img.left, 0);
     expect(back.img.top).toBeCloseTo(baseline.img.top, 0);
@@ -855,11 +856,11 @@ test.describe('Advanced Image Viewer', () => {
     const viewer = page.locator('.jp-ImageViewer').last();
     await viewer.waitFor();
 
-    await toolbarButton(page, '+').click();
+    await toolbarButton(page, 'Zoom in').click();
     expect(await scaleOf(viewer)).toBeCloseTo(1.1, 5);
-    await toolbarButton(page, '+').click();
+    await toolbarButton(page, 'Zoom in').click();
     expect(await scaleOf(viewer)).toBeCloseTo(1.21, 5);
-    await toolbarButton(page, '-').click();
+    await toolbarButton(page, 'Zoom out').click();
     expect(await scaleOf(viewer)).toBeCloseTo(1.1, 5);
   });
 
@@ -884,7 +885,7 @@ test.describe('Advanced Image Viewer', () => {
 
     await page.filebrowser.open(`${tmpPath}/${PNG_NAME}`, 'Image');
     await shown().waitFor();
-    await toolbarButton(page, '+').click();
+    await toolbarButton(page, 'Zoom in').click();
     await shown().click({ button: 'right' });
     await expect(item).toBeVisible();
     await item.click();
@@ -1019,7 +1020,7 @@ test.describe('Advanced Image Viewer', () => {
     const viewer = page.locator('.jp-ImageViewer').last();
     await viewer.waitFor();
 
-    await toolbarButton(page, '+').click();
+    await toolbarButton(page, 'Zoom in').click();
     expect(await scaleOf(viewer)).toBeCloseTo(1.25, 5);
   });
 
@@ -1043,7 +1044,7 @@ test.describe('Advanced Image Viewer', () => {
     await wheelMany(viewer, 5, -120);
     await drag(page, viewer, 300, 200);
     await wheelMany(viewer, 10, 120);
-    for (const label of ['+', '-', 'Fit']) {
+    for (const label of ['Zoom in', 'Zoom out', 'Reset to fit']) {
       await toolbarButton(page, label).click();
     }
     await page
