@@ -247,7 +247,7 @@ function parseStudioEnvironment(bytes: ArrayBuffer): IStudioEnvironment {
 export type MeshReadResult =
   | { read: IReadMesh }
   | { compression: string }
-  | { error: 'download' | 'parse' | 'empty' }
+  | { error: 'download' | 'parse' | 'empty' | 'asset' }
   | null;
 
 // One node of a read model as the scene draws it, kept so a lazy rung can make
@@ -335,7 +335,11 @@ async function workerRead(
     };
     worker.onerror = (event: ErrorEvent) => {
       signal?.removeEventListener('abort', abort);
-      reject(new Error(event.message));
+      // The worker's own parse failures arrive as postMessage replies, so an
+      // onerror is the script or one of its chunks failing to load.
+      const error = new Error(event.message);
+      error.name = 'WorkerLoadError';
+      reject(error);
     };
     const request: IMeshRequest = {
       kind: 'read',
@@ -387,6 +391,19 @@ function assemble(model: IMeshModel): IReadMesh {
         ? materials[part.material]
         : defaultMaterial(part.color !== null, tint);
     const cloud = pointsMaterial(part.color !== null);
+    // DEF-MESH-72-POINTS-COLOUR: a GLB points part keeps its authored colour,
+    // except the glTF default white, and its opacity only when the material is
+    // transparent; no map, because points carry no uv. The point size stays.
+    if (part.points && part.material >= 0) {
+      const authored = material as PointsMaterial;
+      if (authored.color.getHex() !== 0xffffff) {
+        cloud.color.copy(authored.color);
+      }
+      if (authored.transparent) {
+        cloud.opacity = authored.opacity;
+        cloud.transparent = true;
+      }
+    }
     const chunks = chunkGeometries(part);
     for (const geometry of chunks) {
       parts.push(objectOf(part, material, cloud, node, geometry));

@@ -2,6 +2,23 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.12] - 2026-11-11
+
+### Added
+
+- A binary STL sample at `.resources/sample.stl` (a closed sphere, 20,000 triangles) to try the mesh viewer with
+
+### Changed
+
+- The Makefile follows the shared reference 1.49: `make publish` installs before it tests, so the release tests the artifact it installs
+
+### Fixed
+
+- A GLB point cloud draws its authored colour, and its opacity and transparency when the material blends, instead of the viewer's neutral grey; a glTF default-white material stays grey, so it does not wash out the light theme
+- A failed viewer-asset load asks for a page reload instead of reporting a damaged file
+- A multi-megabyte ASCII STL is copied once per stream chunk instead of repeatedly over the whole accumulated buffer
+- OBJ files holding only vertices and GLB POINTS primitives open as point clouds instead of reporting no geometry
+
 ## [1.2.11] - 2026-11-09
 
 ### Added

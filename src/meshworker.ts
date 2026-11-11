@@ -10,6 +10,7 @@ import type {
   Material,
   Mesh,
   MeshStandardMaterial,
+  Points,
   Texture
 } from 'three';
 
@@ -102,7 +103,7 @@ export type IMeshReply =
   | IMeshModel
   | { kind: 'level'; level: number; entries: IMeshLevelEntry[] }
   | { kind: 'compression'; name: string }
-  | { kind: 'error'; stage: 'download' | 'parse' | 'empty' };
+  | { kind: 'error'; stage: 'download' | 'parse' | 'empty' | 'asset' };
 
 // The shape of occt-import-js 0.0.23's ReadStepFile result that this reader
 // uses. The colour is linear RGB in 0..1.
@@ -175,7 +176,7 @@ self.onmessage = async (event: MessageEvent<IMeshRequest>) => {
   }
 };
 
-const failure = (stage: 'download' | 'parse' | 'empty'): IReply => ({
+const failure = (stage: 'download' | 'parse' | 'empty' | 'asset'): IReply => ({
   reply: { kind: 'error', stage },
   transfer: []
 });
@@ -644,17 +645,28 @@ async function readStl(url: string): Promise<IReply> {
   }
 
   if (!binary) {
+    // One allocation for the whole file: appending each chunk to the growing
+    // head copied the accumulated bytes again on every chunk.
+    const chunks = [head];
     try {
       while (!ended) {
         const chunk = await readChunk();
         if (chunk) {
-          append(chunk);
+          chunks.push(chunk);
         }
       }
     } catch (reason) {
       return failure('download');
     }
-    const geometry = new STLLoader().parse(new TextDecoder().decode(head));
+    const bytes = new Uint8Array(
+      chunks.reduce((total, chunk) => total + chunk.byteLength, 0)
+    );
+    let at = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, at);
+      at += chunk.byteLength;
+    }
+    const geometry = new STLLoader().parse(new TextDecoder().decode(bytes));
     const part = stlPart(geometry);
     return modelReply(
       modelOf(part ? [part] : [], part ? [{ part: 0, matrix: IDENTITY }] : [])
@@ -904,10 +916,11 @@ function readObj(body: ArrayBuffer): IReply {
   const nodes: IMeshNode[] = [];
   group.traverse(object => {
     const mesh = object as Mesh;
-    if (!mesh.isMesh) {
+    const points = (object as Points).isPoints === true;
+    if (!mesh.isMesh && !points) {
       return;
     }
-    const part = partOf(mesh.geometry, -1, false);
+    const part = partOf(mesh.geometry, -1, points);
     if (!part) {
       return;
     }
@@ -946,10 +959,11 @@ async function readGlb(body: ArrayBuffer): Promise<IReply> {
   };
   gltf.scene.traverse(object => {
     const mesh = object as Mesh;
-    if (!mesh.isMesh) {
+    const points = (object as Points).isPoints === true;
+    if (!mesh.isMesh && !points) {
       return;
     }
-    const part = partOf(mesh.geometry, materialIndex(mesh.material), false);
+    const part = partOf(mesh.geometry, materialIndex(mesh.material), points);
     if (!part) {
       return;
     }
@@ -1077,8 +1091,14 @@ async function readStep(
   glue: string,
   wasm: string
 ): Promise<IReply> {
-  importScripts(glue);
-  const occt = await occtimportjs({ locateFile: () => wasm });
+  let occt: Awaited<ReturnType<typeof occtimportjs>>;
+  try {
+    importScripts(glue);
+    occt = await occtimportjs({ locateFile: () => wasm });
+  } catch (reason) {
+    // The glue or its WASM is missing: the page is stale, not the file.
+    return failure('asset');
+  }
   const result = occt.ReadStepFile(new Uint8Array(body), null);
   if (!result.success) {
     throw new Error('The STEP reader did not read the file.');

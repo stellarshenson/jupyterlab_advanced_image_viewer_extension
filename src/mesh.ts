@@ -148,6 +148,12 @@ export class MeshViewer extends Widget {
     this.showMessage(trans.__('Loading...'));
     // Up to the end of the download a failure is the server's, then the file's.
     let failure = trans.__('This file cannot be read from the server.');
+    // Duplicated from the media viewer rather than imported, so this chunk
+    // does not pull in that module: a page left open across an install asks
+    // for chunks that no longer exist, and only a page reload helps.
+    const outdated = trans.__(
+      'This viewer was updated; reload the page to use it.'
+    );
     try {
       // The document context drops the size from the file model.
       const { size } = await this.contents.get(path, { content: false });
@@ -209,11 +215,13 @@ export class MeshViewer extends Widget {
       }
       if (result && 'error' in result) {
         this.fail(
-          result.error === 'download'
-            ? trans.__('This file cannot be read from the server.')
-            : result.error === 'empty'
-              ? trans.__('This file is empty.')
-              : failure
+          result.error === 'asset'
+            ? outdated
+            : result.error === 'download'
+              ? trans.__('This file cannot be read from the server.')
+              : result.error === 'empty'
+                ? trans.__('This file is empty.')
+                : failure
         );
         return;
       }
@@ -240,7 +248,12 @@ export class MeshViewer extends Widget {
     } catch (reason) {
       if (!stale()) {
         console.error('Mesh viewer: the file was not shown', reason);
-        this.fail(failure);
+        const name = (reason as Error)?.name;
+        this.fail(
+          name === 'ChunkLoadError' || name === 'WorkerLoadError'
+            ? outdated
+            : failure
+        );
       }
     }
   }

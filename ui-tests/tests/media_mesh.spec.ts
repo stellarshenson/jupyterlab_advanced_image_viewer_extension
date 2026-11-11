@@ -360,6 +360,19 @@ const obj = (triangles: number[][]): string => {
   ].join('\n');
 };
 
+// An OBJ point cloud: vertices and no faces.
+const objPoints = (side: number): string => {
+  const vertices: string[] = [];
+  for (let i = 0; i < side; i++) {
+    for (let j = 0; j < side; j++) {
+      vertices.push(
+        `v ${(2 * i) / (side - 1) - 1} ${(2 * j) / (side - 1) - 1} 0`
+      );
+    }
+  }
+  return [...vertices, ''].join('\n');
+};
+
 const CRC_TABLE = Array.from({ length: 256 }, (_, byte) => {
   let crc = byte;
   for (let bit = 0; bit < 8; bit++) {
@@ -570,6 +583,8 @@ interface IGlb {
   instance?: boolean;
   // Declare KHR_materials_unlit on the material.
   unlit?: boolean;
+  // A POINTS primitive: every three numbers are one vertex, not a triangle.
+  points?: boolean;
 }
 
 // A binary glTF with one mesh in one material.
@@ -625,7 +640,13 @@ const glb = (triangles: number[][], options: IGlb = {}): Buffer => {
     nodes: options.instance
       ? [{ mesh: 0 }, { mesh: 0, translation: [2, 0, 0] }]
       : [{ mesh: 0 }],
-    meshes: [{ primitives: [{ attributes, material: 0 }] }],
+    meshes: [
+      {
+        primitives: [
+          { attributes, material: 0, ...(options.points ? { mode: 0 } : {}) }
+        ]
+      }
+    ],
     materials: [
       {
         pbrMetallicRoughness: options.texture
@@ -694,6 +715,17 @@ const glb = (triangles: number[][], options: IGlb = {}): Buffer => {
     chunkHeader(binChunk.length, 0x004e4942),
     binChunk
   ]);
+};
+
+// A GLB point cloud: a grid of vertices in one POINTS primitive.
+const glbPoints = (side: number): Buffer => {
+  const points: number[][] = [];
+  for (let i = 0; i < side; i++) {
+    for (let j = 0; j < side; j++) {
+      points.push([(2 * i) / (side - 1) - 1, (2 * j) / (side - 1) - 1, 0]);
+    }
+  }
+  return glb(points, { points: true });
 };
 
 interface IShot {
@@ -2105,6 +2137,33 @@ test.describe('Mesh viewer', () => {
     }
   });
 
+  // DEF-MESH-70-STL-COPY
+  test('DEF-MESH-70-STL-COPY a multi-megabyte ASCII STL counts every triangle', async ({
+    page,
+    tmpPath
+  }) => {
+    const side = 160;
+    const step = 2 / side;
+    const height = (x: number, y: number) =>
+      0.2 * Math.sin(3 * x) * Math.cos(3 * y);
+    const triangles: number[][] = [];
+    for (let i = 0; i < side; i++) {
+      for (let j = 0; j < side; j++) {
+        const x = 2 * (i / side) - 1;
+        const y = 2 * (j / side) - 1;
+        const a = [x, y, height(x, y)];
+        const b = [x + step, y, height(x + step, y)];
+        const c = [x + step, y + step, height(x + step, y + step)];
+        const d = [x, y + step, height(x, y + step)];
+        triangles.push([...a, ...b, ...c], [...a, ...c, ...d]);
+      }
+    }
+    const file = `${tmpPath}/large-ascii.stl`;
+    await page.contents.uploadContent(ascii(triangles), 'text', file);
+    await open(page, file);
+    await expect(details(page)).toContainText('51,200 triangles');
+  });
+
   // ACC-MESH-77-PLY
   test('ACC-MESH-77-PLY a PLY surface shows its vertex colours and a PLY point cloud shows points', async ({
     page,
@@ -2156,6 +2215,53 @@ test.describe('Mesh viewer', () => {
     expect(
       requests.filter(url => new URL(url).pathname.endsWith('.mtl'))
     ).toEqual([]);
+  });
+
+  // DEF-MESH-71-POINTS
+  test('DEF-MESH-71-POINTS an OBJ holding only vertices opens as a point cloud', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/cloud.obj`;
+    await page.contents.uploadContent(objPoints(32), 'text', file);
+    await page.filebrowser.open(file);
+    await viewer(page).waitFor();
+    await expect(message(page)).toHaveText('', { timeout: 30000 });
+    await expect(details(page)).toContainText('OBJ · 1,024 points', {
+      timeout: 30000
+    });
+    expect((await measure(page)).covered).toBeGreaterThan(500);
+  });
+
+  // DEF-MESH-71-POINTS
+  test('DEF-MESH-71-POINTS a GLB POINTS primitive opens as a point cloud', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/cloud.glb`;
+    await upload(page, file, glbPoints(32));
+    await page.filebrowser.open(file);
+    await viewer(page).waitFor();
+    await expect(message(page)).toHaveText('', { timeout: 30000 });
+    await expect(details(page)).toContainText('GLB · 1,024 points', {
+      timeout: 30000
+    });
+    expect((await measure(page)).covered).toBeGreaterThan(500);
+    // DEF-MESH-72-POINTS-COLOUR: the cloud keeps the file's authored colour.
+    // A glTF baseColorFactor is linear and so is three's working space, so
+    // the linear hex reads the authored [1, 0.25, 0, 1] as 0xff4000.
+    const colour = await page.evaluate(() => {
+      const scene = (window as any).jupyterapp.shell.currentWidget?.content
+        ?.scene;
+      let hex = -1;
+      scene?.model?.traverse((object: any) => {
+        if (object.isPoints) {
+          hex = object.material.color.getHex('srgb-linear');
+        }
+      });
+      return hex;
+    });
+    expect(colour).toBe(0xff4000);
   });
 
   // ACC-MESH-100-THREEMF
@@ -3141,6 +3247,51 @@ test.describe('Mesh viewer', () => {
       await page.filebrowser.open(`${tmpPath}/zero.${extension}`);
       await expectSentence('This file is empty.');
     }
+  });
+
+  // DEF-MESH-69-ASSET
+  test('DEF-MESH-69-ASSET a failed worker load asks for a page reload, not a damaged file', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/worker.stl`;
+    await upload(page, file, stl(box(1, 1, 1)));
+    await open(page, file);
+
+    // The worker's chunk name changes with every build, so the page records the
+    // URL it asks for rather than the test naming the file.
+    await page.addInitScript(() => {
+      const Native = (window as any).Worker;
+      (window as any).workerUrls = [];
+      (window as any).Worker = class extends Native {
+        constructor(url: string, options?: any) {
+          (window as any).workerUrls.push(String(url));
+          super(url, options);
+        }
+      };
+    });
+    // The restored mesh tab is the current tab, so Galata's readiness wait for
+    // an active Launcher would never finish.
+    await page.reload({ waitForIsReady: false });
+    await viewer(page).waitFor();
+    await expect(details(page)).toHaveText(/./, { timeout: 30000 });
+
+    const before = await page.evaluate(() => (window as any).workerUrls.length);
+    await button(page, RELOAD).click();
+    await expect(message(page)).toHaveText('');
+    const worker = await page.evaluate(
+      (at: number) => (window as any).workerUrls[at] as string,
+      before
+    );
+    expect(worker).toContain('/static/');
+    await page.route(worker, (route: any) =>
+      route.fulfill({ status: 404, body: 'gone' })
+    );
+    await button(page, RELOAD).click();
+    await expect(message(page)).toHaveText(
+      'This viewer was updated; reload the page to use it.'
+    );
+    await expect(details(page)).toHaveText('');
   });
 
   // ACC-MESH-92-LARGE
