@@ -653,3 +653,14 @@ Waveform peaks of audio files over 100 MB, computed by the extension's server pa
   - log: 2026-11-07T00:24:59Z @kj closed
   - log: 2026-11-07T07:31:33Z @kj accepted by the owner on 2026-11-07: only a queued decode is cancelled; a started one finishes and caches
 
+## Pan `PAN`
+
+Drag to pan in the image viewer
+
+- log: 2026-11-13T10:31:40Z @kj category created
+
+- [ ] `DEF-PAN-74-RIGHT-BUTTON` **Right and middle button start a pan** - MINOR; a right or middle press on the image starts a pan; Shift+right-click opens the browser menu, which delivers no mouseup, so the image then follows the pointer with no button held until the next click
+  - repro: zoom in, Shift+right-click the image, press Escape, move the mouse
+  - root-cause: 2026-11-13T10:31:40Z @kj onDown in src/controller.ts starts the pan for every mouse button
+  - log: 2026-11-13T10:31:40Z @kj added
+

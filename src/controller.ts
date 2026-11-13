@@ -147,6 +147,11 @@ export class ViewerController {
   }
 
   private onDown = (e: MouseEvent): void => {
+    // Left button only: a right press opens a menu, and the browser's own
+    // menu delivers no mouseup to end the pan (DEF-PAN-74-RIGHT-BUTTON).
+    if (e.button !== 0) {
+      return;
+    }
     // preventDefault stops the browser dragging the image out, and with it the
     // focus a click would give the viewer; focus it here, or after a toolbar
     // click the stock keys and Left/Right go to the button instead.

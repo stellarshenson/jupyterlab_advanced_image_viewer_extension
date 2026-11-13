@@ -314,6 +314,25 @@ describe('ViewerController', () => {
     button.remove();
   });
 
+  // DEF-PAN-74-RIGHT-BUTTON: the browser menu of a right press delivers no
+  // mouseup, so a pan started by it would never end.
+  it('does not pan on a right or middle button press', () => {
+    stubGeometry(400, 300);
+    const c = new ViewerController(host, img, 0.1);
+    for (const button of [1, 2]) {
+      host.dispatchEvent(
+        new MouseEvent('mousedown', { clientX: 0, clientY: 0, button })
+      );
+      window.dispatchEvent(
+        new MouseEvent('mousemove', { clientX: -40, clientY: -30 })
+      );
+      expect(offset()).toEqual({ tx: 0, ty: 0 });
+    }
+    drag(-40, -30);
+    expect(offset()).toEqual({ tx: -40, ty: -30 });
+    c.dispose();
+  });
+
   it('stops observing the host and the image on dispose', () => {
     stubGeometry(80, 60);
     const c = new ViewerController(host, img, 0.1);
