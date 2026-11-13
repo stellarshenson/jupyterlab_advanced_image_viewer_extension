@@ -1989,9 +1989,12 @@ test.describe('Audio viewer', () => {
         { timeout: 20000 }
       )
       .toBe(true);
-    expect(
-      await media(page).evaluate((m: HTMLMediaElement) => m.readyState)
-    ).toBeGreaterThanOrEqual(1);
+    // Polled: the peaks are not held by the route, so the waveform can be
+    // drawn before the released file request gives the element its metadata
+    // (DEF-BUILD-78-SPINNER-RACE).
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.readyState))
+      .toBeGreaterThanOrEqual(1);
     await expect(spin).toBeHidden();
 
     // An unreadable file: the error sentence and no spinner.

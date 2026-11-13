@@ -74,6 +74,20 @@ Packaging, the Makefile and the GitHub Actions workflows
   - log: 2026-09-30T12:23:19Z @kj added
   - log: 2026-09-30T12:23:19Z @kj reported: CI red on b3e493e; error '_load_jupyter_server_extension function was not found'
   - log: 2026-09-30T13:21:21Z @kj closed: fixed in c20ff79: check_auth step and script removed, template answer kind: frontend
+- [x] `DEF-BUILD-77-GALATA-TRASH` **Galata deletes fail where /tmp and home are separate filesystems** - MINOR; the test server deletes to the trash; with the test root under /tmp on another filesystem than home every DELETE /api/contents answers 400 send2trash failed, and the 7 tests that delete a file fail
+  - evidence: ui-tests/jupyter_server_test_config.py sets delete_to_trash False on the three contents managers; build_test.py 2026-11-13 19:27: Galata 183 passed, no 'send2trash failed' line in the run, the 7 delete tests pass
+  - repro: run build_test.py on this workstation; logs/fleet-build-test.log of 2026-11-13 shows 7 failed, 175 passed
+  - test-tags: E2E
+  - root-cause: 2026-11-13T18:01:56Z @kj ui-tests/jupyter_server_test_config.py leaves FileContentsManager.delete_to_trash at True; send2trash then targets /.Trash-1000, which is root-owned
+  - log: 2026-11-13T18:01:56Z @kj added
+  - log: 2026-11-13T18:29:13Z @kj closed
+- [x] `DEF-BUILD-78-SPINNER-RACE` **ACC-MEDIA-114-SPINNER test reads readyState once** - MINOR; the Galata test reads media.readyState one time right after the waveform is drawn; the peaks request is not held by the route, so under load the waveform comes first and the test fails with readyState 0
+  - evidence: the test polls readyState with expect.poll; 'jlpm playwright test -g ACC-MEDIA-114-SPINNER --repeat-each 4': 8 passed
+  - repro: build_test.py of 2026-11-13 19:27: failed in the full run and the first rerun, passed on the second
+  - test-tags: E2E
+  - root-cause: 2026-11-13T18:28:08Z @kj ui-tests/tests/media_audio.spec.ts asserts readyState >= 1 with no poll after waiting only for wavesurfer.getDecodedData()
+  - log: 2026-11-13T18:28:08Z @kj added
+  - log: 2026-11-13T18:29:13Z @kj closed
 
 ## Context menu `MENU`
 
@@ -89,6 +103,13 @@ Items in the tab context menu and the image context menu
   - log: 2026-10-12T03:26:05Z @kj measured on an isolated server, port 8899, one terminal open: upper item `terminal:show-in-file-browser` moved the file browser to the server root 3 of 3 clicks; lower item `docmanager:show-in-file-browser` moved it to the image 3 of 3 clicks; no single item alternated
   - log: 2026-10-12T03:44:01Z @kj closed: fixed: terminal extension shows its item only when the context menu was opened on a terminal's tab or inside a terminal (`isVisible` in its `src/index.ts`); uncommitted in both repositories, terminal extension release pending
   - log: 2026-10-12T04:31:18Z @kj terminal extension 1.0.27 released to npm and PyPI with the fix; its CI green on 5fa71b8 with 4 Galata tests
+- [x] `DEF-MENU-76-COPY-SILENT` **Copy to Clipboard fails with no message** - MINOR; when the clipboard write fails the command writes only console.error; on a lab served over plain http on a host other than localhost navigator.clipboard is undefined, so nothing is copied and nothing says so
+  - evidence: the catch shows Notification.error 'The image was not copied to the clipboard.' and a null blob goes the same way; Galata 'Copy to Clipboard says so when the clipboard refuses the image' passes; Galata 183 passed
+  - repro: open the lab over http on a LAN host name, right-click a PNG, Copy to Clipboard, paste elsewhere
+  - test-tags: E2E
+  - root-cause: 2026-11-13T18:01:56Z @kj the catch of advanced-image-viewer:copy-to-clipboard in src/index.ts logs and shows nothing; a null blob returns silently
+  - log: 2026-11-13T18:01:56Z @kj added
+  - log: 2026-11-13T18:29:13Z @kj closed
 
 ## Media viewers `MEDIA`
 
@@ -659,8 +680,24 @@ Drag to pan in the image viewer
 
 - log: 2026-11-13T10:31:40Z @kj category created
 
-- [ ] `DEF-PAN-74-RIGHT-BUTTON` **Right and middle button start a pan** - MINOR; a right or middle press on the image starts a pan; Shift+right-click opens the browser menu, which delivers no mouseup, so the image then follows the pointer with no button held until the next click
+- [x] `DEF-PAN-74-RIGHT-BUTTON` **Right and middle button start a pan** - MINOR; a right or middle press on the image starts a pan; Shift+right-click opens the browser menu, which delivers no mouseup, so the image then follows the pointer with no button held until the next click
+  - evidence: onDown returns unless button is 0 (commit 95cb3d5); Jest 'does not pan on a right or middle button press' passes; build_test.py 2026-11-13: Jest 54, pytest 24, Galata 183
   - repro: zoom in, Shift+right-click the image, press Escape, move the mouse
   - root-cause: 2026-11-13T10:31:40Z @kj onDown in src/controller.ts starts the pan for every mouse button
   - log: 2026-11-13T10:31:40Z @kj added
+  - log: 2026-11-13T18:29:13Z @kj closed
+
+## Zoom `ZOOM`
+
+Wheel and toolbar zoom in the image viewer
+
+- log: 2026-11-13T18:01:56Z @kj category created
+
+- [x] `DEF-ZOOM-75-SIDEWAYS-WHEEL` **Sideways wheel zooms the image out** - MEDIUM; a wheel event with deltaY 0 (trackpad sideways swipe, tilt wheel, Shift+wheel in Chrome) zooms the image out one zoomStep per event
+  - evidence: onWheel returns when deltaY is 0; Jest 'does not zoom on a wheel event with no vertical movement' failed before the fix with scale(0.909) and passes after; Jest 54 passed
+  - repro: open a PNG, Shift+wheel over the image in Chrome
+  - test-tags: UNIT
+  - root-cause: 2026-11-13T18:01:56Z @kj onWheel in src/controller.ts takes the zoom-out branch for every deltaY that is not below 0
+  - log: 2026-11-13T18:01:56Z @kj added
+  - log: 2026-11-13T18:29:13Z @kj closed
 

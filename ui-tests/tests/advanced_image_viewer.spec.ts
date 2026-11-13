@@ -912,6 +912,33 @@ test.describe('Advanced Image Viewer', () => {
     await expect(item).toBeHidden();
   });
 
+  // DEF-MENU-76-COPY-SILENT: a clipboard write that fails, as on a lab served
+  // over plain http, says so in a notification.
+  test('Copy to Clipboard says so when the clipboard refuses the image', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.contents.uploadContent(PNG, 'base64', `${tmpPath}/${PNG_NAME}`);
+    await page.filebrowser.open(`${tmpPath}/${PNG_NAME}`, 'Image');
+    const viewer = page.locator(
+      '.jp-MainAreaWidget:not(.lm-mod-hidden) .jp-ImageViewer'
+    );
+    await viewer.waitFor();
+    await page.evaluate(() => {
+      navigator.clipboard.write = () => Promise.reject(new Error('refused'));
+    });
+    await viewer.click({ button: 'right' });
+    await page
+      .locator('.lm-Menu-itemLabel')
+      .filter({ hasText: 'Copy to Clipboard' })
+      .click();
+    await expect(
+      page
+        .locator('.Toastify__toast-container .jp-Notification-Toast-error')
+        .filter({ hasText: 'The image was not copied to the clipboard.' })
+    ).toBeVisible();
+  });
+
   // DEF-MENU-6: no label appears twice in the context menu of an image's tab
   // or of the image itself. A terminal is open because a terminal extension
   // once put its own "Show in File Browser" on every tab, and that item was

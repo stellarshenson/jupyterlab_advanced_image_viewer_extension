@@ -29,6 +29,14 @@ c.GalaxaHubMotd.open_on_start = False
 # file URL gets 404. This narrower section wins whichever file loads last.
 c.FileContentsManager.files_handler_params = {"path": c.ServerApp.root_dir}
 
+# A delete goes to the trash by default. Where the test root under /tmp and the
+# home folder are separate filesystems, send2trash targets the root-owned
+# /.Trash-<uid> and every delete answers 400 (DEF-BUILD-77-GALATA-TRASH). The
+# developer's own config can set it on the more specific manager classes, which
+# outrank FileContentsManager, so all three are set.
+for manager in ("FileContentsManager", "AsyncFileContentsManager", "AsyncLargeFileManager"):
+    getattr(c, manager).delete_to_trash = False
+
 # This extension ships the image fit that jupyterlab_fit_image_size_extension
 # used to supply. The test pages disable that extension, so its stylesheet never
 # loads and the suite measures this extension's fit alone, as in CI where it is

@@ -131,6 +131,11 @@ export class ViewerController {
 
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault();
+    // A sideways swipe, a tilt wheel and Shift+wheel have no vertical part
+    // and are no zoom (DEF-ZOOM-75-SIDEWAYS-WHEEL).
+    if (!e.deltaY) {
+      return;
+    }
     const r = this.host.getBoundingClientRect();
     const factor = e.deltaY < 0 ? 1 + this.zoomStep : 1 / (1 + this.zoomStep);
     this.zoomAt(factor, e.clientX - r.left, e.clientY - r.top);

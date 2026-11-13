@@ -6,6 +6,7 @@ import {
 
 import {
   Dialog,
+  Notification,
   showDialog,
   Toolbar,
   WidgetTracker
@@ -313,15 +314,22 @@ const plugin: JupyterFrontEndPlugin<void> = {
         const blob = await new Promise<Blob | null>(resolve =>
           canvas.toBlob(resolve, 'image/png')
         );
-        if (!blob) {
-          return;
-        }
         try {
+          if (!blob) {
+            throw new Error('The image has no pixels to copy');
+          }
           await navigator.clipboard.write([
             new ClipboardItem({ 'image/png': blob })
           ]);
         } catch (err) {
           console.error('Advanced image viewer: clipboard copy failed', err);
+          // The clipboard is absent on a lab served over plain http; say so,
+          // or the paste gives the old content (DEF-MENU-76-COPY-SILENT).
+          // Notification defaults autoClose to 0, which shows no toast.
+          void Notification.error(
+            trans.__('The image was not copied to the clipboard.'),
+            { autoClose: 5000 }
+          );
         }
       }
     });

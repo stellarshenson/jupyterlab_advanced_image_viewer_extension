@@ -333,6 +333,21 @@ describe('ViewerController', () => {
     c.dispose();
   });
 
+  // DEF-ZOOM-75-SIDEWAYS-WHEEL: a sideways swipe, a tilt wheel and Shift+wheel
+  // deliver deltaY 0, which is no zoom.
+  it('does not zoom on a wheel event with no vertical movement', () => {
+    stubGeometry(400, 300);
+    const c = new ViewerController(host, img, 0.1);
+    const layer = host.querySelector(
+      '.jp-AdvancedImageViewer-panlayer'
+    ) as HTMLElement;
+    host.dispatchEvent(new WheelEvent('wheel', { deltaX: 30, deltaY: 0 }));
+    expect(layer.style.transform).toContain('scale(1)');
+    host.dispatchEvent(new WheelEvent('wheel', { deltaY: -1 }));
+    expect(layer.style.transform).toContain('scale(1.1)');
+    c.dispose();
+  });
+
   it('stops observing the host and the image on dispose', () => {
     stubGeometry(80, 60);
     const c = new ViewerController(host, img, 0.1);
