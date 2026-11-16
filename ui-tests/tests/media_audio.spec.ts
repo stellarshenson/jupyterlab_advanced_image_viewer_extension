@@ -1,11 +1,28 @@
 import { expect, test } from '@jupyterlab/galata';
 
-// A 16-bit PCM WAV of `seconds` at 8 kHz, mono unless `channels` says more:
-// a 440 Hz tone whose loudness swells once a second, so the waveform has a
-// shape, the same in every channel. 60 s mono is 960,044 bytes.
+import { readFileSync } from 'fs';
+
+import * as path from 'path';
+
+// 2 s of a 440 Hz tone at 0.5 and 320 kb/s, then 58 s at 0.8 and 32 kb/s, two
+// MP3s with no Xing, Info or VBRI header joined end to end: the server reads
+// 60 s, Chromium first 7.84 s, timed from the first frame's bit rate. Written
+// from the project root by the pytest fixture of test_wave_137:
+//
+//   mkdir -p /tmp/mp3 && python -c "import pathlib, sys; sys.path.insert(0, 'jupyterlab_advanced_image_viewer_extension/tests'); from test_waveform import joined_mp3; joined_mp3(pathlib.Path(sys.argv[1]), [(2, 0.5, 320000), (58, 0.8, 32000)])" /tmp/mp3/estimated.mp3
+//
+// then copied here; the parts it writes beside it are not needed.
+const ESTIMATED = readFileSync(
+  path.join(__dirname, 'fixtures', 'estimated.mp3')
+);
+
+// A 16-bit PCM WAV of `seconds` at 8 kHz unless `rate` says otherwise, mono
+// unless `channels` says more: a 440 Hz tone whose loudness swells once a
+// second, so the waveform has a shape, the same in every channel. 60 s mono
+// is 960,044 bytes.
 const RATE = 8000;
-const wav = (seconds: number, channels = 1): Buffer => {
-  const samples = seconds * RATE;
+const wav = (seconds: number, channels = 1, rate = RATE): Buffer => {
+  const samples = seconds * rate;
   const bytes = samples * channels * 2;
   const buf = Buffer.alloc(44 + bytes);
   buf.write('RIFF', 0);
@@ -14,15 +31,15 @@ const wav = (seconds: number, channels = 1): Buffer => {
   buf.writeUInt32LE(16, 16);
   buf.writeUInt16LE(1, 20);
   buf.writeUInt16LE(channels, 22);
-  buf.writeUInt32LE(RATE, 24);
-  buf.writeUInt32LE(RATE * channels * 2, 28);
+  buf.writeUInt32LE(rate, 24);
+  buf.writeUInt32LE(rate * channels * 2, 28);
   buf.writeUInt16LE(channels * 2, 32);
   buf.writeUInt16LE(16, 34);
   buf.write('data', 36);
   buf.writeUInt32LE(bytes, 40);
   for (let i = 0; i < samples; i++) {
-    const swell = 0.3 + 0.7 * Math.abs(Math.sin((Math.PI * i) / RATE));
-    const value = 20000 * swell * Math.sin((2 * Math.PI * 440 * i) / RATE);
+    const swell = 0.3 + 0.7 * Math.abs(Math.sin((Math.PI * i) / rate));
+    const value = 20000 * swell * Math.sin((2 * Math.PI * 440 * i) / rate);
     for (let c = 0; c < channels; c++) {
       buf.writeInt16LE(Math.round(value), 44 + (i * channels + c) * 2);
     }
@@ -587,6 +604,217 @@ test.describe('Audio viewer', () => {
     const q = await parts(page);
     expect(q.cursor.x).toBeGreaterThanOrEqual(q.scroll.x);
     expect(q.cursor.x).toBeLessThanOrEqual(q.scroll.x + q.scroll.width);
+  });
+
+  // DEF-MEDIA-79-WHEEL-STEP. The zoom as drawn: the width of the waveform over
+  // the width of the view, 1 at the fit.
+  const zoom = async (page: any): Promise<number> => {
+    const p = await parts(page);
+    return p.wrapper.width / p.scroll.width;
+  };
+  // One wheel event at the mouse, then the zoom a frame later.
+  const wheel = async (
+    page: any,
+    deltaX: number,
+    deltaY: number
+  ): Promise<number> => {
+    await page.mouse.wheel(deltaX, deltaY);
+    await page.evaluate(
+      () => new Promise(resolve => requestAnimationFrame(resolve))
+    );
+    return zoom(page);
+  };
+  // The mouse over the middle row of the waveform, `fraction` of the view
+  // from its left; returns its x.
+  const pointAt = async (page: any, fraction: number): Promise<number> => {
+    const view = (await parts(page)).scroll;
+    const x = Math.round(view.x + view.width * fraction);
+    await page.mouse.move(x, view.y + view.height / 2);
+    return x;
+  };
+
+  // DEF-MEDIA-79-WHEEL-STEP. Every notch of twenty in from the fit and of those
+  // back out zooms by the same ratio, from 1.1 to 1.3. Only the notch that
+  // meets the fit may zoom less.
+  for (const [name, seconds] of [
+    ['short.wav', 1],
+    [NAME, 60],
+    ['long.wav', 600]
+  ] as const) {
+    test(`DEF-MEDIA-79-WHEEL-STEP one wheel notch zooms a ${seconds} s file by the same ratio from 1.1 to 1.3, in and out, from the fit to the deepest zoom`, async ({
+      page,
+      tmpPath
+    }) => {
+      if (name !== NAME) {
+        // At 4 kHz the ten minutes are 4.8 MB.
+        await page.contents.uploadContent(
+          wav(seconds, 1, 4000).toString('base64'),
+          'base64',
+          `${tmpPath}/${name}`
+        );
+      }
+      await open(page, `${tmpPath}/${name}`);
+      await pointAt(page, 0.5);
+      // Notches of `deltaY` until one no longer zooms; the zoom before the
+      // first and after each that zoomed.
+      const notches = async (deltaY: number): Promise<number[]> => {
+        const zooms = [await zoom(page)];
+        for (let i = 0; i < 80; i++) {
+          const now = await wheel(page, 0, deltaY);
+          if (Math.abs(now / zooms[zooms.length - 1] - 1) < 0.001) {
+            return zooms;
+          }
+          zooms.push(now);
+        }
+        throw new Error(`the zoom did not stop in 80 notches of ${deltaY}`);
+      };
+      // The zoom before the first notch in and after each of twenty.
+      const inward = [await zoom(page)];
+      for (let i = 0; i < 20; i++) {
+        inward.push(await wheel(page, 0, -100));
+      }
+      const outward = await notches(100);
+      expect(inward[0]).toBeCloseTo(1, 2);
+      // Out it stops at the fit.
+      expect(outward[outward.length - 1]).toBeCloseTo(1, 2);
+      const ratios = (zooms: number[], power: number): number[] =>
+        zooms.slice(1).map((now, i) => (now / zooms[i]) ** power);
+      const zoomIn = ratios(inward, 1);
+      const zoomOut = ratios(outward, -1);
+      const notch = zoomIn[0];
+      expect(notch).toBeGreaterThanOrEqual(1.1);
+      expect(notch).toBeLessThanOrEqual(1.3);
+      for (const ratio of [...zoomIn, ...zoomOut.slice(0, -1)]) {
+        expect(ratio).toBeCloseTo(notch, 2);
+      }
+      expect(zoomOut[zoomOut.length - 1]).toBeGreaterThan(1);
+      expect(zoomOut[zoomOut.length - 1]).toBeLessThan(notch + 0.005);
+    });
+  }
+
+  // DEF-MEDIA-79-WHEEL-STEP. Started from seven toolbar zooms, under one second
+  // across the view, so a notch in after a deep toolbar zoom zooms in.
+  test('DEF-MEDIA-79-WHEEL-STEP five wheel notches in and five out come back within 2% of the zoom they started from', async ({
+    page,
+    tmpPath
+  }) => {
+    await open(page, `${tmpPath}/${NAME}`);
+    for (let i = 0; i < 7; i++) {
+      await button(page, 'Zoom in').click();
+    }
+    await expect.poll(() => zoom(page)).toBeCloseTo(128, 0);
+    await pointAt(page, 0.3);
+    const start = await zoom(page);
+    for (let i = 0; i < 5; i++) {
+      await wheel(page, 0, -100);
+    }
+    expect(await zoom(page)).toBeGreaterThan(start * 1.5);
+    for (let i = 0; i < 5; i++) {
+      await wheel(page, 0, 100);
+    }
+    expect(Math.abs((await zoom(page)) / start - 1)).toBeLessThan(0.02);
+  });
+
+  // DEF-MEDIA-79-WHEEL-STEP. A trackpad flick sends thousands of px of deltaY;
+  // one render of a deeper waveform takes 2 s and 2.7 GB at 2.8e7 times the
+  // fit.
+  test('DEF-MEDIA-79-WHEEL-STEP a wheel event worth a hundred notches stops at a waveform 2 ** 24 px wide, and a notch in or Zoom in there keeps the zoom', async ({
+    page,
+    tmpPath
+  }) => {
+    await open(page, `${tmpPath}/${NAME}`);
+    await pointAt(page, 0.5);
+    const deepest = await wheel(page, 0, -10000);
+    const width = (await parts(page)).wrapper.width;
+    expect(width).toBeLessThanOrEqual(2 ** 24 + 1);
+    expect(width).toBeGreaterThanOrEqual(0.99 * 2 ** 24);
+    expect(Math.abs((await wheel(page, 0, -100)) / deepest - 1)).toBeLessThan(
+      0.001
+    );
+    await button(page, 'Zoom in').click();
+    await page.evaluate(
+      () => new Promise(resolve => requestAnimationFrame(resolve))
+    );
+    expect(Math.abs((await zoom(page)) / deepest - 1)).toBeLessThan(0.001);
+    // The click left the mouse over the toolbar.
+    await pointAt(page, 0.5);
+    expect(deepest / (await wheel(page, 0, 100))).toBeCloseTo(1.2, 2);
+  });
+
+  // DEF-MEDIA-79-WHEEL-STEP. The waveform is drawn over the server's 60 s of
+  // ESTIMATED while the element states 7.84 s; the zoom follows the drawing.
+  test('DEF-MEDIA-79-WHEEL-STEP on an MP3 the browser first times at 7.84 s of 60 s, one notch from the fit zooms by 1.2 and a hundred notches stop at a waveform at most 2 ** 24 px wide', async ({
+    page,
+    tmpPath
+  }) => {
+    await page.contents.uploadContent(
+      ESTIMATED.toString('base64'),
+      'base64',
+      `${tmpPath}/estimated.mp3`
+    );
+    await open(page, `${tmpPath}/estimated.mp3`);
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
+      .toBeLessThan(8);
+    await pointAt(page, 0.5);
+    expect(await zoom(page)).toBeCloseTo(1, 2);
+    expect(await wheel(page, 0, -100)).toBeCloseTo(1.2, 2);
+    await wheel(page, 0, -10000);
+    const width = (await parts(page)).wrapper.width;
+    expect(width).toBeLessThanOrEqual(2 ** 24 + 1);
+    expect(width).toBeGreaterThanOrEqual(0.99 * 2 ** 24);
+  });
+
+  // DEF-MEDIA-79-WHEEL-STEP. A trackpad sends many small deltas; together
+  // they zoom by their sum, not one step each.
+  test('DEF-MEDIA-79-WHEEL-STEP forty wheel events of 2.5 px, 100 px in all, zoom in no further than two notches', async ({
+    page,
+    tmpPath
+  }) => {
+    await open(page, `${tmpPath}/${NAME}`);
+    await pointAt(page, 0.5);
+    const notch = await wheel(page, 0, -100);
+    expect(notch).toBeGreaterThan(1);
+    await button(page, 'Reset to fit').click();
+    await expect.poll(() => zoom(page)).toBeCloseTo(1, 2);
+    await pointAt(page, 0.5);
+    let pad = 1;
+    for (let i = 0; i < 40; i++) {
+      pad = await wheel(page, 0, -2.5);
+    }
+    expect(pad).toBeGreaterThan(1);
+    expect(pad).toBeLessThanOrEqual(notch ** 2);
+  });
+
+  // DEF-MEDIA-79-WHEEL-STEP. Anchored within 3 px of the drawing: wavesurfer
+  // rounds the drawn width up to a whole pixel and the browser the scroll.
+  test('DEF-MEDIA-79-WHEEL-STEP the wheel keeps the time under the mouse in place, stops at the fit, and a sideways wheel does not zoom', async ({
+    page,
+    tmpPath
+  }) => {
+    await open(page, `${tmpPath}/${NAME}`);
+    const x = await pointAt(page, 0.25);
+    // The fraction of the file under the mouse, and the drawn width.
+    const under = async () => {
+      const w = (await parts(page)).wrapper;
+      return { at: (x - w.x) / w.width, width: w.width };
+    };
+    let before = await under();
+    for (const deltaY of [-100, -100, -100, -100, -100, 100, 100]) {
+      await wheel(page, 0, deltaY);
+      const after = await under();
+      expect(Math.abs(after.at - before.at) * after.width).toBeLessThan(3);
+      before = after;
+    }
+    // Sideways the zoomed waveform may scroll, but it does not zoom.
+    const level = await zoom(page);
+    expect(level).toBeGreaterThan(1.1);
+    expect(await wheel(page, 100, 0)).toBeCloseTo(level, 3);
+    for (let i = 0; i < 10; i++) {
+      await wheel(page, 0, 100);
+    }
+    expect(await zoom(page)).toBeCloseTo(1, 3);
+    expect(await wheel(page, -100, 0)).toBeCloseTo(1, 3);
   });
 
   // ACC-AUDIO-49-HOVER
@@ -1424,6 +1652,12 @@ test.describe('Audio viewer', () => {
         waveforms.push(r.url());
       }
     });
+    // Longer than the server's SHORT (84 s), so the first answer is the quick view.
+    await page.contents.uploadContent(
+      wav(90).toString('base64'),
+      'base64',
+      `${tmpPath}/${NAME}`
+    );
     await open(page, `${tmpPath}/${NAME}`);
 
     const src: string = await media(page).evaluate(
@@ -1439,10 +1673,14 @@ test.describe('Audio viewer', () => {
     const answer = await files[0].response();
     expect([200, 206]).toContain(answer.status());
     expect((await answer.allHeaders())['accept-ranges']).toBe('bytes');
-    expect(waveforms).toHaveLength(1);
-    expect(new URL(waveforms[0]).searchParams.get('path')).toBe(
-      `${tmpPath}/${NAME}`
-    );
+    // The quick view, then the fast pass, which the server answers as the
+    // full pass for a WAV (ACC-WAVE-141-REFINE).
+    await expect
+      .poll(() => waveforms.map(url => new URL(url).searchParams.get('level')))
+      .toEqual(['0', '1']);
+    for (const url of waveforms) {
+      expect(new URL(url).searchParams.get('path')).toBe(`${tmpPath}/${NAME}`);
+    }
     expect(await page.evaluate(() => (window as any).decodes)).toBe(0);
   });
 
@@ -1783,7 +2021,7 @@ test.describe('Audio viewer', () => {
 
   // ACC-WAVE-120-PROGRESS. The peaks answer is held until the spinner and
   // playback are checked.
-  test('ACC-WAVE-120-PROGRESS while the peaks compute, the waveform area shows a spinner with a line and the file already plays', async ({
+  test('ACC-WAVE-120-PROGRESS while the peaks compute, the waveform area shows a spinner with Loading... under it and the file already plays', async ({
     page,
     tmpPath
   }) => {
@@ -1803,9 +2041,7 @@ test.describe('Audio viewer', () => {
     const peaks = viewer(page).locator('.jp-AdvancedMediaViewer-peaks');
     await expect(peaks).toBeVisible();
     await expect(peaks.locator('.jp-SpinnerContent')).toBeVisible();
-    await expect(peaks.getByRole('status')).toHaveText(
-      'Drawing the waveform...'
-    );
+    await expect(peaks.getByRole('status')).toHaveText('Loading...');
     const area = (await peaks.boundingBox())!;
     const times = (await bar(page)
       .locator('.jp-AdvancedMediaViewer-times')
@@ -1906,6 +2142,514 @@ test.describe('Audio viewer', () => {
         .toBeGreaterThan(29.5);
       expect(await currentTime(page), name).toBeLessThan(30.5);
     }
+  });
+
+  // ACC-WAVE-139-PLAY-FIRST and ACC-WAVE-141-REFINE. Waveform answers of the
+  // 60 s WAV made in the test, one per level: every point of level n is
+  // LOUDNESS[n], so the drawn peaks name the level drawn.
+  const LOUDNESS = [0.2, 0.6, 1];
+  const levelAnswer = (level: number, header = true) => ({
+    status: 200,
+    contentType: 'application/octet-stream',
+    headers: {
+      'X-Waveform-Duration': '60',
+      'X-Waveform-Channels': '1',
+      'X-Waveform-Source-Channels': '1',
+      ...(header ? { 'X-Waveform-Level': String(level) } : {})
+    },
+    body: Buffer.alloc(600, Math.round(LOUDNESS[level] * 255))
+  });
+  // Routes the waveform requests: each waits until the test releases the
+  // level it asks, then gets `respond`. `asked` lists the levels asked, in
+  // order; a request with no level asks level 1, as the server reads it.
+  const holdLevels = async (
+    page: any,
+    respond = (level: number, route: any): Promise<void> =>
+      route.fulfill(levelAnswer(level))
+  ) => {
+    const asked: number[] = [];
+    const opens: (() => void)[] = [];
+    const gates = [0, 1, 2].map(
+      () => new Promise<void>(resolve => opens.push(resolve))
+    );
+    await page.route(PEAKS, async (route: any) => {
+      const level = Number(
+        new URL(route.request().url()).searchParams.get('level') ?? '1'
+      );
+      asked.push(level);
+      await gates[level];
+      // The page may have closed the request meanwhile.
+      await respond(level, route).catch(() => undefined);
+    });
+    return { asked, release: (level: number) => opens[level]() };
+  };
+  // The waveform as drawn: the first peak wavesurfer holds, and the share of
+  // the rows painted in the middle column of the drawn canvases, the largest
+  // of them; null before the first drawing.
+  const drawn = (page: any) =>
+    page.evaluate((shown: string) => {
+      const data = (
+        window as any
+      ).jupyterapp.shell.currentWidget?.content?.wavesurfer?.getDecodedData();
+      if (!data) {
+        return null;
+      }
+      const host = document.querySelector(
+        `${shown} .jp-AdvancedMediaViewer-wave > div`
+      ) as HTMLElement;
+      let painted = 0;
+      for (const canvas of host.shadowRoot!.querySelectorAll<HTMLCanvasElement>(
+        '.canvases canvas'
+      )) {
+        if (!canvas.width || !canvas.height) {
+          continue;
+        }
+        const column = canvas
+          .getContext('2d')!
+          .getImageData(Math.floor(canvas.width / 2), 0, 1, canvas.height).data;
+        let rows = 0;
+        for (let i = 3; i < column.length; i += 4) {
+          rows += column[i] > 0 ? 1 : 0;
+        }
+        painted = Math.max(painted, rows / canvas.height);
+      }
+      return { peak: data.getChannelData(0)[0] as number, painted };
+    }, SHOWN);
+  // Waits until the waveform holds and shows level `level`.
+  const expectDrawn = async (page: any, level: number) => {
+    await expect
+      .poll(async () => (await drawn(page))?.peak ?? -1, { timeout: 20000 })
+      .toBeCloseTo(LOUDNESS[level], 2);
+    await expect
+      .poll(async () => (await drawn(page))!.painted)
+      .toBeCloseTo(LOUDNESS[level], 1);
+  };
+
+  // ACC-WAVE-139-PLAY-FIRST. No waveform answer arrives during the test.
+  test('ACC-WAVE-139-PLAY-FIRST with every waveform answer held, Play plays the file within 1 s and the slider at 50% moves playback to 30 s', async ({
+    page,
+    tmpPath
+  }) => {
+    const { asked } = await holdLevels(page);
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    // The quick view is asked first.
+    await expect.poll(() => asked, { timeout: 20000 }).toEqual([0]);
+    await expect(spinner(page)).toBeHidden({ timeout: 15000 });
+    const start = Date.now();
+    await control(page, 'Play').click();
+    await expect
+      .poll(() => currentTime(page), { timeout: 1000, intervals: [50] })
+      .toBeGreaterThan(0);
+    expect(Date.now() - start).toBeLessThan(1000);
+    const box = (await seekBar(page).boundingBox())!;
+    await page.mouse.click(
+      box.x + 8 + (box.width - 16) * 0.5,
+      box.y + box.height / 2
+    );
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(29.5);
+    expect(await currentTime(page)).toBeLessThan(31);
+    expect(await paused(page)).toBe(false);
+    expect(await drawn(page)).toBeNull();
+    expect(asked).toEqual([0]);
+  });
+
+  // ACC-WAVE-141-REFINE, ACC-WAVE-120-PROGRESS. Each level is held until the
+  // one before it is drawn.
+  test('ACC-WAVE-141-REFINE ACC-WAVE-120-PROGRESS the waveform is asked at level 0, then 1, then 2, each answer replaces the drawing, and the spinner shows only until the first drawing', async ({
+    page,
+    tmpPath
+  }) => {
+    const { asked, release } = await holdLevels(page);
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expect.poll(() => asked, { timeout: 20000 }).toEqual([0]);
+    const peaks = viewer(page).locator('.jp-AdvancedMediaViewer-peaks');
+    await expect(peaks.getByRole('status')).toHaveText('Loading...');
+    for (const level of [0, 1, 2]) {
+      release(level);
+      await expectDrawn(page, level);
+      // The next level is asked and held: no spinner and no message.
+      await expect
+        .poll(() => asked)
+        .toEqual([0, 1, 2].slice(0, Math.min(level + 2, 3)));
+      await expect(peaks).toBeHidden();
+      await expect(spinner(page)).toBeHidden();
+      await expect(message(page)).toHaveText('');
+    }
+    // Level 2 is the last.
+    await page.waitForTimeout(1000);
+    expect(asked).toEqual([0, 1, 2]);
+  });
+
+  // ACC-WAVE-141-REFINE. The events of a media element that pauses, stalls or
+  // loads its source again.
+  test('ACC-WAVE-141-REFINE a replacement while the file plays causes no pause, no wait and no reload of the file, and playback goes on', async ({
+    page,
+    tmpPath
+  }) => {
+    const { asked, release } = await holdLevels(page);
+    release(0);
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expectDrawn(page, 0);
+    await control(page, 'Play').click();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(0.3);
+    await media(page).evaluate((m: HTMLMediaElement) => {
+      const events: string[] = ((window as any).mediaEvents = []);
+      for (const type of [
+        'pause',
+        'waiting',
+        'emptied',
+        'abort',
+        'loadstart'
+      ]) {
+        m.addEventListener(type, () => events.push(type));
+      }
+    });
+    for (const level of [1, 2]) {
+      await expect.poll(() => asked).toContain(level);
+      const before = await currentTime(page);
+      release(level);
+      await expectDrawn(page, level);
+      await expect.poll(() => currentTime(page)).toBeGreaterThan(before + 0.3);
+      expect(await paused(page)).toBe(false);
+    }
+    expect(await page.evaluate(() => (window as any).mediaEvents)).toEqual([]);
+  });
+
+  // ACC-WAVE-141-REFINE. Paused, so the view does not follow the playhead.
+  test('ACC-WAVE-141-REFINE the zoom level, scroll position, playhead and loop region are the same after each replacement', async ({
+    page,
+    tmpPath
+  }) => {
+    const { asked, release } = await holdLevels(page);
+    release(0);
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expectDrawn(page, 0);
+    // A loop region from 10 s to 20 s, dragged as in ACC-AUDIO-50-LOOP.
+    const p = await parts(page);
+    const from = at(p.wrapper, 10 / 60);
+    const to = at(p.wrapper, 20 / 60);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 20, from.y);
+    await page.mouse.move(to.x, to.y);
+    await page.mouse.up();
+    await expect.poll(async () => (await parts(page)).regions).toBe(1);
+    await seek(page, 17);
+    for (let i = 0; i < 3; i++) {
+      await button(page, 'Zoom in').click();
+    }
+    await expect.poll(() => shownSpan(page)).toBeCloseTo(7.5, 0);
+    await page.evaluate(() => {
+      const ws = (window as any).jupyterapp.shell.currentWidget.content
+        .wavesurfer;
+      ws.setScroll(14 * ws.options.minPxPerSec);
+    });
+    const state = async () => {
+      const q = await parts(page);
+      return {
+        ...(await page.evaluate(() => {
+          const viewer = (window as any).jupyterapp.shell.currentWidget.content;
+          const ws = viewer.wavesurfer;
+          const [r] = ws
+            .getActivePlugins()
+            .find((x: any) => x.getRegions)
+            .getRegions();
+          return {
+            zoom: ws.options.minPxPerSec,
+            scroll: ws.getScroll(),
+            time: viewer.media.currentTime,
+            region: [r.start, r.end],
+            looping: viewer.looping
+          };
+        })),
+        regions: q.regions,
+        wrapper: q.wrapper,
+        cursor: q.cursor,
+        shown: await bar(page)
+          .locator('.jp-AdvancedMediaViewer-range')
+          .textContent()
+      };
+    };
+    const before = await state();
+    expect(before.scroll).toBeGreaterThan(0);
+    expect(before.looping).toBe(true);
+    for (const level of [1, 2]) {
+      await expect.poll(() => asked).toContain(level);
+      release(level);
+      await expectDrawn(page, level);
+      expect(await state(), `level ${level}`).toEqual(before);
+    }
+    await expect(labelled(page, 'Loop')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
+  // ACC-WAVE-141-REFINE. Level 0 answers; level 1 answers 500.
+  test('ACC-WAVE-141-REFINE a failed refinement request keeps the drawing, logs to the console, shows no sentence and asks no further level', async ({
+    page,
+    tmpPath
+  }) => {
+    const errors: string[] = [];
+    page.on('console', (m: any) => {
+      if (m.type() === 'error') {
+        errors.push(m.text());
+      }
+    });
+    const { asked, release } = await holdLevels(page, (level, route) =>
+      level
+        ? route.fulfill({ status: 500, json: { message: '' } })
+        : route.fulfill(levelAnswer(level))
+    );
+    for (const level of [0, 1, 2]) {
+      release(level);
+    }
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expectDrawn(page, 0);
+    await expect
+      .poll(() => errors.some(text => text.startsWith('Audio viewer:')))
+      .toBe(true);
+    await page.waitForTimeout(1000);
+    expect(asked).toEqual([0, 1]);
+    await expectDrawn(page, 0);
+    await expect(message(page)).toHaveText('');
+    await expect(spinner(page)).toBeHidden();
+    await expect(
+      viewer(page).locator('.jp-AdvancedMediaViewer-peaks')
+    ).toBeHidden();
+    for (const label of ['Zoom out', 'Zoom in', 'Reset to fit']) {
+      await expect(button(page, label)).not.toHaveAttribute('disabled', '');
+    }
+  });
+
+  // ACC-WAVE-141-REFINE. A cached level 2 answers the quick view request at
+  // once (ACC-WAVE-117-CACHE); an answer of an earlier server names no level.
+  test('ACC-WAVE-141-REFINE an answer of level 2 to the first request, or one with no level, is drawn and ends the requests', async ({
+    page,
+    tmpPath
+  }) => {
+    let header = true;
+    const { asked, release } = await holdLevels(page, (_level, route) =>
+      route.fulfill(levelAnswer(2, header))
+    );
+    for (const level of [0, 1, 2]) {
+      release(level);
+    }
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    await expectDrawn(page, 2);
+    await page.waitForTimeout(1000);
+    expect(asked).toEqual([0]);
+
+    header = false;
+    asked.length = 0;
+    await button(page, 'Reload audio from disk').click();
+    // The request comes after the reload removed the old player.
+    await expect.poll(() => asked).toEqual([0]);
+    await expectDrawn(page, 2);
+    await page.waitForTimeout(1000);
+    expect(asked).toEqual([0]);
+  });
+
+  // ACC-WAVE-141-REFINE. Level 1 is held each time.
+  test('ACC-WAVE-141-REFINE a reload and a close abort the waveform requests in flight', async ({
+    page,
+    tmpPath
+  }) => {
+    const { asked, release } = await holdLevels(page);
+    release(0);
+    const levelOne = (r: any) =>
+      r
+        .url()
+        .includes('/jupyterlab-advanced-image-viewer-extension/waveform') &&
+      new URL(r.url()).searchParams.get('level') === '1';
+    let held = page.waitForRequest(levelOne, { timeout: 20000 });
+    await page.filebrowser.open(`${tmpPath}/${NAME}`);
+    let request = await held;
+    let closed = page.waitForEvent('requestfailed', {
+      predicate: (r: any) => r.url() === request.url(),
+      timeout: 10000
+    });
+    held = page.waitForRequest(levelOne, { timeout: 20000 });
+    await button(page, 'Reload audio from disk').click();
+    await closed;
+    request = await held;
+    await expect.poll(() => asked).toEqual([0, 1, 0, 1]);
+    closed = page.waitForEvent('requestfailed', {
+      predicate: (r: any) => r.url() === request.url(),
+      timeout: 10000
+    });
+    await page
+      .locator(
+        '#jp-main-dock-panel .lm-TabBar-tab.lm-mod-current .lm-TabBar-tabCloseIcon'
+      )
+      .click();
+    await expect(viewer(page)).toHaveCount(0);
+    await closed;
+  });
+
+  // ACC-WAVE-143-TIME-SCALE. ESTIMATED open, its element still on Chromium's
+  // estimate of 7.84 s; the server's length is 60 s.
+  const openEstimated = async (page: any, tmpPath: string) => {
+    await page.contents.uploadContent(
+      ESTIMATED.toString('base64'),
+      'base64',
+      `${tmpPath}/estimated.mp3`
+    );
+    await open(page, `${tmpPath}/estimated.mp3`);
+    await expect
+      .poll(() => media(page).evaluate((m: HTMLMediaElement) => m.duration))
+      .toBeLessThan(8);
+  };
+
+  // ACC-WAVE-143-TIME-SCALE. The playhead and the played part are read with
+  // currentTime in one frame.
+  test('ACC-WAVE-143-TIME-SCALE on an MP3 the browser first times at 7.84 s of 60 s, the playhead and the played colour are drawn at currentTime over 60 s while it plays', async ({
+    page,
+    tmpPath
+  }) => {
+    await openEstimated(page, tmpPath);
+    await control(page, 'Play').click();
+    await expect.poll(() => currentTime(page)).toBeGreaterThan(3);
+    const drawn = await page.evaluate((shown: string) => {
+      const root = (
+        document.querySelector(
+          `${shown} .jp-AdvancedMediaViewer-wave > div`
+        ) as HTMLElement
+      ).shadowRoot!;
+      const box = (selector: string) =>
+        root.querySelector(selector)!.getBoundingClientRect();
+      const wrapper = box('.wrapper');
+      return {
+        time: (window as any).jupyterapp.shell.currentWidget.content.media
+          .currentTime,
+        cursor: (box('.cursor').x - wrapper.x) / wrapper.width,
+        played: box('.progress').width / wrapper.width
+      };
+    }, SHOWN);
+    expect(await paused(page)).toBe(false);
+    expect(drawn.cursor).toBeCloseTo(drawn.time / 60, 2);
+    expect(drawn.played).toBeCloseTo(drawn.time / 60, 2);
+  });
+
+  // ACC-WAVE-143-TIME-SCALE. At the fit the ruler's labels are 5 s apart or
+  // more, and each stands at its time over 60 s.
+  test('ACC-WAVE-143-TIME-SCALE on an MP3 the browser first times at 7.84 s of 60 s, the last ruler label, the hover time at the right end, the showing label at the fit and the time row length and seek slider read 60 s', async ({
+    page,
+    tmpPath
+  }) => {
+    await openEstimated(page, tmpPath);
+    const ruler = await page.evaluate((shown: string) => {
+      const root = (
+        document.querySelector(
+          `${shown} .jp-AdvancedMediaViewer-wave > div`
+        ) as HTMLElement
+      ).shadowRoot!;
+      const wrapper = root.querySelector('.wrapper')!.getBoundingClientRect();
+      const labels = [
+        ...root.querySelectorAll<HTMLElement>('[part~="timeline-notch"]')
+      ].filter(notch => notch.textContent);
+      const last = labels[labels.length - 1];
+      return {
+        text: last.textContent!,
+        at: (last.getBoundingClientRect().x - wrapper.x) / wrapper.width
+      };
+    }, SHOWN);
+    expect(seconds(ruler.text)).toBeGreaterThanOrEqual(45);
+    expect(ruler.at).toBeCloseTo(seconds(ruler.text) / 60, 2);
+
+    const p = await parts(page);
+    const end = { x: p.wrapper.x + p.wrapper.width - 1, y: at(p.wrapper, 1).y };
+    await page.mouse.move(end.x - 5, end.y);
+    await page.mouse.move(end.x, end.y);
+    await expect
+      .poll(async () => seconds((await parts(page)).hover || '00:00'))
+      .toBeGreaterThan(59.5);
+    expect(seconds((await parts(page)).hover)).toBeLessThanOrEqual(60);
+
+    expect(await shownSpan(page)).toBeCloseTo(60, 0);
+    expect(
+      seconds(
+        await bar(page).locator('.jp-AdvancedMediaViewer-length').textContent()
+      )
+    ).toBeCloseTo(60, 0);
+    expect(Number(await seekBar(page).getAttribute('max'))).toBeCloseTo(60, 0);
+  });
+
+  // ACC-WAVE-143-TIME-SCALE. Dragged as in ACC-AUDIO-50-LOOP.
+  test('ACC-WAVE-143-TIME-SCALE on an MP3 the browser first times at 7.84 s of 60 s, a loop region dragged over the right half spans 30 to 60 s', async ({
+    page,
+    tmpPath
+  }) => {
+    await openEstimated(page, tmpPath);
+    const p = await parts(page);
+    const from = at(p.wrapper, 0.5);
+    const to = at(p.wrapper, 0.998);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 20, from.y);
+    await page.mouse.move(to.x, to.y);
+    await page.mouse.up();
+    await expect.poll(async () => (await parts(page)).regions).toBe(1);
+    // The server's length of the file is 60.072 s, its last frame padded.
+    const [start, end, length] = await page.evaluate(() => {
+      const ws = (window as any).jupyterapp.shell.currentWidget.content
+        .wavesurfer;
+      const [r] = ws
+        .getActivePlugins()
+        .find((x: any) => x.getRegions)
+        .getRegions();
+      return [r.start, r.end, ws.getDecodedData().duration];
+    });
+    expect(start).toBeCloseTo(30, 0);
+    expect(end).toBeGreaterThan(59.5);
+    expect(end).toBeLessThanOrEqual(length);
+  });
+
+  // ACC-WAVE-143-TIME-SCALE. The seek exception, measured in
+  // logs/waveform-timescale-measure.log: Chromium clamps currentTime to its
+  // own length, so a seek past 7.84 s lands at 7.84 s.
+  test('ACC-WAVE-143-TIME-SCALE on an MP3 the browser first times at 7.84 s of 60 s, a click at three quarters of the waveform asks 45 s and playback lands at the browser length', async ({
+    page,
+    tmpPath
+  }) => {
+    await openEstimated(page, tmpPath);
+    const estimate: number = await media(page).evaluate(
+      (m: HTMLMediaElement) => m.duration
+    );
+    await page.evaluate(() => {
+      (window as any).jupyterapp.shell.currentWidget.content.wavesurfer.on(
+        'interaction',
+        (time: number) => ((window as any).asked = time)
+      );
+    });
+    const p = await parts(page);
+    const point = at(p.wrapper, 0.75);
+    await page.mouse.click(point.x, point.y);
+    await expect
+      .poll(() => page.evaluate(() => (window as any).asked ?? 0))
+      .toBeCloseTo(45, 0);
+    await expect.poll(() => currentTime(page)).toBeCloseTo(estimate, 1);
+  });
+
+  // ACC-WAVE-143-TIME-SCALE. The details line ends in the file length,
+  // rounded to the second.
+  test('ACC-WAVE-143-TIME-SCALE on an MP3 the browser first times at 7.84 s of 60 s, the toolbar details read the server length 01:00, the same as the time row length', async ({
+    page,
+    tmpPath
+  }) => {
+    await openEstimated(page, tmpPath);
+    expect(
+      Math.round(
+        seconds(
+          await bar(page)
+            .locator('.jp-AdvancedMediaViewer-length')
+            .textContent()
+        )
+      )
+    ).toBe(60);
+    await expect(
+      toolbar(page).locator('.jp-AdvancedMediaViewer-details')
+    ).toHaveText(/ · 01:00$/);
   });
 
   // DEF-MEDIA-22-LARGE-VIDEO
@@ -2017,7 +2761,7 @@ test.describe('Audio viewer', () => {
   // not reliably read. So each line is empty while its region is first drawn,
   // and its text comes at least one drawn frame later. The file answer and
   // the peaks answer are held, so both lines stay up.
-  test('DEF-MEDIA-63-LIVE-REGIONS Loading... and Drawing the waveform... are written into their live regions a drawn frame after the regions show', async ({
+  test('DEF-MEDIA-63-LIVE-REGIONS the Loading... lines of the file and of the waveform are written into their live regions a drawn frame after the regions show', async ({
     page,
     tmpPath
   }) => {
@@ -2083,12 +2827,12 @@ test.describe('Audio viewer', () => {
     release();
     await expect(
       viewer(page).locator('.jp-AdvancedMediaViewer-peaks').getByRole('status')
-    ).toHaveText('Drawing the waveform...');
+    ).toHaveText('Loading...');
 
     const lines = await page.evaluate(() => (window as any).lines);
     for (const [key, text] of [
       ['loading', 'Loading...'],
-      ['drawing', 'Drawing the waveform...']
+      ['drawing', 'Loading...']
     ]) {
       const list = lines[key];
       const written = list.findIndex((s: any) => s.shown && s.text === text);
@@ -2266,9 +3010,7 @@ test.describe('Audio viewer', () => {
     // stands in the waveform's place until the peaks arrive.
     await expect(spinner(page)).toBeHidden({ timeout: 15000 });
     await expect(peaks).toBeVisible();
-    await expect(peaks.getByRole('status')).toHaveText(
-      'Drawing the waveform...'
-    );
+    await expect(peaks.getByRole('status')).toHaveText('Loading...');
     await expect(wave).toBeHidden();
     // There is no waveform to zoom yet.
     for (const label of ['Zoom out', 'Zoom in', 'Reset to fit']) {

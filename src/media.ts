@@ -191,14 +191,15 @@ export class MediaViewer extends Widget {
     announce(this.loading, this.trans.__('Loading...'));
   }
 
-  // The format from the extension, then whatever the viewer measured.
-  protected setDetails(parts: string[]): void {
+  // The format from the extension, then whatever the viewer measured. The
+  // length is the element's unless the viewer gives one.
+  protected setDetails(parts: string[], duration = this.media.duration): void {
     const ext = PathExt.extname(this.context.path).slice(1);
     this.details.textContent = [
       ext.toUpperCase(),
       ...parts,
       ...(this.size === undefined ? [] : [formatSize(this.size)]),
-      formatTime(this.media.duration, 0)
+      formatTime(duration, 0)
     ].join(' · ');
   }
 

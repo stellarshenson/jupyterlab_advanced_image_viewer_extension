@@ -27,8 +27,9 @@ export function bufferedParts(
   return parts;
 }
 
-// The peaks answer of the server part: per channel, one byte per millisecond,
-// channel 0 first, 0 for silence to 255 for full scale. Anything else throws.
+// The peaks answer of the server part: per channel any number of bytes spread
+// evenly over the duration, channel 0 first, 0 for silence to 255 for full
+// scale. Anything else throws.
 export function readPeaks(
   bytes: Uint8Array,
   duration: number,

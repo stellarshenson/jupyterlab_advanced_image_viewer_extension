@@ -301,6 +301,8 @@ export class AudioViewer extends MediaViewer {
 
   async load(): Promise<void> {
     const token = ++this.loads;
+    this.peaksRequest.abort();
+    this.peaksRequest = new AbortController();
     this.sourceChannels = undefined;
     this.setLoop(false);
     this.showLoading();
@@ -324,6 +326,7 @@ export class AudioViewer extends MediaViewer {
       // file.
       this.wavesurfer?.destroy();
       this.wavesurfer = null;
+      this.duration = undefined;
       this.playUrl(url);
       await this.drawPeaks(token);
     } catch (reason) {
@@ -336,6 +339,7 @@ export class AudioViewer extends MediaViewer {
   protected fail(reason: unknown): void {
     // No waveform of the old file stays; the next load makes a new player.
     this.wavesurfer?.empty();
+    this.duration = undefined;
     this.setZoomEnabled(false);
     this.view.textContent = '';
     super.fail(reason);
@@ -362,11 +366,28 @@ export class AudioViewer extends MediaViewer {
   }
 
   // Multiply the shown time scale by `factor`; 0 fits the whole file. The
-  // waveform never zooms out past the fit.
-  zoomBy(factor: number): void {
+  // waveform never zooms out past the fit, nor in past a waveform 2 ** 24 px
+  // wide. With `x`, the wheel's offset in the view, the time at `x` stays
+  // there.
+  zoomBy(factor: number, x?: number): void {
     const ws = this.wavesurfer;
-    const duration = ws?.getDuration();
-    if (!ws?.getDecodedData() || !duration) {
+    // The length the waveform is drawn over, not the element's estimate.
+    const duration = ws?.getDecodedData()?.duration;
+    if (!ws || !duration) {
+      return;
+    }
+    const fit = ws.getWidth() / duration;
+    const level = Math.max(ws.options.minPxPerSec, fit);
+    // wavesurfer 8.0.4 plans one canvas per view width along the whole
+    // waveform on every render, so the zoom stops at a waveform 2 ** 24 px
+    // wide, under Chromium's 33,554,428 px element limit, and a zoom in never
+    // zooms out.
+    const deepest = Math.max(2 ** 24 / duration, level);
+    if (x !== undefined) {
+      const time = (ws.getScroll() + x) / level;
+      const next = Math.min(Math.max(level * factor, fit), deepest);
+      ws.zoom(next);
+      ws.setScroll(time * next - x);
       return;
     }
     // The level comes from wavesurfer's own setting, not from the wrapper
@@ -374,7 +395,7 @@ export class AudioViewer extends MediaViewer {
     // render, so a click right after a fit or a wheel zoom would start from
     // the old level. 0 fits the file.
     ws.zoom(
-      factor ? (ws.options.minPxPerSec || ws.getWidth() / duration) * factor : 0
+      factor ? Math.min((ws.options.minPxPerSec || fit) * factor, deepest) : 0
     );
   }
 
@@ -404,34 +425,54 @@ export class AudioViewer extends MediaViewer {
   }
 
   // The file plays with the seek slider while the peaks are on their way, and
-  // the waveform takes over when they arrive. Without them the tab stays so,
-  // with a sentence.
+  // the waveform takes over when they arrive: the quick view first, then each
+  // level above the one answered until the full pass, each drawn in place of
+  // the last (ACC-WAVE-141-REFINE). Without a first answer the tab stays so,
+  // with a sentence; a failed later one leaves the waveform drawn.
   private async drawPeaks(token: number): Promise<void> {
     this.showPeaks();
     let failure: unknown;
-    const answer = await Promise.all([loadPlayer(), this.fetchPeaks()]).catch(
-      (reason: unknown) => {
-        // A request aborted by dispose() is no failure.
-        if (!this.isDisposed) {
-          console.error('Audio viewer: the waveform was not drawn', reason);
-        }
+    for (let level = 0; level <= 2;) {
+      const answer = await Promise.all([
+        loadPlayer(),
+        this.fetchPeaks(level)
+      ]).catch((reason: unknown) => {
         failure = reason;
         return null;
+      });
+      // A reload or a close while the peaks were on their way supersedes them.
+      if (this.isDisposed || token !== this.loads) {
+        return;
       }
-    );
-    // A reload or a close while the peaks were on their way supersedes them.
-    if (this.isDisposed || token !== this.loads) {
+      if (!answer) {
+        console.error('Audio viewer: the waveform was not drawn', failure);
+        break;
+      }
+      const [modules, { sourceChannels, level: answered, ...peaks }] = answer;
+      this.duration = peaks.duration;
+      this.showTime();
+      if (this.wavesurfer) {
+        // The source is the element's own, so wavesurfer keeps the element
+        // playing and its zoom, scroll and regions, and redraws the peaks.
+        void this.wavesurfer.load(
+          this.media.currentSrc || this.media.src,
+          peaks.peaks,
+          peaks.duration
+        );
+      } else {
+        this.peaks.hidden = true;
+        this.sourceChannels = sourceChannels;
+        this.wavesurfer = this.createPlayer(modules, peaks);
+        this.view.hidden = false;
+        this.setZoomEnabled(true);
+      }
+      // Never the same level again, whatever the answer names.
+      level = Math.max(level, answered) + 1;
+    }
+    if (this.wavesurfer) {
       return;
     }
     this.peaks.hidden = true;
-    if (answer) {
-      const [modules, { sourceChannels, ...peaks }] = answer;
-      this.sourceChannels = sourceChannels;
-      this.wavesurfer = this.createPlayer(modules, peaks);
-      this.view.hidden = false;
-      this.setZoomEnabled(true);
-      return;
-    }
     // The metadata clears the message line, so the sentence waits for it. A
     // file that does not play keeps its own sentence.
     if (!this.media.readyState) {
@@ -450,12 +491,14 @@ export class AudioViewer extends MediaViewer {
     }
   }
 
-  // The peaks of the open file from the server part, asked with the lab's
-  // authentication. The path has no drive prefix, as the server reads it.
-  private async fetchPeaks(): Promise<{
+  // The peaks of the open file at `level` from the server part, asked with the
+  // lab's authentication, and the level answered. The path has no drive
+  // prefix, as the server reads it.
+  private async fetchPeaks(level: number): Promise<{
     peaks: Float32Array[];
     duration: number;
     sourceChannels: number | undefined;
+    level: number;
   }> {
     const settings = this.contents.serverSettings;
     const response = await ServerConnection.makeRequest(
@@ -465,7 +508,8 @@ export class AudioViewer extends MediaViewer {
         'waveform'
       ) +
         URLExt.objectToQueryString({
-          path: this.contents.localPath(this.context.path)
+          path: this.contents.localPath(this.context.path),
+          level
         }),
       { signal: this.peaksRequest.signal },
       settings
@@ -482,14 +526,16 @@ export class AudioViewer extends MediaViewer {
       // The file's own channel count, before the server mixes more than two
       // down to two.
       sourceChannels:
-        Number(response.headers.get('X-Waveform-Source-Channels')) || undefined
+        Number(response.headers.get('X-Waveform-Source-Channels')) || undefined,
+      // An earlier server names no level and has only its one.
+      level: Number(response.headers.get('X-Waveform-Level') ?? 2)
     };
   }
 
   // The spinner in the waveform's place, with its line.
   private showPeaks(): void {
     this.peaks.hidden = false;
-    announce(this.drawing, this.trans.__('Drawing the waveform...'));
+    announce(this.drawing, this.trans.__('Loading...'));
   }
 
   private setZoomEnabled(on: boolean): void {
@@ -553,8 +599,24 @@ export class AudioViewer extends MediaViewer {
           formatTimeCallback: (seconds: number) => formatTime(seconds)
         }),
         regions,
-        Zoom.create()
+        // Pinch only: the plugin's wheel adds 50 px/s per notch at every zoom.
+        Zoom.create({ deltaThreshold: Infinity })
       ]
+    });
+    // The playhead, seeking and every plugin time by the server's length
+    // (ACC-WAVE-143-TIME-SCALE); after a failure, by wavesurfer's own.
+    const own = ws.getDuration.bind(ws);
+    ws.getDuration = () => this.duration ?? own();
+    const view = ws.getWrapper().parentElement!;
+    view.addEventListener('wheel', event => {
+      if (Math.abs(event.deltaX) >= Math.abs(event.deltaY)) {
+        return;
+      }
+      event.preventDefault();
+      this.zoomBy(
+        1.2 ** (-event.deltaY / 100),
+        event.clientX - view.getBoundingClientRect().left
+      );
     });
     regions.enableDragSelection(
       {
@@ -642,7 +704,8 @@ export class AudioViewer extends MediaViewer {
   }
 
   private showTime(): void {
-    const { currentTime, duration } = this.media;
+    const { currentTime } = this.media;
+    const duration = this.duration ?? this.media.duration;
     this.time.textContent = formatTime(currentTime);
     this.length.textContent = formatTime(duration);
     // The maximum first, so the value is not clamped to the old one.
@@ -751,7 +814,9 @@ export class AudioViewer extends MediaViewer {
               : channels === 2
                 ? this.trans.__('stereo')
                 : this.trans.__('%1 channels', channels)
-          ]
+          ],
+      // The server's length once it answers (ACC-WAVE-143-TIME-SCALE).
+      this.duration
     );
   }
 
@@ -760,14 +825,19 @@ export class AudioViewer extends MediaViewer {
   private drawing: HTMLElement;
   // The channels of the file, from the server.
   private sourceChannels: number | undefined;
+  // The server's length of the file, from the latest waveform answer: the
+  // time scale once it arrives. Chromium can time an MP3 with no Xing header
+  // from its first frame, 7.84 s of a 60 s file (ACC-WAVE-143-TIME-SCALE).
+  private duration: number | undefined;
   private time: HTMLElement;
   private view: HTMLElement;
   private seek: HTMLInputElement;
   private length: HTMLElement;
   private themeObserver: MutationObserver;
-  // Aborted only when the viewer closes, as on Page Up, Page Down or a tab
-  // close: the closed request tells the server nobody waits for the peaks. A
-  // Reload keeps it, so its new request joins the decode under way.
+  // The waveform requests of the current load, aborted by the next load and
+  // when the viewer closes, as on Page Up, Page Down or a tab close: the
+  // closed request tells the server nobody waits for the peaks. A level 1 or
+  // 2 decode the server started still ends and is cached for the next load.
   private peaksRequest = new AbortController();
   private minimap: GenericPlugin | null = null;
   private createMinimap: (() => GenericPlugin) | null = null;
