@@ -128,6 +128,9 @@ export class MeshViewer extends Widget {
     this.lightingMenu.aboutToClose.connect(() =>
       this.focusButton(this.lightingButton)
     );
+    // File > Reload from Disk calls revert(), which re-reads only the empty
+    // document model. The viewer reads the file instead.
+    this.context.revert = () => this.load();
     void this.context.ready.then(() => this.load());
   }
 

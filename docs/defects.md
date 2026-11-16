@@ -111,6 +111,13 @@ Packaging, the Makefile and the GitHub Actions workflows
   - test-tags: INTEGRATION
   - log: 2026-11-16T12:44:05Z @kj added
   - log: 2026-11-16T13:12:50Z @kj closed
+- [x] `DEF-BUILD-85-SURFACE-TEXT` **Advertised text differs from the code in four places** - MINOR; README says zoom out has no limit, it stops at MIN_SCALE 0.05; schema description names only the image viewer, the settings also reach audio, video and mesh; plugin description omits the video viewer; package.json description omits the audio, video and mesh viewers
+  - evidence: README.md:21, schema/plugin.json:4, src/index.ts:125 and package.json:4 reworded; read against MIN_SCALE 0.05 and the four viewers; lint 0 warnings, settings check passed in build_test.py at 1.2.18
+  - root-cause: 2026-11-16T14:57:11Z @kj the four texts were written for the image viewer alone and were not changed when the zoom limit and the audio, video and mesh viewers came
+  - repro: read README.md:21, schema/plugin.json:4, src/index.ts:125, package.json:4 against src/controller.ts MIN_SCALE and the viewers in src/index.ts
+  - test-tags: MANUAL
+  - log: 2026-11-16T14:31:49Z @kj added
+  - log: 2026-11-16T14:57:11Z @kj closed
 
 ## Context menu `MENU`
 
@@ -637,6 +644,13 @@ Wrong behaviour of the 3D viewer for STL, PLY, OBJ, 3MF, GLB and STEP files
   - log: 2026-11-11T12:41:40Z @kj added
   - log: 2026-11-11T13:10:17Z @kj attempted: red case failed reading pressed true after one Fit click against the installed build (logs/fit-toggle-red.log, exit 1)
   - log: 2026-11-11T13:10:19Z @kj closed: fixed: a momentary helper clears pressed after the action on Reload, - + and Fit
+- [x] `DEF-MESH-84-FILE-RELOAD` **File > Reload from Disk does not reload a mesh** - MEDIUM; File > Reload from Disk on a mesh tab ran the stock context.revert(), which reads only the empty document model, so a changed mesh file kept its old model; audio and video read the file since DEF-MEDIA-31-FILE-RELOAD; src/mesh.ts, src/index.ts
+  - evidence: MeshViewer sets context.revert to its own load, toolbar Reload calls viewer.load(); Galata DEF-MESH-84-FILE-RELOAD kept 12 triangles before, shows 256 after; Galata 204 green at 1.2.18
+  - root-cause: 2026-11-16T14:57:11Z @kj MeshViewer left context.revert as the stock one, which re-reads the document model; the viewer never reads that model, it downloads the file itself in load()
+  - repro: open an STL, replace the file, run docmanager:reload: the read-out keeps the old triangle count
+  - test-tags: FUNCTIONAL
+  - log: 2026-11-16T14:30:31Z @kj added
+  - log: 2026-11-16T14:57:11Z @kj closed
 
 ## Server waveform `WAVE`
 
@@ -735,4 +749,11 @@ Wheel and toolbar zoom in the image viewer
   - root-cause: 2026-11-13T18:01:56Z @kj onWheel in src/controller.ts takes the zoom-out branch for every deltaY that is not below 0
   - log: 2026-11-13T18:01:56Z @kj added
   - log: 2026-11-13T18:29:13Z @kj closed
+- [x] `DEF-ZOOM-83-WHEEL-DELTA` **Wheel zoom ignores the size of deltaY** - MEDIUM; image wheel zoom took one full zoomStep per wheel event whatever deltaY, so a trackpad scroll of many small events ran to the 40x cap; audio and mesh viewers scale by deltaY; src/controller.ts onWheel
+  - evidence: factor is (1 + zoomStep) ** (-deltaY / 100) in src/controller.ts; Jest 'scales the wheel zoom by the size of deltaY' gave 17.449 before, passes after; Jest 55, Galata 204 green at 1.2.18
+  - root-cause: 2026-11-16T14:57:10Z @kj onWheel read only the sign of deltaY, so every event zoomed one full zoomStep
+  - repro: open a PNG, send 30 wheel events of deltaY -3 at zoomStep 0.1: scale 17.449, expected below 1.1
+  - test-tags: UNIT
+  - log: 2026-11-16T14:29:48Z @kj added
+  - log: 2026-11-16T14:57:11Z @kj closed
 

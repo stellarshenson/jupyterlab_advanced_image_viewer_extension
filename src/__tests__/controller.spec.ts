@@ -343,8 +343,25 @@ describe('ViewerController', () => {
     ) as HTMLElement;
     host.dispatchEvent(new WheelEvent('wheel', { deltaX: 30, deltaY: 0 }));
     expect(layer.style.transform).toContain('scale(1)');
-    host.dispatchEvent(new WheelEvent('wheel', { deltaY: -1 }));
+    host.dispatchEvent(new WheelEvent('wheel', { deltaY: -100 }));
     expect(layer.style.transform).toContain('scale(1.1)');
+    c.dispose();
+  });
+
+  // DEF-ZOOM-83-WHEEL-DELTA: a trackpad scroll sends many small events, and
+  // 90 px of them together stay under one zoom step.
+  it('scales the wheel zoom by the size of deltaY', () => {
+    stubGeometry(400, 300);
+    const c = new ViewerController(host, img, 0.1);
+    const layer = host.querySelector(
+      '.jp-AdvancedImageViewer-panlayer'
+    ) as HTMLElement;
+    for (let i = 0; i < 30; i++) {
+      host.dispatchEvent(new WheelEvent('wheel', { deltaY: -3 }));
+    }
+    const scale = /scale\(([\d.]+)\)/.exec(layer.style.transform)![1];
+    expect(parseFloat(scale)).toBeGreaterThan(1);
+    expect(parseFloat(scale)).toBeLessThan(1.1);
     c.dispose();
   });
 

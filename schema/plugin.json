@@ -1,7 +1,7 @@
 {
   "jupyter.lab.setting-icon-label": "Advanced Image Viewer",
   "title": "Advanced Image Viewer",
-  "description": "Settings for wheel-zoom, drag-pan, and folder navigation in the advanced image viewer.",
+  "description": "Settings for the folder navigation keys of the image, audio, video and mesh viewers and for the zoom step of the image and mesh viewers.",
   "type": "object",
   "additionalProperties": false,
   "properties": {

@@ -137,7 +137,7 @@ export class ViewerController {
       return;
     }
     const r = this.host.getBoundingClientRect();
-    const factor = e.deltaY < 0 ? 1 + this.zoomStep : 1 / (1 + this.zoomStep);
+    const factor = (1 + this.zoomStep) ** (-e.deltaY / 100);
     this.zoomAt(factor, e.clientX - r.left, e.clientY - r.top);
   };
 

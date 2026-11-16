@@ -18,7 +18,7 @@ The viewer toolbar adds zoom in / out / fit controls and a help button that list
 
 - **Fit to screen** - every image opens scaled to fit the panel (same result as the stock viewer), and reset returns to that fit
 - **Image fit everywhere** - images in the image viewer, notebook outputs, markdown cells and HTML output shrink to fit their container with the aspect ratio kept, and keep their size when smaller; `jupyterlab_fit_image_size_extension` is no longer needed
-- **Wheel zoom** - scroll to zoom in and out, anchored at the cursor; zoom out as far as you like
+- **Wheel zoom** - scroll to zoom in and out, anchored at the cursor
 - **Drag to pan** - hold and drag to move the image at any zoom; the image can touch a viewport border but never leave it, the grab cursor is always available, and Fit recenters
 - **Toolbar controls** - zoom in, zoom out, and reset-to-fit buttons on the viewer toolbar
 - **Arrow-key navigation** - Left and Right open the previous and next image in the same folder, in the order the file browser lists them, advancing within one viewer instead of opening new tabs

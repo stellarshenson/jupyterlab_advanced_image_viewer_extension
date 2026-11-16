@@ -2934,6 +2934,25 @@ test.describe('Mesh viewer', () => {
     await expect(message(page)).toHaveText('');
   });
 
+  // DEF-MESH-84-FILE-RELOAD
+  test('DEF-MESH-84-FILE-RELOAD File > Reload from Disk shows the changed file', async ({
+    page,
+    tmpPath
+  }) => {
+    const file = `${tmpPath}/menu-reload.stl`;
+    await upload(page, file, stl(box(1, 1, 1)));
+    await open(page, file);
+    await expect(details(page)).toContainText('12 triangles');
+    await upload(page, file, stl(globe()));
+    // The command of File > Reload Mesh from Disk.
+    await page.evaluate(() => {
+      void (window as any).jupyterapp.commands
+        .execute('docmanager:reload')
+        .catch(() => undefined);
+    });
+    await expect(details(page)).toContainText('256 triangles');
+  });
+
   // ACC-MESH-88-RELOAD
   test('ACC-MESH-88-RELOAD a new model the kept camera cannot show is framed, so it stays on show', async ({
     page,

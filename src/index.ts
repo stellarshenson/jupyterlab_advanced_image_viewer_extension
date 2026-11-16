@@ -122,7 +122,7 @@ const defaults: ISettingsState = {
 const plugin: JupyterFrontEndPlugin<void> = {
   id: PLUGIN_ID,
   description:
-    'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation; audio viewer with a waveform, and media keys; mesh viewer for 3D files.',
+    'Advanced image viewer: cursor-anchored wheel zoom, drag-to-pan, fit-to-screen reset, and arrow-key folder navigation; audio viewer with a waveform, video viewer, and media keys; mesh viewer for 3D files.',
   autoStart: true,
   requires: [IImageTracker, IDefaultDrive],
   optional: [
@@ -689,17 +689,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
       void meshTracker.add(widget);
       widget.context.pathChanged.connect(() => void meshTracker.save(widget));
       widget.title.icon = meshIcon;
-      addReloadButton(
-        widget.toolbar,
-        trans.__('Reload mesh from disk'),
-        async () => {
-          // revert() answers a deleted file with its own dialog, so the viewer
-          // reads first and says so in its sentence.
-          await viewer.load();
-          if (viewer.scene?.model) {
-            await widget.context.revert();
-          }
-        }
+      addReloadButton(widget.toolbar, trans.__('Reload mesh from disk'), () =>
+        viewer.load()
       );
       // The same step as the image viewer's zoom buttons.
       addZoomButtons(
