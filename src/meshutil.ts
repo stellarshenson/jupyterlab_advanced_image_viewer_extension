@@ -16,8 +16,6 @@ export interface IMeshLight {
 
 export interface IMeshLightingStyle {
   name: MeshLighting;
-  // The menu label, in English.
-  label: string;
   // The RoomEnvironment texture lights the model.
   environment: boolean;
   lights: IMeshLight[];
@@ -26,13 +24,11 @@ export interface IMeshLightingStyle {
 export const MESH_LIGHTING: IMeshLightingStyle[] = [
   {
     name: 'studio',
-    label: 'Studio',
     environment: true,
     lights: [{ name: 'cameraLight', intensity: 2.9, parent: 'camera' }]
   },
   {
     name: 'neutral',
-    label: 'Neutral',
     environment: false,
     lights: [
       { name: 'cameraLight', intensity: 1.5, parent: 'camera' },
@@ -41,7 +37,6 @@ export const MESH_LIGHTING: IMeshLightingStyle[] = [
   },
   {
     name: 'three-point',
-    label: 'Three-point',
     environment: false,
     // Tuned on the grey cube: every face median holds 3:1 in both themes (the
     // lowest is 3.27:1, on the white panel), and the torus's top band measures
@@ -58,8 +53,20 @@ export const MESH_LIGHTING: IMeshLightingStyle[] = [
 // ACC-MESH-104-VIEWS: the ten standard views, as the camera's direction from
 // the model, before normalisation. Front is -Y for a Z-up file and +Z for a
 // Y-up one, so each file's own front faces the camera.
+export type MeshViewName =
+  | 'Front'
+  | 'Back'
+  | 'Right'
+  | 'Left'
+  | 'Top'
+  | 'Bottom'
+  | 'Front-Left'
+  | 'Front-Right'
+  | 'Back-Left'
+  | 'Back-Right';
+
 export interface IMeshView {
-  name: string;
+  name: MeshViewName;
   z: [number, number, number];
   y: [number, number, number];
 }
@@ -225,41 +232,6 @@ export function meshCreasedNormals(
     }
   }
   return normals;
-}
-
-// Above this size a file is refused before any of it is downloaded.
-export const MESH_LIMIT = 1024 * 1024 * 1024;
-
-export interface IMeshFormat {
-  // The file type name; in capitals it is the format in the read-out.
-  name: string;
-  extensions: string[];
-  mimeType: string;
-  // The axis that points up in files of this format.
-  up: 'y' | 'z';
-}
-
-export const MESH_FORMATS: IMeshFormat[] = [
-  { name: 'stl', extensions: ['.stl'], mimeType: 'model/stl', up: 'z' },
-  { name: 'ply', extensions: ['.ply'], mimeType: 'model/ply', up: 'z' },
-  { name: '3mf', extensions: ['.3mf'], mimeType: 'model/3mf', up: 'z' },
-  {
-    name: 'step',
-    extensions: ['.step', '.stp'],
-    mimeType: 'model/step',
-    up: 'z'
-  },
-  { name: 'obj', extensions: ['.obj'], mimeType: 'model/obj', up: 'y' },
-  { name: 'glb', extensions: ['.glb'], mimeType: 'model/gltf-binary', up: 'y' }
-];
-
-export function meshFormat(path: string): IMeshFormat | undefined {
-  const ext = path.slice(path.lastIndexOf('.')).toLowerCase();
-  return MESH_FORMATS.find(format => format.extensions.includes(ext));
-}
-
-export function exceedsMeshLimit(size: number): boolean {
-  return size > MESH_LIMIT;
 }
 
 // The extents with no unit, because STL has none. At least one decimal, and

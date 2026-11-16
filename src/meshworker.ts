@@ -223,7 +223,7 @@ async function bodyOf(
   let response: Response;
   try {
     response = await fetch(url);
-  } catch (reason) {
+  } catch {
     return 'download';
   }
   if (!response.ok) {
@@ -232,7 +232,7 @@ async function bodyOf(
   let body: ArrayBuffer;
   try {
     body = await response.arrayBuffer();
-  } catch (reason) {
+  } catch {
     return 'download';
   }
   return body.byteLength ? body : 'empty';
@@ -381,7 +381,7 @@ async function addProxies(result: IReply): Promise<IReply> {
       );
       return proxyOf(part, target);
     });
-  } catch (reason) {
+  } catch {
     return result;
   }
   const total = drawnTotal(proxies, whole, refs);
@@ -461,7 +461,7 @@ function levelOf(level: number): IReply {
       next[index] = proxyOf(source, partTarget) ?? source;
       unique += partTriangles(next[index]!);
     }
-  } catch (reason) {
+  } catch {
     return emptyLevel(level);
   }
   const total = drawnTotal(next, state.whole, state.refs);
@@ -579,7 +579,7 @@ async function readStl(url: string): Promise<IReply> {
   let response: Response;
   try {
     response = await fetch(url);
-  } catch (reason) {
+  } catch {
     return failure('download');
   }
   if (!response.ok) {
@@ -616,7 +616,7 @@ async function readStl(url: string): Promise<IReply> {
       }
       append(chunk);
     }
-  } catch (reason) {
+  } catch {
     return failure('download');
   }
   if (!head.byteLength && ended) {
@@ -655,7 +655,7 @@ async function readStl(url: string): Promise<IReply> {
           chunks.push(chunk);
         }
       }
-    } catch (reason) {
+    } catch {
       return failure('download');
     }
     const bytes = new Uint8Array(
@@ -755,7 +755,7 @@ async function readStl(url: string): Promise<IReply> {
         feed(chunk);
       }
     }
-  } catch (reason) {
+  } catch {
     return failure('download');
   }
   if (!ended) {
@@ -1095,7 +1095,7 @@ async function readStep(
   try {
     importScripts(glue);
     occt = await occtimportjs({ locateFile: () => wasm });
-  } catch (reason) {
+  } catch {
     // The glue or its WASM is missing: the page is stale, not the file.
     return failure('asset');
   }

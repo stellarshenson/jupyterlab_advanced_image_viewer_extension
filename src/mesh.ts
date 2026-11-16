@@ -25,14 +25,13 @@ import {
   wireframeIcon
 } from './icons';
 
+import { exceedsMeshLimit, MESH_LIMIT, meshFormat } from './meshformat';
+
 import type { IMeshStats, MeshScene } from './meshscene';
 
 import {
-  exceedsMeshLimit,
   formatDimensions,
   MESH_LIGHTING,
-  MESH_LIMIT,
-  meshFormat,
   MESH_VIEWS,
   MeshLighting
 } from './meshutil';

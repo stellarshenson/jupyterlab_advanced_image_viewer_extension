@@ -877,11 +877,13 @@ STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
   - log: 2026-10-31T19:55:14Z @kj added
   - log: 2026-11-01T12:51:05Z @kj closed
 - [x] `ACC-MESH-86-UP` **Up axis** - MEDIUM; STL, PLY, 3MF and STEP open with Z up; OBJ and GLB open with Y up
-  - evidence: src/__tests__/meshutil.spec.ts table gives stl/ply/3mf/step z and obj/glb y; media_mesh.spec.ts ACC-MESH-86-UP: Z-tall STL and pyramid stand, Y-tall GLB stands taller than wide; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
-  - test: meshutil table in Jest; a Z-tall STL and a Y-tall GLB each render taller than wide in Galata
+  - evidence: src/__tests__/meshformat.spec.ts table gives stl/ply/3mf/step z and obj/glb y; media_mesh.spec.ts ACC-MESH-86-UP: Z-tall STL and pyramid stand, Y-tall GLB stands taller than wide; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: meshformat table in Jest (src/__tests__/meshformat.spec.ts); a Z-tall STL and a Y-tall GLB each render taller than wide in Galata
   - test-tags: UNIT, E2E
   - log: 2026-10-31T19:55:14Z @kj added
   - log: 2026-11-01T12:51:05Z @kj closed
+  - log: 2026-11-16T09:49:13Z @kj edited test "meshutil table in Jest; a Z-tall STL and a Y-tall GLB each render taller than wide in Galata" -> "meshformat table in Jest (src/__tests__/meshformat.spec.ts); a Z-tall STL and a Y-tall GLB each render taller than wide in Galata"
+  - log: 2026-11-16T10:53:00Z @kj edited evidence "src/__tests__/meshutil.spec.ts table gives stl/ply/3mf/step z and obj/glb y; media_mesh.spec.ts ACC-MESH-86-UP: Z-tall STL and pyramid stand, Y-tall GLB stands taller than wide; Galata 84 passed, logs/mesh-galata-verify-formats-2.log" -> "src/__tests__/meshformat.spec.ts table gives stl/ply/3mf/step z and obj/glb y; media_mesh.spec.ts ACC-MESH-86-UP: Z-tall STL and pyramid stand, Y-tall GLB stands taller than wide; Galata 84 passed, logs/mesh-galata-verify-formats-2.log"; reason: lint fix moved the file type table and size limit tests to meshformat.spec.ts; Jest 54/54 in logs/lint-fix-make-test.log
 - [x] `ACC-MESH-87-READOUT` **File read-out** - MEDIUM; the toolbar shows format, triangle count, three dimensions with no unit, and file size
   - evidence: src/__tests__/meshutil.spec.ts formatDimensions cases; media_mesh.spec.ts ACC-MESH-87-READOUT exact text 'STL · 12 triangles · 12.4 × 8.0 × 3.1 · 684 B'; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
   - test: assert the exact text for a generated file of known size and extents
@@ -908,11 +910,13 @@ STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
   - log: 2026-10-31T19:55:14Z @kj added
   - log: 2026-11-01T12:51:06Z @kj closed
 - [x] `ACC-MESH-91-ERROR` **Failures show a sentence** - HIGH; a damaged file, an empty file, missing WebGL and a file over the 1 GiB limit each show one plain sentence, never a raw exception or a silent blank panel; a file over the limit is not downloaded
-  - evidence: src/__tests__/meshutil.spec.ts limit 1 GiB exact; media_mesh.spec.ts ACC-MESH-91-ERROR two tests: damaged, empty, 403, deleted, no WebGL, lost context, over-limit not downloaded, one plain sentence for every format; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
-  - test: open a damaged and an empty file of each format family, assert the sentence has no exception text; meshutil limit in Jest
+  - evidence: src/__tests__/meshformat.spec.ts limit 1 GiB exact; media_mesh.spec.ts ACC-MESH-91-ERROR two tests: damaged, empty, 403, deleted, no WebGL, lost context, over-limit not downloaded, one plain sentence for every format; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
+  - test: open a damaged and an empty file of each format family, assert the sentence has no exception text; meshformat limit in Jest (src/__tests__/meshformat.spec.ts)
   - test-tags: UNIT, E2E
   - log: 2026-10-31T19:55:14Z @kj added
   - log: 2026-11-01T12:51:07Z @kj closed
+  - log: 2026-11-16T09:49:13Z @kj edited test "open a damaged and an empty file of each format family, assert the sentence has no exception text; meshutil limit in Jest" -> "open a damaged and an empty file of each format family, assert the sentence has no exception text; meshformat limit in Jest (src/__tests__/meshformat.spec.ts)"
+  - log: 2026-11-16T10:53:00Z @kj edited evidence "src/__tests__/meshutil.spec.ts limit 1 GiB exact; media_mesh.spec.ts ACC-MESH-91-ERROR two tests: damaged, empty, 403, deleted, no WebGL, lost context, over-limit not downloaded, one plain sentence for every format; Galata 84 passed, logs/mesh-galata-verify-formats-2.log" -> "src/__tests__/meshformat.spec.ts limit 1 GiB exact; media_mesh.spec.ts ACC-MESH-91-ERROR two tests: damaged, empty, 403, deleted, no WebGL, lost context, over-limit not downloaded, one plain sentence for every format; Galata 84 passed, logs/mesh-galata-verify-formats-2.log"; reason: lint fix moved the file type table and size limit tests to meshformat.spec.ts; Jest 54/54 in logs/lint-fix-make-test.log
 - [x] `ACC-MESH-92-LARGE` **Large file** - HIGH; a 100 MB binary STL of 2,000,000 triangles opens and renders
   - evidence: media_mesh.spec.ts ACC-MESH-92-LARGE: a 95.4 MB binary STL of 2,000,000 triangles shows the count and model pixels; Galata 84 passed, logs/mesh-galata-verify-formats-2.log
   - test: upload through the contents API, assert the triangle count and model pixels
@@ -1058,6 +1062,13 @@ STL, PLY, OBJ, 3MF, GLB and STEP files open in a 3D viewer built on three.js
   - test-tags: E2E
   - log: 2026-11-11T15:05:58Z @kj added
   - log: 2026-11-11T15:42:26Z @kj closed; reason: evidence names the passing test title
+- [x] `ACC-MESH-145-MENU-TRANSLATED` **View and lighting names are translated** - LOW; the view names and the lighting style names in the view and lighting menus that the mesh viewer's toolbar buttons open go through the translator as fixed strings, with the same English text as before; a view or a style added without a label fails to compile
+  - evidence: src/index.ts writes the ten view names and three lighting names as fixed strings in trans.__ inside Record<MeshViewName, string> and Record<MeshLighting, string>, English text unchanged; lint shows no no-untranslated-string or no-dynamic-translation warning (logs/lint-fix-lint.log); tests/media_mesh.spec.ts 53/53 choosing views and styles by English menu text (logs/lint-fix-galata-mesh.log)
+  - test: 'jlpm run lint:check' reports no jupyter/no-untranslated-string or jupyter/no-dynamic-translation warning; tests/media_mesh.spec.ts chooses Front-Left, Back-Right and Three-point by their English menu text and passes
+  - test-tags: E2E, BUILD
+  - log: 2026-11-16T09:45:11Z @kj added
+  - log: 2026-11-16T10:02:07Z @kj closed
+  - log: 2026-11-16T10:52:55Z @kj edited text "the view names and the lighting style names in the mesh viewer's menus and toolbar go through the translator as fixed strings, with the same English text as before; a view or a style added without a label fails to compile" -> "the view names and the lighting style names in the view and lighting menus that the mesh viewer's toolbar buttons open go through the translator as fixed strings, with the same English text as before; a view or a style added without a label fails to compile"; reason: lint review round 1: the toolbar shows only icon buttons; the names appear in the menus they open
 
 ## Server waveform `WAVE`
 
@@ -1209,4 +1220,18 @@ Waveform peaks of every audio file, computed by the extension's server part with
   - log: 2026-11-16T05:07:50Z @kj edited test "Galata on estimated.mp3, a 60 s joined MP3 that Chromium first reads as 7.84 s: while it plays, the playhead x matches currentTime / 60; the last ruler label, the hover time at the right end, the 'showing' label at the fit and the time row length and slider maximum read 60 s; a loop region over the right half spans 30 to 60 s; a click at three quarters asks 45 s and lands at the browser's 7.84 s" -> "Galata on estimated.mp3, a 60 s joined MP3 that Chromium first reads as 7.84 s: while it plays, the playhead x matches currentTime / 60; the last ruler label, the hover time at the right end, the 'showing' label at the fit and the time row length and slider maximum read 60 s; the toolbar details end in 01:00; a loop region over the right half spans 30 to 60 s; a click at three quarters asks 45 s and lands at the browser's 7.84 s"; reason: owner decision of 2026-11-16 on the review round 4 deferral
   - log: 2026-11-16T05:20:42Z @kj edited evidence "4 Galata ACC-WAVE-143-TIME-SCALE tests on estimated.mp3 (server 60.072 s, Chromium 7.8432 s) failed before the change (playhead at 0.494 of the waveform for currentTime/60 = 0.065, last ruler label 5 s, loop start 3.92 s, click at three quarters asked 5.88 s; logs/waveform-timescale-red.log) and pass after it (logs/waveform-timescale-green.log, 5/5 with the DEF-MEDIA-79-WHEEL-STEP test); audio spec 79/79 (logs/waveform-timescale-galata-audio.log); seek exception measured in logs/waveform-timescale-measure.log" -> "4 Galata ACC-WAVE-143-TIME-SCALE tests on estimated.mp3 (server 60.072 s, Chromium 7.8432 s) failed before the change (playhead at 0.494 of the waveform for currentTime/60 = 0.065, last ruler label 5 s, loop start 3.92 s, click at three quarters asked 5.88 s; logs/waveform-timescale-red.log) and pass after it (logs/waveform-timescale-green.log, 5/5 with the DEF-MEDIA-79-WHEEL-STEP test); audio spec 79/79 (logs/waveform-timescale-galata-audio.log); seek exception measured in logs/waveform-timescale-measure.log; the Galata test of the toolbar details read 'MP3 · stereo · 306.4 KB · 00:08' before the setDetails length argument (logs/waveform-toolbar-red.log) and ends in 01:00 after it (logs/waveform-toolbar-green.log)"; reason: owner decision of 2026-11-16 on the review round 4 deferral
   - log: 2026-11-16T06:30:18Z @kj owner ruling of 2026-11-16: the review deferral on the playhead, click-to-seek and the 'showing' range is closed by this criterion's fix
+
+## Build and CI `BUILD`
+
+the lint, build and test gates of the repository
+
+- log: 2026-11-16T09:45:07Z @kj category created
+
+- [x] `ACC-BUILD-144-LINT-CLEAN` **Lint reports no warnings** - MEDIUM; jlpm run lint:check reports 0 errors and 0 warnings; a warning is fixed at its cause, never hidden by an underscore rename or a lint-config change; an eslint-disable comment stands only where the rule's own message names it as the fix, with its reason
+  - evidence: jlpm run lint:check 0 errors 0 warnings and uncached eslint . --max-warnings 0 exit 0 (logs/lint-fix-lint.log), down from 15 warnings (logs/lint-fix-before.log); the fix adds no eslint-disable comment, no underscore rename and no change to eslint.config.mjs, package.json or tsconfig.json
+  - test: jlpm run lint:check exits 0 and prints no eslint problem line, and eslint . --max-warnings 0 exits 0
+  - test-tags: BUILD
+  - log: 2026-11-16T09:45:07Z @kj added
+  - log: 2026-11-16T10:02:07Z @kj closed
+  - log: 2026-11-16T10:43:00Z @kj edited test "run 'jlpm run lint:check' and read its last line: 0 errors and 0 warnings; 'git diff' of the fix adds no eslint-disable comment and changes no eslint.config.mjs" -> "jlpm run lint:check exits 0 and prints no eslint problem line, and eslint . --max-warnings 0 exits 0"; reason: lint-fix verifier of 2026-11-16: a clean run prints no summary line
 

@@ -2,6 +2,17 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.16] - 2026-11-16
+
+### Changed
+
+- The mesh format list and its size limit live in their own small module, so the extension's start-up code imports only what it needs; what loads when JupyterLab starts is unchanged
+- The mesh worker no longer keeps unused error variables in its failure handlers; each failure still shows the same message
+
+### Fixed
+
+- The view and lighting names in the mesh viewer's menus go through the translator, so a language pack can translate them; the English text is unchanged
+
 ## [1.2.15] - 2026-11-16
 
 ### Added

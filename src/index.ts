@@ -48,7 +48,9 @@ import { SEEK_STEP } from './mediautil';
 // eslint-disable-next-line jupyter/prefer-lazy-imports -- the layout restorer opens saved mesh tabs at activation; three.js itself loads on first use
 import { LIGHTING_COMMAND, MeshViewer, VIEW_COMMAND } from './mesh';
 
-import { MESH_FORMATS, MESH_LIGHTING, MeshLighting } from './meshutil';
+import { MESH_FORMATS } from './meshformat';
+
+import type { MeshLighting, MeshViewName } from './meshutil';
 
 import { navigate } from './navigate';
 
@@ -731,8 +733,30 @@ const plugin: JupyterFrontEndPlugin<void> = {
       }
     };
 
+    // The menu labels of the views and the lighting styles, keyed by the name
+    // unions in meshutil.ts: a view or a style with no label here does not
+    // compile.
+    const viewLabels: Record<MeshViewName, string> = {
+      Front: trans.__('Front'),
+      Back: trans.__('Back'),
+      Right: trans.__('Right'),
+      Left: trans.__('Left'),
+      Top: trans.__('Top'),
+      Bottom: trans.__('Bottom'),
+      'Front-Left': trans.__('Front-Left'),
+      'Front-Right': trans.__('Front-Right'),
+      'Back-Left': trans.__('Back-Left'),
+      'Back-Right': trans.__('Back-Right')
+    };
+    const lightingLabels: Record<MeshLighting, string> = {
+      studio: trans.__('Studio'),
+      neutral: trans.__('Neutral'),
+      'three-point': trans.__('Three-point')
+    };
+
     app.commands.addCommand(VIEW_COMMAND, {
-      label: args => trans.__(String(args.name ?? '')),
+      label: args =>
+        viewLabels[args.name as MeshViewName] ?? String(args.name ?? ''),
       describedBy: {
         args: {
           type: 'object',
@@ -745,10 +769,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     });
     app.commands.addCommand(LIGHTING_COMMAND, {
       label: args =>
-        trans.__(
-          MESH_LIGHTING.find(style => style.name === args.style)?.label ??
-            String(args.style ?? '')
-        ),
+        lightingLabels[args.style as MeshLighting] ?? String(args.style ?? ''),
       describedBy: {
         args: {
           type: 'object',
