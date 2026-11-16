@@ -7,7 +7,7 @@ author_name: Stellars Henson
 has_ai_rules: false
 has_binder: false
 has_settings: true
-kind: frontend
+kind: frontend-and-server
 labextension_name: '@stellarshenson/jupyterlab-advanced-image-viewer-extension'
 project_short_description: 'Jupyterlab extension to allow advanced image viewing:
     pan, zoom, also controls for pan + zoom (and use of the mouse - hold and move,

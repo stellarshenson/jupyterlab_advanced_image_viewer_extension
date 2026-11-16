@@ -104,6 +104,13 @@ Packaging, the Makefile and the GitHub Actions workflows
   - log: 2026-11-16T09:44:48Z @kj added; reason: three independent root causes, one sentence each
   - log: 2026-11-16T09:44:59Z @kj root-cause updated "2026-11-16T09:44:48Z @kj Nine catch clauses in src/meshworker.ts bind 'reason' and never read it, because each drops the error on purpose and returns a failure kind. The lighting style labels are kept as untranslated data in src/meshutil.ts, a module with no translator, and src/index.ts passes them and the view names to trans.__ as variables, so no translation catalogue can extract them. src/index.ts imports the whole 9.9 KB src/meshutil.ts only for the format list, above the 4096-byte size the prefer-lazy-imports rule reports." -> "Nine catch clauses in src/meshworker.ts bind 'reason' and never read it, because each drops the error on purpose and returns a failure kind. The lighting style labels are kept as untranslated data in src/meshutil.ts, a module with no translator, and src/index.ts passes them and the view names to trans.__ as variables, so no translation catalogue can extract them. src/index.ts imports the whole 9.9 KB src/meshutil.ts for the format list and the lighting labels, above the 4096-byte size the prefer-lazy-imports rule reports."; reason: three independent root causes, one sentence each
   - log: 2026-11-16T10:02:02Z @kj closed
+- [x] `DEF-BUILD-82-CI-PYTEST` **CI runs no server test and no endpoint auth check** - MEDIUM; Build job holds no pytest line and no check_auth.py step, so a push that breaks routes.py (root check, authentication, playlist guard) shows a green Build; cause .copier-answers.yml says kind: frontend; fix template_sync.py; `.github/workflows/build.yml`
+  - evidence: template_sync.py set kind: frontend-and-server; build.yml runs pytest -vv -r ap --cov and .github/scripts/check_auth.py; locally check_auth.py prints 'All endpoints of the extension require authentication.' and build_test.py passed at 1.2.17: Jest 54, pytest 98, Galata 203 (logs/fleet-build-test.log)
+  - root-cause: 2026-11-16T13:12:50Z @kj the project was rendered as kind: frontend and the server part was added later by hand (2026-11-06), so no template render ever gave it the pytest line or check_auth.py
+  - repro: read the Build job steps of a run at 2f3ad57: lint, Jest, lists, browser check; no pytest, no check_auth.py
+  - test-tags: INTEGRATION
+  - log: 2026-11-16T12:44:05Z @kj added
+  - log: 2026-11-16T13:12:50Z @kj closed
 
 ## Context menu `MENU`
 
