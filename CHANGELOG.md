@@ -2,6 +2,26 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.15] - 2026-11-16
+
+### Added
+
+- The audio waveform arrives in up to three drawings that replace each other in place: a quick view sampled across the file within about a second, a rough waveform, then one decoded from every part of the file, so short loud sounds show once the last drawing is in
+- The audio file plays at once, before any waveform answer, and computing the waveform does not slow the file's own requests
+
+### Changed
+
+- The waveform spinner reads Loading...
+- Once the first waveform answer arrives, the playhead, click-to-seek, time ruler, loop region, hover time, 'showing' range, zoom, time row and toolbar length all use the server's length of the file, so an MP3 whose length the browser first misreads keeps one time scale
+- A file shorter than 84 s goes straight to the full-detail waveform
+
+### Fixed
+
+- One wheel notch zooms the waveform by a small step, and zooming in stops at the deepest level the browser can draw
+- Panning an image follows the left mouse button only, so a Shift+right-click no longer leaves the image following the pointer
+- A sideways wheel or Shift+wheel no longer zooms the image out
+- A refused clipboard copy shows an error notification instead of failing silently
+
 ## [1.2.13] - 2026-11-11
 
 ### Added
