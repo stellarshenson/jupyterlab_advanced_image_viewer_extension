@@ -2339,11 +2339,23 @@ test.describe('Audio viewer', () => {
       await button(page, 'Zoom in').click();
     }
     await expect.poll(() => shownSpan(page)).toBeCloseTo(7.5, 0);
-    await page.evaluate(() => {
+    const start: number = await page.evaluate(() => {
       const ws = (window as any).jupyterapp.shell.currentWidget.content
         .wavesurfer;
       ws.setScroll(14 * ws.options.minPxPerSec);
+      return ws.getScroll() / ws.options.minPxPerSec;
     });
+    // The label is written on the scroll event, which the browser dispatches
+    // at its next rendering step, after setScroll has returned
+    // (DEF-BUILD-80-REFINE-RACE).
+    await expect
+      .poll(async () => {
+        const text: string = await bar(page)
+          .locator('.jp-AdvancedMediaViewer-range')
+          .textContent();
+        return seconds(text.replace('showing', '').split(' - ')[0]);
+      })
+      .toBeCloseTo(start, 1);
     const state = async () => {
       const q = await parts(page);
       return {

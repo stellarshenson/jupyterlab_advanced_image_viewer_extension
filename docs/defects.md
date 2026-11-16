@@ -88,6 +88,14 @@ Packaging, the Makefile and the GitHub Actions workflows
   - root-cause: 2026-11-13T18:28:08Z @kj ui-tests/tests/media_audio.spec.ts asserts readyState >= 1 with no poll after waiting only for wavesurfer.getDecodedData()
   - log: 2026-11-13T18:28:08Z @kj added
   - log: 2026-11-13T18:29:13Z @kj closed
+- [x] `DEF-BUILD-80-REFINE-RACE` **ACC-WAVE-141-REFINE state test reads the range label before the scroll event** - MINOR; the Galata test sets the scroll with ws.setScroll and reads the range label right after it; the label is written on the scroll event of the next rendering step, so the snapshot before the replacements can hold the label of the earlier zoom and differ from the snapshot after level 1
+  - evidence: probe logs/refine-race-probe.log: the label is stale in the task of ws.setScroll and right at the DOM scroll event, 5 of 5 runs; red logs/refine-race-red.log: 9 failed of 30 on the unchanged spec; green logs/refine-race-green.log: 30 passed of 30 with the wait on the label
+  - repro: in the bubblewrap Galata runner at 16ddc6e, 'npx playwright test tests/media_audio.spec.ts -g "the zoom level, scroll position, playhead and loop region are the same after each replacement" --repeat-each=30': 9 failed of 30, each with shown 'showing 00:14.9 - 00:22.4' before and 'showing 00:14.0 - 00:21.5' after at scroll 1176
+  - test-tags: E2E
+  - root-cause: 2026-11-16T06:56:06Z @kj ui-tests/tests/media_audio.spec.ts takes its first snapshot right after ws.setScroll, while AudioViewer.showView writes the label on wavesurfer's 'scroll' event, which follows the DOM scroll event the browser dispatches at its next rendering step
+  - log: 2026-11-16T06:56:06Z @kj added; reason: the body names the read, the event and the visible failure
+  - log: 2026-11-16T06:59:42Z @kj fix: before the first snapshot the test polls until the start time of the range label equals getScroll() / minPxPerSec read from the page; the two snapshots after the replacements stay single reads, compared with toEqual
+  - log: 2026-11-16T07:11:19Z @kj closed; reason: the evidence names the probe, the red run and the green run
 
 ## Context menu `MENU`
 
