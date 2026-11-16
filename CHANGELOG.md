@@ -2,6 +2,17 @@
 
 <!-- <START NEW CHANGELOG ENTRY> -->
 
+## [1.2.19] - 2026-11-16
+
+### Changed
+
+- Run the server tests and the endpoint auth check
+
+### Fixed
+
+- Scale the image wheel zoom by deltaY and reload a mesh from the File menu
+- Translate the mesh menu names and clear the lint warnings
+
 ## [1.2.16] - 2026-11-16
 
 ### Changed
